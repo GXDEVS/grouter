@@ -177,7 +177,7 @@
 <div id="dashboard" style="min-height:100vh;display:flex;max-width:100%;overflow-x:hidden;">
   <aside id="desktop-sidebar" style="width:220px;flex-shrink:0;background:#151515;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:20;">
     <div style="padding:1rem 0.5rem 0.875rem;border-bottom:1px solid #1e1e1e;display:flex;justify-content:center;">
-      <div class="ascii-logo" style="font-size:6.5px;line-height:1.2;"> ██████╗ ██████╗  ██████╗ ██╗   ██╗████████╗███████╗██████╗
+      <div class="ascii-logo" style="font-size:5.5px;line-height:1.2;"> ██████╗ ██████╗  ██████╗ ██╗   ██╗████████╗███████╗██████╗
 ██╔════╝ ██╔══██╗██╔═══██╗██║   ██║╚══██╔══╝██╔════╝██╔══██╗
 ██║  ███╗██████╔╝██║   ██║██║   ██║   ██║   █████╗  ██████╔╝
 ██║   ██║██╔══██╗██║   ██║██║   ██║   ██║   ██╔══╝  ██╔══██╗
@@ -258,7 +258,7 @@
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.625rem;">
                 <div style="display:flex;align-items:center;gap:0.375rem;">
                   <iconify-icon icon="solar:wallet-money-bold-duotone" style="color:#22c55e;font-size:0.95rem;"></iconify-icon>
-                  <p style="font-size:0.7rem;color:#6b7280;font-weight:600;">Estimated value saved</p>
+                  <p style="font-size:0.7rem;color:#6b7280;font-weight:600;" id="est-value-saved-label">Estimated value saved</p>
                 </div>
                 <p id="proxy-total-cost" style="font-size:1rem;font-weight:800;color:#22c55e;">$0.00</p>
               </div>
@@ -411,17 +411,17 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
             <div style="display:flex;align-items:center;gap:0.5rem;">
               <iconify-icon icon="solar:routing-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
-              <h3 style="font-weight:600;font-size:0.95rem;">Proxy Pools</h3>
+              <h3 style="font-weight:600;font-size:0.95rem;" id="pool-section-title">Proxy Pools</h3>
             </div>
             <button class="btn-sm btn-sm-ghost" onclick="openCreatePoolForm()" id="btn-add-pool">
               <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
-              <span>Add pool</span>
+              <span id="add-pool-span">Add pool</span>
             </button>
           </div>
           <p style="font-size:0.78rem;color:#6b7280;margin-bottom:1rem;line-height:1.5;">Assign HTTP proxy URLs to individual connections — useful for IP rotation or corporate proxies.</p>
           <!-- Create form (hidden by default) -->
           <div id="pool-create-form" class="hidden" style="margin-bottom:1rem;padding:1rem;border-radius:12px;background:#151515;border:1px solid #2a2a2a;">
-            <p style="font-size:0.78rem;font-weight:600;color:#9ca3af;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em;">New Proxy Pool</p>
+            <p style="font-size:0.78rem;font-weight:600;color:#9ca3af;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em;" id="new-pool-title">New Proxy Pool</p>
             <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
               <input id="pool-name-input" type="text" placeholder="Pool name (e.g. Residential US)"
                 style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;width:100%;" />
@@ -432,13 +432,13 @@
             </div>
             <p id="pool-create-error" style="font-size:0.78rem;color:#ef4444;margin-bottom:0.5rem;display:none;"></p>
             <div style="display:flex;gap:0.5rem;">
-              <button class="btn-primary" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="submitCreatePool()"><iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon><span>Create</span></button>
-              <button class="btn-ghost" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="closeCreatePoolForm()">Cancel</button>
+              <button class="btn-primary" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="submitCreatePool()"><iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon><span id="pool-create-btn-span">Create</span></button>
+              <button class="btn-ghost" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="closeCreatePoolForm()"><span id="pool-cancel-btn-span">Cancel</span></button>
             </div>
           </div>
           <!-- Pool list -->
           <div id="pool-list" style="display:flex;flex-direction:column;gap:0.5rem;">
-            <p style="font-size:0.82rem;color:#6b7280;">Loading…</p>
+            <p style="font-size:0.82rem;color:#6b7280;" id="pool-loading">Loading…</p>
           </div>
         </div>
 
@@ -489,7 +489,7 @@
         </button>
       </div>
 
-      <p style="font-size:0.7rem;color:#4b5563;text-align:center;padding-top:0.5rem;border-top:1px solid #1a1a1a;">Each key is rotated automatically. Add as many as you like.</p>
+      <p style="font-size:0.7rem;color:#4b5563;text-align:center;padding-top:0.5rem;border-top:1px solid #1a1a1a;" id="each-key-rotated">Each key is rotated automatically. Add as many as you like.</p>
     </div>
   </div>
 </div>
@@ -578,19 +578,19 @@
   </div>
   <!-- Nav section -->
   <nav style="flex:1;padding:0.5rem 0.75rem;display:flex;flex-direction:column;gap:0.25rem;">
-    <button class="nav-item active" id="mob-nav-overview" onclick="showTab('overview');toggleDrawer()"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Overview</span></button>
-    <button class="nav-item" id="mob-nav-providers" onclick="showTab('providers');toggleDrawer()"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Providers</span></button>
-    <button class="nav-item" id="mob-nav-accounts" onclick="showTab('accounts');toggleDrawer()"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Accounts</span></button>
-    <button class="nav-item" id="mob-nav-settings" onclick="showTab('settings');toggleDrawer()"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Settings</span></button>
+    <button class="nav-item active" id="mob-nav-overview" onclick="showTab('overview');toggleDrawer()"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-overview-label">Overview</span></button>
+    <button class="nav-item" id="mob-nav-providers" onclick="showTab('providers');toggleDrawer()"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-providers-label">Providers</span></button>
+    <button class="nav-item" id="mob-nav-accounts" onclick="showTab('accounts');toggleDrawer()"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-accounts-label">Accounts</span></button>
+    <button class="nav-item" id="mob-nav-settings" onclick="showTab('settings');toggleDrawer()"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-settings-label">Settings</span></button>
   </nav>
   <!-- Divider -->
   <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
   <!-- Quick actions -->
   <div style="padding:0.75rem;">
     <p style="font-size:0.65rem;color:#4b5563;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;padding-left:0.25rem;">Quick actions</p>
-    <button class="nav-item" onclick="manualRefresh();toggleDrawer()"><iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Refresh</span></button>
+    <button class="nav-item" onclick="manualRefresh();toggleDrawer()"><iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-refresh-label">Refresh</span></button>
     <button class="nav-item" id="mob-autopoll-btn" onclick="toggleAutoPoll()" style="justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:0.625rem;"><iconify-icon icon="solar:clock-circle-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Auto-refresh</span></div>
+      <div style="display:flex;align-items:center;gap:0.625rem;"><iconify-icon icon="solar:clock-circle-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-auto-refresh-label">Auto-refresh</span></div>
       <span id="mob-autopoll-badge" style="font-size:0.6rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:9999px;background:#1e1e1e;color:#4b5563;">OFF</span>
     </button>
   </div>
@@ -600,7 +600,7 @@
   <div style="padding:0.875rem;">
     <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
       <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:13px;flex-shrink:0;"></iconify-icon>
-      <select class="lang-select" style="width:100%;" onchange="setLang(this.value);document.getElementById('lang-select-dash').value=this.value;">
+      <select class="lang-select" style="width:100%;" id="lang-select-mob" onchange="setLang(this.value)">
         <option value="en">English</option>
         <option value="pt">PT-BR</option>
         <option value="zh">中文</option>
@@ -619,19 +619,19 @@
   <div class="mob-bottomnav-inner">
     <button class="mob-tab active" id="mob-tab-overview" onclick="showTab('overview')">
       <iconify-icon icon="solar:chart-2-bold-duotone"></iconify-icon>
-      <span>Overview</span>
+      <span id="mob-tab-overview-label">Overview</span>
     </button>
     <button class="mob-tab" id="mob-tab-providers" onclick="showTab('providers')">
       <iconify-icon icon="solar:planet-bold-duotone"></iconify-icon>
-      <span>Providers</span>
+      <span id="mob-tab-providers-label">Providers</span>
     </button>
     <button class="mob-tab" id="mob-tab-accounts" onclick="showTab('accounts')">
       <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
-      <span>Accounts</span>
+      <span id="mob-tab-accounts-label">Accounts</span>
     </button>
     <button class="mob-tab" id="mob-tab-settings" onclick="showTab('settings')">
       <iconify-icon icon="solar:settings-bold-duotone"></iconify-icon>
-      <span>Settings</span>
+      <span id="mob-tab-settings-label">Settings</span>
     </button>
   </div>
 </nav>
@@ -702,6 +702,29 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.',
     btn_add_another:'Add another',btn_try_again:'Try again',
     no_oauth_available:'No OAuth providers available. Add an API key provider instead.',
+    tag_active:'✓ Active',tag_rate_limited:'✗ Rate limited',tag_ready:'◌ Ready',
+    sub_rate_limited:'rate limited',sub_not_tested:'not tested yet',sub_all_healthy:'all healthy',
+    status_stop_btn:'Stop server',status_confirm_stop:'Confirm stop?',status_stopped_btn:'Stopped',status_stopping:'Stopping…',
+    page_providers:'Providers',page_providers_sub:'Manage your AI provider connections',
+    no_proxy:'No proxy',api_key_required:'API key is required.',no_proxy_pools:'No proxy pools yet. Add one to route connections through an HTTP proxy.',
+    pool_status_ok:'ok',pool_status_error:'error',pool_status_untested:'untested',
+    testing:'Testing…',delete_pool_confirm:'Delete proxy pool "{name}"?',
+    update_available:'New version available: v{latest} (current: v{current}) — run grouter update',
+    nav_providers:'Providers',mob_overview:'Overview',mob_providers:'Providers',mob_accounts:'Accounts',mob_settings:'Settings',
+    mob_status_checking:'checking…',mob_refresh:'Refresh',mob_auto_refresh:'Auto-refresh',mob_quick_actions:'Quick actions',
+    pool_name_required:'Name is required.',pool_url_required:'Proxy URL is required.',pool_create_failed:'Failed to create pool.',pool_network_error:'Network error.',
+    pool_cannot_delete:'Cannot delete pool.',
+    pool_test:'Test',pool_connections_one:'1 connection',pool_connections_many:'{n} connections',
+    get_api_key:'Get API key →',existing_keys_empty:'No keys yet — add your first below',
+    add_new_key:'Add a new key',label_optional:'Label (optional)',paste_token:'Paste token here…',
+    failed_to_connect:'Failed to connect.',
+    connected_providers:'Connected Providers',est_value_saved:'Estimated value saved',
+    connections_label:'Connections',
+    pool_section_title:'Proxy Pools',add_pool_btn:'Add pool',new_proxy_pool:'New Proxy Pool',
+    pool_name_placeholder:'Pool name (e.g. Residential US)',pool_noproxy_placeholder:'No-proxy (optional): localhost,127.0.0.1',
+    create_btn:'Create',cancel_btn:'Cancel',
+    each_key_rotated:'Each key is rotated automatically. Add as many as you like.',
+    loading_pools:'Loading…',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -759,6 +782,29 @@ const I18N = {
     qwen_deprecated_msg:'O Qwen Code Free foi descontinuado. Contas existentes continuam funcionando, mas novos cadastros OAuth não são mais aceitos.',
     btn_add_another:'Adicionar outro',btn_try_again:'Tentar novamente',
     no_oauth_available:'Nenhum provedor OAuth disponível. Adicione um provedor com API Key.',
+    tag_active:'✓ Ativo',tag_rate_limited:'✗ Limitado',tag_ready:'◌ Pronto',
+    sub_rate_limited:'limitado',sub_not_tested:'não testado ainda',sub_all_healthy:'todos saudáveis',
+    status_stop_btn:'Parar servidor',status_confirm_stop:'Confirmar parada?',status_stopped_btn:'Parado',status_stopping:'Parando…',
+    page_providers:'Provedores',page_providers_sub:'Gerencie suas conexões de provedores de IA',
+    no_proxy:'Sem proxy',api_key_required:'API key é obrigatória.',no_proxy_pools:'Sem pools de proxy ainda. Adicione um para rotear conexões através de um proxy HTTP.',
+    pool_status_ok:'ok',pool_status_error:'erro',pool_status_untested:'não testado',
+    testing:'Testando…',delete_pool_confirm:'Excluir pool de proxy "{name}"?',
+    update_available:'Nova versão disponível: v{latest} (atual: v{current}) — rode grouter update',
+    nav_providers:'Provedores',mob_overview:'Visão Geral',mob_providers:'Provedores',mob_accounts:'Contas',mob_settings:'Configurações',
+    mob_status_checking:'verificando…',mob_refresh:'Atualizar',mob_auto_refresh:'Auto-atualizar',mob_quick_actions:'Ações rápidas',
+    pool_name_required:'Nome é obrigatório.',pool_url_required:'URL do proxy é obrigatória.',pool_create_failed:'Falha ao criar pool.',pool_network_error:'Erro de rede.',
+    pool_cannot_delete:'Não é possível excluir pool.',
+    pool_test:'Testar',pool_connections_one:'1 conexão',pool_connections_many:'{n} conexões',
+    get_api_key:'Obter API key →',existing_keys_empty:'Nenhuma chave ainda — adicione a primeira abaixo',
+    add_new_key:'Adicionar nova chave',label_optional:'Rótulo (opcional)',paste_token:'Cole o token aqui…',
+    failed_to_connect:'Falha ao conectar.',
+    connected_providers:'Provedores Conectados',est_value_saved:'Valor estimado economizado',
+    connections_label:'Conexões',
+    pool_section_title:'Pools de Proxy',add_pool_btn:'Adicionar pool',new_proxy_pool:'Novo Pool de Proxy',
+    pool_name_placeholder:'Nome do pool (ex: Residencial BR)',pool_noproxy_placeholder:'Sem proxy (opcional): localhost,127.0.0.1',
+    create_btn:'Criar',cancel_btn:'Cancelar',
+    each_key_rotated:'Cada chave é rotacionada automaticamente. Adicione quantas quiser.',
+    loading_pools:'Carregando…',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -816,6 +862,29 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free 已停用。现有账户继续可用，但不再接受新的 OAuth 注册。',
     btn_add_another:'再添加一个',btn_try_again:'重试',
     no_oauth_available:'暂无可用的 OAuth 提供商。请改用 API Key 提供商。',
+    tag_active:'✓ 活跃',tag_rate_limited:'✗ 已限速',tag_ready:'◌ 就绪',
+    sub_rate_limited:'已限速',sub_not_tested:'尚未测试',sub_all_healthy:'全部健康',
+    status_stop_btn:'停止服务器',status_confirm_stop:'确认停止？',status_stopped_btn:'已停止',status_stopping:'停止中…',
+    page_providers:'提供商',page_providers_sub:'管理您的 AI 提供商连接',
+    no_proxy:'无代理',api_key_required:'需要 API 密钥。',no_proxy_pools:'暂无代理池。添加一个以通过 HTTP 代理路由连接。',
+    pool_status_ok:'正常',pool_status_error:'错误',pool_status_untested:'未测试',
+    testing:'测试中…',delete_pool_confirm:'删除代理池 "{name}"？',
+    update_available:'新版本可用：v{latest}（当前：v{current}）— 运行 grouter update',
+    nav_providers:'提供商',mob_overview:'概览',mob_providers:'提供商',mob_accounts:'账户',mob_settings:'设置',
+    mob_status_checking:'检查中…',mob_refresh:'刷新',mob_auto_refresh:'自动刷新',mob_quick_actions:'快捷操作',
+    pool_name_required:'名称为必填项。',pool_url_required:'代理 URL 为必填项。',pool_create_failed:'创建池失败。',pool_network_error:'网络错误。',
+    pool_cannot_delete:'无法删除池。',
+    pool_test:'测试',pool_connections_one:'1 个连接',pool_connections_many:'{n} 个连接',
+    get_api_key:'获取 API 密钥 →',existing_keys_empty:'尚无密钥 — 请在下方添加第一个',
+    add_new_key:'添加新密钥',label_optional:'标签（可选）',paste_token:'在此粘贴令牌…',
+    failed_to_connect:'连接失败。',
+    connected_providers:'已连接的提供商',est_value_saved:'估计节省价值',
+    connections_label:'连接数',
+    pool_section_title:'代理池',add_pool_btn:'添加代理池',new_proxy_pool:'新建代理池',
+    pool_name_placeholder:'代理池名称（例如：住宅代理）',pool_noproxy_placeholder:'不使用代理（可选）：localhost,127.0.0.1',
+    create_btn:'创建',cancel_btn:'取消',
+    each_key_rotated:'每个密钥都会自动轮换。可以添加任意数量。',
+    loading_pools:'加载中…',
   }
 };
 
@@ -829,7 +898,7 @@ async function checkDashboardVersion() {
     const banner = document.getElementById('dash-update-banner');
     const msg    = document.getElementById('dash-update-msg');
     if (banner && msg) {
-      msg.textContent = `Nova versão disponível: v${latest} (atual: v${current}) — rode grouter update`;
+      msg.textContent = tr('update_available', {latest, current});
       banner.classList.remove('hidden');
     }
   } catch {}
@@ -837,12 +906,24 @@ async function checkDashboardVersion() {
 
 let lang = 'en', T = I18N.en, statusData = null;
 let modalPollTimer = null, refreshTimer = null;
+let _langVersion = 0;
 
 function setLang(l) {
   lang = l; T = I18N[l] || I18N.en;
+  _langVersion++;
+  try { localStorage.setItem('grouter-lang', l); } catch {}
+  document.documentElement.lang = l;
   const ls = document.getElementById('lang-select-dash');
   if (ls) ls.value = l;
+  const mobLs = document.getElementById('lang-select-mob');
+  if (mobLs) mobLs.value = l;
   applyI18n();
+  if (statusData) {
+    renderStatus(statusData);
+    if (currentTab === 'accounts' && statusData.accounts.list) {
+      renderAccountsList('accounts-list-full', statusData.accounts.list, true);
+    }
+  }
 }
 
 // Minimal {placeholder} interpolation
@@ -879,6 +960,58 @@ function applyI18n() {
   s('connect-existing-header',T.connect_existing_header);
   s('modal-deprecation-title',T.qwen_deprecated_title);
   s('modal-tryagain-btn',T.btn_try_again);s('modal-addanother-btn',T.btn_add_another);
+  // Mobile nav labels
+  s('nav-providers-label',T.nav_providers||'Providers');
+  s('mob-nav-overview-label',T.mob_overview||'Overview');s('mob-nav-providers-label',T.mob_providers||'Providers');
+  s('mob-nav-accounts-label',T.mob_accounts||'Accounts');s('mob-nav-settings-label',T.mob_settings||'Settings');
+  s('mob-refresh-label',T.mob_refresh||'Refresh');s('mob-auto-refresh-label',T.mob_auto_refresh||'Auto-refresh');
+  // Mobile bottom nav
+  s('mob-tab-overview-label',T.mob_overview||'Overview');s('mob-tab-providers-label',T.mob_providers||'Providers');
+  s('mob-tab-accounts-label',T.mob_accounts||'Accounts');s('mob-tab-settings-label',T.mob_settings||'Settings');
+  // Mobile drawer status
+  const mobDrStEl = document.getElementById('mob-drawer-status');
+  if (mobDrStEl) mobDrStEl.textContent = T.mob_status_checking || 'checking…';
+  // Quick actions header
+  const mobQuickActionsEl = document.querySelector('#mob-drawer p[style*="text-transform"]');
+  if (mobQuickActionsEl) mobQuickActionsEl.textContent = T.mob_quick_actions || 'Quick actions';
+  // Server power button initial
+  const serverPowerLbl = document.getElementById('server-power-label');
+  if (serverPowerLbl) serverPowerLbl.textContent = T.status_stop_btn || 'Stop server';
+  // Connected providers label
+  const connProvEl = document.querySelector('#overview-providers-row span[style*="text-transform"]');
+  if (connProvEl) connProvEl.textContent = T.connected_providers || 'Connected Providers';
+  // Estimated value label
+  const estValEl = document.querySelector('#proxy-total-cost')?.parentElement?.previousElementSibling?.querySelector('p:last-child');
+  // Pool section title
+  s('pool-section-title', T.pool_section_title || 'Proxy Pools');
+  // Pool add button
+  s('add-pool-span', T.add_pool_btn || 'Add pool');
+  // Pool create form title
+  s('new-pool-title', T.new_proxy_pool || 'New Proxy Pool');
+  // Pool form placeholders
+  const poolNameInput = document.getElementById('pool-name-input');
+  if (poolNameInput) poolNameInput.placeholder = T.pool_name_placeholder || 'Pool name (e.g. Residential US)';
+  const poolUrlInput = document.getElementById('pool-url-input');
+  if (poolUrlInput) poolUrlInput.placeholder = 'http://user:pass@proxy.host:port';
+  const poolNoProxyInput = document.getElementById('pool-noproxy-input');
+  if (poolNoProxyInput) poolNoProxyInput.placeholder = T.pool_noproxy_placeholder || 'No-proxy (optional): localhost,127.0.0.1';
+  // Pool create buttons
+  s('pool-create-btn-span', T.create_btn || 'Create');
+  s('pool-cancel-btn-span', T.cancel_btn || 'Cancel');
+  // Estimated value saved label
+  s('est-value-saved-label', T.est_value_saved || 'Estimated value saved');
+  // Pool loading placeholder
+  s('pool-loading', T.loading_pools || 'Loading…');
+  // Each key rotated footer
+  s('each-key-rotated', T.each_key_rotated || 'Each key is rotated automatically. Add as many as you like.');
+  // Add a new key label
+  const addNewLabel = document.querySelector('#connect-modal-body label[style*="text-transform"]');
+  if (addNewLabel) addNewLabel.textContent = T.add_new_key || 'Add a new key';
+  // Connect modal placeholders
+  const keyNameInput = document.getElementById('connect-keyname-input');
+  if (keyNameInput) keyNameInput.placeholder = T.label_optional || 'Label (optional)';
+  const apiKeyInput = document.getElementById('connect-apikey-input');
+  if (apiKeyInput) apiKeyInput.placeholder = T.paste_token || 'Paste token here…';
 }
 
 // ── Dashboard nav ─────────────────────────────────────────────────────
@@ -898,8 +1031,8 @@ function showTab(tab) {
     document.getElementById('page-title').textContent = T.page_overview;
     document.getElementById('page-sub').textContent   = T.page_overview_sub;
   } else if (tab==='providers') {
-    document.getElementById('page-title').textContent = 'Providers';
-    document.getElementById('page-sub').textContent   = 'Manage your AI provider connections';
+    document.getElementById('page-title').textContent = T.page_providers || 'Providers';
+    document.getElementById('page-sub').textContent   = T.page_providers_sub || 'Manage your AI provider connections';
     loadProviders();
   } else if (tab==='accounts') {
     document.getElementById('page-title').textContent = T.page_accounts;
@@ -925,7 +1058,8 @@ function toggleDrawer() {
 
 // ── Status ────────────────────────────────────────────────────────────
 async function loadStatus() {
-  try { const r = await fetch('/api/status'); statusData = await r.json(); renderStatus(statusData); } catch {}
+  const lv = _langVersion;
+  try { const r = await fetch('/api/status'); const d = await r.json(); if (_langVersion === lv) { statusData = d; renderStatus(statusData); } else { applyI18n(); } } catch {}
 }
 
 const MODEL_PRICING = {
@@ -954,9 +1088,9 @@ function statusTag(acc) {
   if (!acc.is_active) return '<span class="tag tag-disabled">'+T.toggle_enable+'</span>';
   // Use effective_status (server normalises unavailable→active when lock expired)
   const st = acc.effective_status || acc.test_status;
-  if (st==='active')      return '<span class="tag tag-active">&#x2713; Active</span>';
-  if (st==='unavailable') return '<span class="tag tag-unavail">&#x2717; Rate limited</span>';
-  return '<span class="tag tag-unknown">&#x25CC; Ready</span>';
+  if (st==='active')      return '<span class="tag tag-active">'+(T.tag_active||'&#x2713; Active')+'</span>';
+  if (st==='unavailable') return '<span class="tag tag-unavail">'+(T.tag_rate_limited||'&#x2717; Rate limited')+'</span>';
+  return '<span class="tag tag-unknown">'+(T.tag_ready||'&#x25CC; Ready')+'</span>';
 }
 
 function renderStatus(d) {
@@ -1002,12 +1136,12 @@ function renderStatus(d) {
     if (proxy.running) {
       pwrBtn.classList.add('power-on');
       pwrBtn.disabled = false;
-      document.getElementById('server-power-label').textContent = 'Stop server';
+      document.getElementById('server-power-label').textContent = T.status_stop_btn || 'Stop server';
       document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
     } else {
       pwrBtn.classList.add('power-off');
       pwrBtn.disabled = true;
-      document.getElementById('server-power-label').textContent = 'Stopped';
+      document.getElementById('server-power-label').textContent = T.status_stopped_btn || 'Stopped';
       document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
     }
   }
@@ -1039,9 +1173,9 @@ function renderStatus(d) {
   document.getElementById('kpi-tokens-in').textContent  = fmtNum(usage.totals.prompt_tokens);
   document.getElementById('kpi-tokens-out').textContent = fmtNum(usage.totals.completion_tokens);
   const subParts = [];
-  if (accounts.unavailable > 0) subParts.push(accounts.unavailable+' rate limited');
-  if (accounts.unknown > 0) subParts.push(accounts.unknown+' not tested yet');
-  document.getElementById('kpi-total-sub').textContent = subParts.length ? subParts.join(' · ') : 'all healthy';
+  if (accounts.unavailable > 0) subParts.push(accounts.unavailable+' '+(T.sub_rate_limited||'rate limited'));
+  if (accounts.unknown > 0) subParts.push(accounts.unknown+' '+(T.sub_not_tested||'not tested yet'));
+  document.getElementById('kpi-total-sub').textContent = subParts.length ? subParts.join(' · ') : (T.sub_all_healthy||'all healthy');
   const me = document.getElementById('usage-by-model');
   if (!usage.byModel.length) { me.innerHTML='<p style="font-size:0.85rem;color:#6b7280;">'+T.no_usage+'</p>'; }
   else {
@@ -1095,7 +1229,7 @@ function renderAccountsList(id, list, showPoolAssign) {
     // Pool assignment selector (only in full list if pools exist)
     let poolSelect = '';
     if (showPoolAssign && _pools.length > 0) {
-      const opts = '<option value="">No proxy</option>' + _pools.map(p =>
+      const opts = '<option value="">'+(T.no_proxy||'No proxy')+'</option>' + _pools.map(p =>
         `<option value="${p.id}"${acc.proxy_pool_id===p.id?' selected':''}>${p.name}</option>`
       ).join('');
       poolSelect = `<select class="lang-select" style="height:1.8rem;font-size:0.7rem;padding:0.2rem 0.5rem;" onchange="assignPool('${acc.id}',this.value)">${opts}</select>`;
@@ -1123,14 +1257,14 @@ function handleServerPower() {
   btn.classList.remove('power-on');
   btn.classList.add('power-confirming');
   document.getElementById('server-power-icon').setAttribute('icon','solar:shield-warning-bold-duotone');
-  document.getElementById('server-power-label').textContent = 'Confirm stop?';
+  document.getElementById('server-power-label').textContent = T.status_confirm_stop || 'Confirm stop?';
 
   _powerConfirmTimer = setTimeout(() => {
     _powerConfirmTimer = null;
     btn.classList.remove('power-confirming');
     btn.classList.add('power-on');
     document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
-    document.getElementById('server-power-label').textContent = 'Stop server';
+    document.getElementById('server-power-label').textContent = T.status_stop_btn || 'Stop server';
   }, 2500);
 }
 
@@ -1145,7 +1279,7 @@ async function _doStopServer(btn) {
   const apBtn = document.getElementById('btn-autopoll');
   if (apBtn) { apBtn.classList.remove('autopoll-on'); document.getElementById('autopoll-dot').style.display='none'; }
 
-  document.getElementById('server-power-label').textContent = 'Stopping…';
+  document.getElementById('server-power-label').textContent = T.status_stopping || 'Stopping…';
   document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
 
   try { await fetch('/api/proxy/stop', {method:'POST'}); } catch {}
@@ -1154,7 +1288,7 @@ async function _doStopServer(btn) {
   const dot = document.getElementById('proxy-pill-dot');
   const lbl = document.getElementById('proxy-pill-label');
   dot.className = 'dot dot-warn dot-pulse';
-  lbl.textContent = 'stopping…';
+  lbl.textContent = T.status_stopping || 'stopping…';
   lbl.style.color = '#6b7280';
 
   setTimeout(() => {
@@ -1162,7 +1296,7 @@ async function _doStopServer(btn) {
     lbl.textContent = T.status_stopped;
     btn.classList.add('power-off');
     btn.disabled = true;
-    document.getElementById('server-power-label').textContent = 'Stopped';
+    document.getElementById('server-power-label').textContent = T.status_stopped_btn || 'Stopped';
     delete btn.dataset.stopping;
   }, 1000);
 }
@@ -1183,12 +1317,11 @@ function animN(id, target) {
 let cfgStrategy = 'fill-first', cfgStickyLimit = 3;
 
 async function loadConfig() {
+  const lv = _langVersion;
   try {
     const r = await fetch('/api/config');
     const d = await r.json();
-    cfgStrategy    = d.strategy;
-    cfgStickyLimit = d.stickyLimit;
-    renderConfig(d);
+    if (_langVersion === lv) { cfgStrategy = d.strategy; cfgStickyLimit = d.stickyLimit; renderConfig(d); }
   } catch {}
 }
 
@@ -1277,10 +1410,12 @@ let _connectingProvider = null;
 let _providersMap = {};
 
 async function loadProviders() {
+  const lv = _langVersion;
   try {
     const res = await fetch('/api/providers');
     if (!res.ok) return;
     const { providers } = await res.json();
+    if (_langVersion !== lv) { applyI18n(); return; }
     _providersMap = Object.fromEntries(providers.map(p => [p.id, p]));
     renderProviderGrid('prov-grid-oauth',  providers.filter(p => p.category === 'oauth'));
     renderProviderGrid('prov-grid-free',   providers.filter(p => p.category === 'free'));
@@ -1359,7 +1494,7 @@ async function openConnectModal(p) {
   document.getElementById('connect-modal-sub').textContent = p.description;
   const urlEl = document.getElementById('connect-apikey-url');
   const urlTxt = document.getElementById('connect-apikey-url-text');
-  if (p.apiKeyUrl) { urlEl.href = p.apiKeyUrl; urlTxt.textContent = 'Get API key →'; urlEl.style.display = ''; }
+  if (p.apiKeyUrl) { urlEl.href = p.apiKeyUrl; urlTxt.textContent = T.get_api_key || 'Get API key →'; urlEl.style.display = ''; }
   else { urlEl.style.display = 'none'; }
   document.getElementById('connect-apikey-input').value = '';
   document.getElementById('connect-keyname-input').value = '';
@@ -1419,7 +1554,7 @@ async function submitApiKeyConnection() {
   const key  = document.getElementById('connect-apikey-input').value.trim();
   const name = document.getElementById('connect-keyname-input').value.trim();
   const errEl = document.getElementById('connect-modal-error');
-  if (!key) { errEl.textContent = 'API key is required.'; errEl.style.display = ''; return; }
+  if (!key) { errEl.textContent = T.api_key_required || 'API key is required.'; errEl.style.display = ''; return; }
   const btn = document.getElementById('connect-submit-btn');
   btn.disabled = true;
   errEl.style.display = 'none';
@@ -1712,10 +1847,12 @@ function onAuthError(msg, sub) {
 let _pools = [];
 
 async function loadProxyPools() {
+  const lv = _langVersion;
   try {
     const res = await fetch('/api/proxy-pools');
     if (!res.ok) return;
     const { pools } = await res.json();
+    if (_langVersion !== lv) { applyI18n(); return; }
     _pools = pools || [];
     renderProxyPools();
   } catch {}
@@ -1725,13 +1862,13 @@ function renderProxyPools() {
   const el = document.getElementById('pool-list');
   if (!el) return;
   if (!_pools.length) {
-    el.innerHTML = '<p style="font-size:0.82rem;color:#6b7280;padding:0.25rem 0;">No proxy pools yet. Add one to route connections through an HTTP proxy.</p>';
+    el.innerHTML = '<p style="font-size:0.82rem;color:#6b7280;padding:0.25rem 0;">'+(T.no_proxy_pools||'No proxy pools yet. Add one to route connections through an HTTP proxy.')+'</p>';
     return;
   }
   el.innerHTML = _pools.map(pool => {
     const dotColor = pool.test_status === 'active' ? '#22c55e' : pool.test_status === 'error' ? '#ef4444' : '#f59e0b';
-    const statusLabel = pool.test_status === 'active' ? 'ok' : pool.test_status === 'error' ? 'error' : 'untested';
-    const connLabel = pool.connections === 1 ? '1 connection' : pool.connections + ' connections';
+    const statusLabel = pool.test_status === 'active' ? (T.pool_status_ok||'ok') : pool.test_status === 'error' ? (T.pool_status_error||'error') : (T.pool_status_untested||'untested');
+    const connLabel = pool.connections === 1 ? (T.pool_connections_one||'1 connection') : tr('pool_connections_many',{n:pool.connections});
     return `<div class="pool-row">
       <div class="pool-status-dot" style="background:${dotColor};box-shadow:0 0 5px ${dotColor}55;"></div>
       <div style="flex:1;min-width:0;">
@@ -1744,7 +1881,7 @@ function renderProxyPools() {
       </div>
       <div style="display:flex;align-items:center;gap:0.375rem;flex-shrink:0;">
         <button class="btn-sm btn-sm-ghost" id="pool-test-btn-${pool.id}" onclick="testPool('${pool.id}')" style="font-size:0.72rem;padding:0 0.625rem;">
-          <iconify-icon icon="solar:bolt-bold-duotone" style="font-size:0.8rem;"></iconify-icon>Test
+          <iconify-icon icon="solar:bolt-bold-duotone" style="font-size:0.8rem;"></iconify-icon>'+(T.pool_test||'Test')+'</button>
         </button>
         <button class="btn-sm btn-sm-danger" onclick="deletePool('${pool.id}','${pool.name.replace(/'/g,"\\'")}')">
           <iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.8rem;"></iconify-icon>
@@ -1774,8 +1911,8 @@ async function submitCreatePool() {
   const url     = document.getElementById('pool-url-input').value.trim();
   const noProxy = document.getElementById('pool-noproxy-input').value.trim() || null;
   const errEl   = document.getElementById('pool-create-error');
-  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = ''; return; }
-  if (!url)  { errEl.textContent = 'Proxy URL is required.'; errEl.style.display = ''; return; }
+  if (!name) { errEl.textContent = T.pool_name_required || 'Name is required.'; errEl.style.display = ''; return; }
+  if (!url)  { errEl.textContent = T.pool_url_required || 'Proxy URL is required.'; errEl.style.display = ''; return; }
   errEl.style.display = 'none';
   try {
     const res = await fetch('/api/proxy-pools', {
@@ -1783,15 +1920,15 @@ async function submitCreatePool() {
       body: JSON.stringify({ name, proxy_url: url, no_proxy: noProxy }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Failed to create pool.'; errEl.style.display = ''; return; }
+    if (!res.ok) { errEl.textContent = data.error || (T.pool_create_failed||'Failed to create pool.'); errEl.style.display = ''; return; }
     closeCreatePoolForm();
     loadProxyPools();
-  } catch(e) { errEl.textContent = 'Network error.'; errEl.style.display = ''; }
+  } catch(e) { errEl.textContent = T.pool_network_error || 'Network error.'; errEl.style.display = ''; }
 }
 
 async function testPool(id) {
   const btn = document.getElementById(`pool-test-btn-${id}`);
-  if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="solar:refresh-bold-duotone" style="font-size:0.8rem;animation:spin 0.7s linear infinite;"></iconify-icon>Testing…'; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="solar:refresh-bold-duotone" style="font-size:0.8rem;animation:spin 0.7s linear infinite;"></iconify-icon>'+(T.testing||'Testing…')+'</button>'; }
   try {
     const res = await fetch(`/api/proxy-pools/${id}/test`, { method: 'POST' });
     const data = await res.json();
@@ -1801,7 +1938,7 @@ async function testPool(id) {
 }
 
 async function deletePool(id, name) {
-  if (!confirm(`Delete proxy pool "${name}"?`)) return;
+  if (!confirm(tr('delete_pool_confirm',{name}))) return;
   try {
     const res = await fetch(`/api/proxy-pools/${id}`, { method: 'DELETE' });
     const data = await res.json();
@@ -1878,6 +2015,7 @@ function stopLoadingAnim() {
 }
 
 window.addEventListener('load', () => {
+  try { const saved = localStorage.getItem('grouter-lang'); if (saved && I18N[saved]) setLang(saved); } catch {}
   applyI18n();
   document.getElementById('dashboard').style.opacity = '0';
   startLoadingAnim();

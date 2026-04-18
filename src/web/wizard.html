@@ -357,6 +357,25 @@ const I18N = {
     cfg_unlock_label:'Unlock all accounts',cfg_unlock_hint:'Clear all rate-limit locks and reset backoff state.',
     cfg_unlock_btn:'Unlock',cfg_unlocked:'Unlocked!',
     page_settings:'Settings',page_settings_sub:'Proxy configuration and maintenance',
+    tag_active:'✓ Active',tag_rate_limited:'✗ Rate limited',tag_ready:'◌ Ready',
+    sub_rate_limited:'rate limited',sub_not_tested:'not tested yet',sub_all_healthy:'all healthy',
+    status_stop_btn:'Stop server',status_confirm_stop:'Confirm stop?',status_stopped_btn:'Stopped',status_stopping:'Stopping…',
+    page_providers:'Providers',page_providers_sub:'Manage your AI provider connections',
+    no_proxy:'No proxy',api_key_required:'API key is required.',no_proxy_pools:'No proxy pools yet. Add one to route connections through an HTTP proxy.',
+    pool_status_ok:'ok',pool_status_error:'error',pool_status_untested:'untested',
+    testing:'Testing…',delete_pool_confirm:'Delete proxy pool "{name}"?',
+    update_available:'New version available: v{latest} (current: v{current}) — run grouter update',
+    auth_denied:'Authorization denied.',auth_expired:'Code expired. Please try again.',
+    nav_providers:'Providers',mob_overview:'Overview',mob_providers:'Providers',mob_accounts:'Accounts',mob_settings:'Settings',
+    mob_status_checking:'checking…',mob_refresh:'Refresh',mob_auto_refresh:'Auto-refresh',mob_quick_actions:'Quick actions',
+    pool_name_required:'Name is required.',pool_url_required:'Proxy URL is required.',pool_create_failed:'Failed to create pool.',pool_network_error:'Network error.',
+    pool_delete_confirm:'Delete proxy pool "{name}"?',pool_cannot_delete:'Cannot delete pool.',
+    pool_testing:'Testing…',pool_test:'Test',pool_connections_one:'1 connection',pool_connections_many:'{n} connections',
+    get_api_key:'Get API key →',existing_keys:'Existing keys',existing_keys_empty:'No keys yet — add your first below',
+    add_new_key:'Add a new key',label_optional:'Label (optional)',paste_token:'Paste token here…',
+    failed_to_connect:'Failed to connect.',remove_key:'Remove this key?',
+    connected_providers:'Connected Providers',est_value_saved:'Estimated value saved',
+    connections_label:'Connections',
   },
   pt: {
     subtitle:'Proxy OAuth Qwen · compatível com OpenAI',
@@ -403,6 +422,25 @@ const I18N = {
     cfg_unlock_label:'Desbloquear todas as contas',cfg_unlock_hint:'Limpa todos os bloqueios de rate limit e reseta o estado de backoff.',
     cfg_unlock_btn:'Desbloquear',cfg_unlocked:'Desbloqueado!',
     page_settings:'Configurações',page_settings_sub:'Configurações do proxy e manutenção',
+    tag_active:'✓ Ativo',tag_rate_limited:'✗ Limitado',tag_ready:'◌ Pronto',
+    sub_rate_limited:'limitado',sub_not_tested:'não testado ainda',sub_all_healthy:'todos saudáveis',
+    status_stop_btn:'Parar servidor',status_confirm_stop:'Confirmar parada?',status_stopped_btn:'Parado',status_stopping:'Parando…',
+    page_providers:'Provedores',page_providers_sub:'Gerencie suas conexões de provedores de IA',
+    no_proxy:'Sem proxy',api_key_required:'API key é obrigatória.',no_proxy_pools:'Sem pools de proxy ainda. Adicione um para rotear conexões através de um proxy HTTP.',
+    pool_status_ok:'ok',pool_status_error:'erro',pool_status_untested:'não testado',
+    testing:'Testando…',delete_pool_confirm:'Excluir pool de proxy "{name}"?',
+    update_available:'Nova versão disponível: v{latest} (atual: v{current}) — rode grouter update',
+    auth_denied:'Autorização negada.',auth_expired:'Código expirado. Tente novamente.',
+    nav_providers:'Provedores',mob_overview:'Visão Geral',mob_providers:'Provedores',mob_accounts:'Contas',mob_settings:'Configurações',
+    mob_status_checking:'verificando…',mob_refresh:'Atualizar',mob_auto_refresh:'Auto-atualizar',mob_quick_actions:'Ações rápidas',
+    pool_name_required:'Nome é obrigatório.',pool_url_required:'URL do proxy é obrigatória.',pool_create_failed:'Falha ao criar pool.',pool_network_error:'Erro de rede.',
+    pool_delete_confirm:'Excluir pool de proxy "{name}"?',pool_cannot_delete:'Não é possível excluir pool.',
+    pool_testing:'Testando…',pool_test:'Testar',pool_connections_one:'1 conexão',pool_connections_many:'{n} conexões',
+    get_api_key:'Obter API key →',existing_keys:'Chaves existentes',existing_keys_empty:'Nenhuma chave ainda — adicione a primeira abaixo',
+    add_new_key:'Adicionar nova chave',label_optional:'Rótulo (opcional)',paste_token:'Cole o token aqui…',
+    failed_to_connect:'Falha ao conectar.',remove_key:'Remover esta chave?',
+    connected_providers:'Provedores Conectados',est_value_saved:'Valor estimado economizado',
+    connections_label:'Conexões',
   },
   zh: {
     subtitle:'Qwen OAuth 代理 · 兼容 OpenAI',
@@ -449,14 +487,37 @@ const I18N = {
     cfg_unlock_label:'解锁所有账户',cfg_unlock_hint:'清除所有限速锁定并重置退避状态。',
     cfg_unlock_btn:'解锁',cfg_unlocked:'已解锁！',
     page_settings:'设置',page_settings_sub:'代理配置和维护',
+    tag_active:'✓ 活跃',tag_rate_limited:'✗ 已限速',tag_ready:'◌ 就绪',
+    sub_rate_limited:'已限速',sub_not_tested:'尚未测试',sub_all_healthy:'全部健康',
+    status_stop_btn:'停止服务器',status_confirm_stop:'确认停止？',status_stopped_btn:'已停止',status_stopping:'停止中…',
+    page_providers:'提供商',page_providers_sub:'管理您的 AI 提供商连接',
+    no_proxy:'无代理',api_key_required:'需要 API 密钥。',no_proxy_pools:'暂无代理池。添加一个以通过 HTTP 代理路由连接。',
+    pool_status_ok:'正常',pool_status_error:'错误',pool_status_untested:'未测试',
+    testing:'测试中…',delete_pool_confirm:'删除代理池 "{name}"？',
+    update_available:'新版本可用：v{latest}（当前：v{current}）— 运行 grouter update',
+    auth_denied:'授权被拒绝。',auth_expired:'代码已过期。请重试。',
+    nav_providers:'提供商',mob_overview:'概览',mob_providers:'提供商',mob_accounts:'账户',mob_settings:'设置',
+    mob_status_checking:'检查中…',mob_refresh:'刷新',mob_auto_refresh:'自动刷新',mob_quick_actions:'快捷操作',
+    pool_name_required:'名称为必填项。',pool_url_required:'代理 URL 为必填项。',pool_create_failed:'创建池失败。',pool_network_error:'网络错误。',
+    pool_delete_confirm:'删除代理池 "{name}"？',pool_cannot_delete:'无法删除池。',
+    pool_testing:'测试中…',pool_test:'测试',pool_connections_one:'1 个连接',pool_connections_many:'{n} 个连接',
+    get_api_key:'获取 API 密钥 →',existing_keys:'现有密钥',existing_keys_empty:'尚无密钥 — 请在下方添加第一个',
+    add_new_key:'添加新密钥',label_optional:'标签（可选）',paste_token:'在此粘贴令牌…',
+    failed_to_connect:'连接失败。',remove_key:'删除此密钥？',
+    connected_providers:'已连接的提供商',est_value_saved:'估计节省价值',
+    connections_label:'连接数',
   }
 };
 
 let lang = 'en', T = I18N.en, currentStep = 0;
 let pollTimer = null, modalPollTimer = null;
+let _langVersion = 0;
 
 function setLang(l) {
   lang = l; T = I18N[l] || I18N.en;
+  _langVersion++;
+  try { localStorage.setItem('grouter-lang', l); } catch {}
+  document.documentElement.lang = l;
   const ls = document.getElementById('lang-select');
   if (ls) ls.value = l;
   applyI18n();
@@ -599,7 +660,7 @@ async function doPoll(deviceCode, target) {
     } else if (['expired','denied','error'].includes(data.status)) {
       clearInterval(target==='wizard' ? pollTimer : modalPollTimer);
       const pfx = target==='wizard'?'s1':'modal';
-      document.getElementById(pfx+'-pollstatus').textContent = data.status==='denied'?'Authorization denied.':'Code expired. Please try again.';
+      document.getElementById(pfx+'-pollstatus').textContent = data.status==='denied'?T.auth_denied:T.auth_expired;
     }
   } catch {}
 }
@@ -644,6 +705,7 @@ function resetModal() {
 document.getElementById('add-modal').addEventListener('click', e => { if(e.target.id==='add-modal') closeAddModal(); });
 
 window.addEventListener('load', () => {
+  try { const saved = localStorage.getItem('grouter-lang'); if (saved && I18N[saved]) setLang(saved); } catch {}
   applyI18n();
   // Wizard starts hidden — splash will reveal it
   document.getElementById('wizard').style.opacity = '0';
