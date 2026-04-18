@@ -88,6 +88,8 @@ function getPsProfilePath(): string {
 
 const PS_MARKER_START = "# >>> grouter-openclaude >>>";
 const PS_MARKER_END   = "# <<< grouter-openclaude <<<";
+const PS_LEGACY_START = "# >>> gqwen-openclaude >>>";
+const PS_LEGACY_END   = "# <<< gqwen-openclaude <<<";
 
 function psBlock(env: EnvVars): string {
   return [
@@ -100,10 +102,17 @@ function psBlock(env: EnvVars): string {
   ].join("\n");
 }
 
+function stripLegacyBlock(content: string, start: string, end: string): string {
+  const re = new RegExp(`\\n?${start}[\\s\\S]*?${end}\\n?`, "g");
+  return content.replace(re, "\n");
+}
+
 function injectIntoPsProfile(env: EnvVars): "injected" | "updated" | "failed" {
   const path = getPsProfilePath();
   try {
     let content = existsSync(path) ? readFileSync(path, "utf8") : "";
+    const hadLegacy = content.includes(PS_LEGACY_START);
+    if (hadLegacy) content = stripLegacyBlock(content, PS_LEGACY_START, PS_LEGACY_END);
     const block = psBlock(env);
     if (content.includes(PS_MARKER_START)) {
       const re = new RegExp(`${PS_MARKER_START}[\\s\\S]*?${PS_MARKER_END}`, "g");
@@ -113,7 +122,7 @@ function injectIntoPsProfile(env: EnvVars): "injected" | "updated" | "failed" {
     }
     const sep = content.endsWith("\n") || content === "" ? "\n" : "\n\n";
     writeFileSync(path, content + sep + block + "\n", "utf8");
-    return "injected";
+    return hadLegacy ? "updated" : "injected";
   } catch {
     return "failed";
   }
@@ -124,9 +133,11 @@ function removeFromPsProfile(): boolean {
   try {
     if (!existsSync(path)) return true;
     let content = readFileSync(path, "utf8");
-    if (!content.includes(PS_MARKER_START)) return true;
-    const re = new RegExp(`\n?${PS_MARKER_START}[\\s\\S]*?${PS_MARKER_END}\n?`, "g");
-    content = content.replace(re, "\n");
+    const hasCurrent = content.includes(PS_MARKER_START);
+    const hasLegacy  = content.includes(PS_LEGACY_START);
+    if (!hasCurrent && !hasLegacy) return true;
+    if (hasCurrent) content = stripLegacyBlock(content, PS_MARKER_START, PS_MARKER_END);
+    if (hasLegacy)  content = stripLegacyBlock(content, PS_LEGACY_START, PS_LEGACY_END);
     writeFileSync(path, content, "utf8");
     return true;
   } catch {
@@ -144,6 +155,8 @@ interface ShellConfig {
 
 const MARKER_START = "# >>> grouter-openclaude >>>";
 const MARKER_END   = "# <<< grouter-openclaude <<<";
+const LEGACY_START = "# >>> gqwen-openclaude >>>";
+const LEGACY_END   = "# <<< gqwen-openclaude <<<";
 
 function shellConfigs(): ShellConfig[] {
   const home = homedir();
@@ -178,6 +191,8 @@ function shellConfigs(): ShellConfig[] {
 function injectIntoShell(config: ShellConfig, env: EnvVars): "injected" | "updated" | "failed" {
   try {
     let content = existsSync(config.path) ? readFileSync(config.path, "utf8") : "";
+    const hadLegacy = content.includes(LEGACY_START);
+    if (hadLegacy) content = stripLegacyBlock(content, LEGACY_START, LEGACY_END);
     const block = config.exportBlock(env);
     if (content.includes(MARKER_START)) {
       const re = new RegExp(`${MARKER_START}[\\s\\S]*?${MARKER_END}`, "g");
@@ -187,7 +202,7 @@ function injectIntoShell(config: ShellConfig, env: EnvVars): "injected" | "updat
     }
     const sep = content.endsWith("\n") || content === "" ? "\n" : "\n\n";
     writeFileSync(config.path, content + sep + block + "\n", "utf8");
-    return "injected";
+    return hadLegacy ? "updated" : "injected";
   } catch {
     return "failed";
   }
@@ -197,9 +212,11 @@ function removeFromShell(config: ShellConfig): boolean {
   try {
     if (!existsSync(config.path)) return true;
     let content = readFileSync(config.path, "utf8");
-    if (!content.includes(MARKER_START)) return true;
-    const re = new RegExp(`\n?${MARKER_START}[\\s\\S]*?${MARKER_END}\n?`, "g");
-    content = content.replace(re, "\n");
+    const hasCurrent = content.includes(MARKER_START);
+    const hasLegacy  = content.includes(LEGACY_START);
+    if (!hasCurrent && !hasLegacy) return true;
+    if (hasCurrent) content = stripLegacyBlock(content, MARKER_START, MARKER_END);
+    if (hasLegacy)  content = stripLegacyBlock(content, LEGACY_START, LEGACY_END);
     writeFileSync(config.path, content, "utf8");
     return true;
   } catch {

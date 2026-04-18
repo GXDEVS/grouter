@@ -1,12 +1,34 @@
 import { Database } from "bun:sqlite";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { mkdirSync, existsSync } from "node:fs";
+import { mkdirSync, existsSync, renameSync } from "node:fs";
 
 let _db: Database | null = null;
 
+// One-time migration for users upgrading from the old `gqwen` name.
+// Moves ~/.gqwen → ~/.grouter and renames gqwen.db → grouter.db (plus WAL/SHM
+// sidecars). No-op if the new dir already exists or the old one doesn't.
+function migrateLegacyDir(newDir: string): void {
+  const legacyDir = join(homedir(), ".gqwen");
+  if (existsSync(newDir) || !existsSync(legacyDir)) return;
+  try {
+    renameSync(legacyDir, newDir);
+    const oldDb = join(newDir, "gqwen.db");
+    const newDb = join(newDir, "grouter.db");
+    if (existsSync(oldDb) && !existsSync(newDb)) renameSync(oldDb, newDb);
+    for (const ext of ["-wal", "-shm", "-journal"]) {
+      const oldSidecar = oldDb + ext;
+      const newSidecar = newDb + ext;
+      if (existsSync(oldSidecar) && !existsSync(newSidecar)) renameSync(oldSidecar, newSidecar);
+    }
+  } catch (err) {
+    console.error(`warning: could not migrate ~/.gqwen → ~/.grouter: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
 function getDbPath(): string {
   const dir = join(homedir(), ".grouter");
+  migrateLegacyDir(dir);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return join(dir, "grouter.db");
 }

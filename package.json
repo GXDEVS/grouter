@@ -1,19 +1,26 @@
 {
   "name": "grouter-auth",
-  "version": "4.7.0",
-  "description": "Qwen OAuth account manager and OpenAI-compatible proxy CLI",
+  "version": "5.0.1",
+  "description": "Universal AI router — OAuth + API Key providers (Claude, GitHub Copilot, Gemini, Kimi, Kiro, Qwen, Cursor, OpenRouter, Groq…) behind one OpenAI-compatible local proxy",
   "author": "gxdev",
   "license": "MIT",
   "keywords": [
-    "qwen",
     "ai",
-    "openai",
+    "router",
     "proxy",
+    "openai",
+    "openai-compatible",
     "oauth",
-    "cli"
+    "claude",
+    "copilot",
+    "gemini",
+    "qwen",
+    "kimi",
+    "cli",
+    "bun"
   ],
   "bin": {
-    "grouter": "./dist/grouter"
+    "grouter": "dist/grouter"
   },
   "files": [
     "dist/grouter"
