@@ -7,7 +7,7 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
     clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
     authorizeUrl: "https://auth.openai.com/oauth/authorize",
     tokenUrl: "https://auth.openai.com/oauth/token",
-    scope: "openid profile email offline_access",
+    scope: "openid profile email offline_access api.connectors.read api.connectors.invoke",
     codeChallengeMethod: "S256",
   };
 
@@ -87,6 +87,5 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
   return adapter;
 }
 
-export const codexAdapter   = buildAdapter("codex", "codex_cli_rs");
-export const openaiAdapter  = buildAdapter("openai", "openai_native");
-export const chatgptAdapter = buildAdapter("chatgpt", "chatgpt_native");
+export const codexAdapter  = buildAdapter("codex", "codex_cli_rs");
+export const openaiAdapter = buildAdapter("openai", "openai_native");

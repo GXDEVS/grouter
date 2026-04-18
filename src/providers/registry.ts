@@ -278,7 +278,7 @@ export const PROVIDERS: Record<string, Provider> = {
     category: "oauth",
     authType: "oauth",
     color: "#4285f4",
-    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    baseUrl: "https://cloudcode-pa.googleapis.com/v1internal",
     logo: "/public/logos/Gemini-CLI.png",
     models: [
       { id: "gemini-2.5-pro",                name: "Gemini 2.5 Pro"         },
@@ -287,27 +287,6 @@ export const PROVIDERS: Record<string, Provider> = {
       { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite"  },
       { id: "gemini-3-flash-preview",        name: "Gemini 3 Flash Preview" },
       { id: "gemini-2.0-flash",              name: "Gemini 2.0 Flash"       },
-    ],
-  },
-
-  chatgpt: {
-    id: "chatgpt",
-    name: "ChatGPT (OAuth)",
-    description: "ChatGPT Plus/Pro subscription via native OpenAI OAuth — no API key required",
-    category: "oauth",
-    authType: "oauth",
-    color: "#22c55e",
-    baseUrl: "https://api.openai.com/v1",
-    logo: "/public/logos/chatgpt.png",
-    models: [
-      { id: "gpt-5.4",      name: "GPT-5.4"      },
-      { id: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
-      { id: "gpt-5.2",      name: "GPT-5.2"      },
-      { id: "gpt-5",        name: "GPT-5"        },
-      { id: "gpt-4o",       name: "GPT-4o"       },
-      { id: "gpt-4.1",      name: "GPT-4.1"      },
-      { id: "o3",           name: "o3"           },
-      { id: "o4-mini",      name: "o4-mini"      },
     ],
   },
 

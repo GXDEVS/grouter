@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { buildQwenHeaders, buildQwenUrl, buildQwenModelsUrl, QWEN_MODELS_OAUTH, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
+import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
@@ -453,8 +454,9 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       const dec = new TextDecoder();
       const enc = new TextEncoder();
       const fmt = dispatch.format;
-      const needsTranslation = fmt === "claude";
+      const needsTranslation = fmt === "claude" || fmt === "gemini";
       const claudeState = fmt === "claude" ? newClaudeStreamState() : null;
+      const geminiState = fmt === "gemini" ? newGeminiStreamState() : null;
       let tail = "";
       let lineBuf = "";
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
@@ -470,7 +472,9 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
             for (const line of lines) {
               const trimmed = line.trim();
               if (!trimmed) continue;
-              const translated = claudeChunkToOpenAI(trimmed, claudeState!);
+              const translated = claudeState
+                ? claudeChunkToOpenAI(trimmed, claudeState)
+                : geminiChunkToOpenAI(trimmed, geminiState!);
               for (const out of translated) {
                 ctrl.enqueue(enc.encode(out));
                 tail += out;
@@ -480,7 +484,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
           }
         },
         flush() {
-          const stateUsage = claudeState?.usage;
+          const stateUsage = claudeState?.usage ?? geminiState?.usage;
           const usage = needsTranslation && stateUsage
             ? { prompt: (stateUsage.prompt_tokens as number) ?? 0, completion: (stateUsage.completion_tokens as number) ?? 0, total: (stateUsage.total_tokens as number) ?? 0 }
             : extractUsageFromSSE(tail);
@@ -498,6 +502,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
 
     // Translate non-stream responses → OpenAI format
     if (dispatch.format === "claude") data = translateClaudeNonStream(data);
+    else if (dispatch.format === "gemini") data = translateGeminiNonStream(data);
 
     const rawUsage = data["usage"] as Record<string, number> | undefined;
     const promptTok     = rawUsage?.prompt_tokens     ?? 0;

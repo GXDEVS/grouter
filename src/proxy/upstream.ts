@@ -20,6 +20,7 @@ import {
   buildClaudeHeaders,
   buildKimiCodingHeaders,
 } from "./claude-translator.ts";
+import { openaiToGemini } from "./gemini-translator.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -248,6 +249,26 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
           body:    openaiToClaude(model, ctx.body, ctx.stream),
         },
         format: "claude",
+      };
+    }
+
+    case "gemini-cli": {
+      const model = (ctx.body.model as string) ?? "gemini-2.5-flash";
+      const pd = parseProviderData(ctx.account.provider_data);
+      const project = (pd?.cloudProject as string | undefined) ?? null;
+      const path = ctx.stream ? ":streamGenerateContent?alt=sse" : ":generateContent";
+      return {
+        kind: "ok",
+        req: {
+          url:     `https://cloudcode-pa.googleapis.com/v1internal${path}`,
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${token}`,
+            Accept:          ctx.stream ? "text/event-stream" : "application/json",
+          },
+          body:    openaiToGemini(model, ctx.body, project),
+        },
+        format: "gemini",
       };
     }
 

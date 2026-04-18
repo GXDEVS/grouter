@@ -4,7 +4,7 @@ import { githubAdapter } from "./github.ts";
 import { kimiAdapter } from "./kimi.ts";
 import { kilocodeAdapter } from "./kilocode.ts";
 import { claudeAdapter } from "./claude.ts";
-import { codexAdapter, chatgptAdapter } from "./codex.ts";
+import { codexAdapter } from "./codex.ts";
 import { gitlabAdapter } from "./gitlab.ts";
 import { kiroAdapter } from "./kiro.ts";
 import { iflowAdapter } from "./iflow.ts";
@@ -21,7 +21,6 @@ const ADAPTERS: Record<string, OAuthAdapter> = {
   [kilocodeAdapter.id]: kilocodeAdapter,
   [claudeAdapter.id]: claudeAdapter,
   [codexAdapter.id]: codexAdapter,
-  [chatgptAdapter.id]: chatgptAdapter,
   [gitlabAdapter.id]: gitlabAdapter,
   [kiroAdapter.id]: kiroAdapter,
   [iflowAdapter.id]: iflowAdapter,
