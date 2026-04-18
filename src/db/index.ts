@@ -119,16 +119,30 @@ export function db(): Database {
     "SELECT name FROM pragma_table_info(?)"
   ).all("accounts").map(r => r.name);
 
+  function safeAlter(sql: string): void {
+    try {
+      _db!.exec(sql);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("duplicate column name")) {
+        throw new Error(
+          `[grouter] DB migration failed: ${msg}. ` +
+          `If this persists, delete ~/.grouter/grouter.db to reset.`
+        );
+      }
+    }
+  }
+
   if (!cols.includes("provider"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN provider TEXT NOT NULL DEFAULT 'qwen'`);
+    safeAlter(`ALTER TABLE accounts ADD COLUMN provider TEXT NOT NULL DEFAULT 'qwen'`);
   if (!cols.includes("auth_type"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'oauth'`);
+    safeAlter(`ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'oauth'`);
   if (!cols.includes("api_key"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN api_key TEXT`);
+    safeAlter(`ALTER TABLE accounts ADD COLUMN api_key TEXT`);
   if (!cols.includes("proxy_pool_id"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN proxy_pool_id TEXT REFERENCES proxy_pools(id) ON DELETE SET NULL`);
+    safeAlter(`ALTER TABLE accounts ADD COLUMN proxy_pool_id TEXT REFERENCES proxy_pools(id) ON DELETE SET NULL`);
   if (!cols.includes("provider_data"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN provider_data TEXT`);
+    safeAlter(`ALTER TABLE accounts ADD COLUMN provider_data TEXT`);
 
   // Seed defaults
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('strategy', 'fill-first')`);

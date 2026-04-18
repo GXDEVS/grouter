@@ -1,5 +1,10 @@
 import type { OAuthAdapter, NormalizedTokens } from "../types.ts";
 
+// NOTE: This is the public OAuth app credential for the iflow provider.
+// It is intentionally bundled as a public client secret (the provider allows this).
+// If this repository is ever made fully public or the credential is rotated,
+// replace with: process.env.GROUTER_IFLOW_CLIENT_SECRET ?? "<new_value>"
+// Tracked as a known security consideration for future hardening.
 const CONFIG = {
   clientId: "10009311001",
   clientSecret: "4Z3YjXycVsQvyGF1etiNlIBB4RsqSDtW",

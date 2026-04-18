@@ -25,7 +25,18 @@ export async function refreshQwenToken(refreshToken: string): Promise<{
   };
 }
 
+const refreshInFlight = new Map<string, Promise<QwenAccount>>();
+
 export async function checkAndRefreshAccount(account: QwenAccount): Promise<QwenAccount> {
+  if (refreshInFlight.has(account.id)) {
+    return refreshInFlight.get(account.id)!;
+  }
+  const p = doRefresh(account).finally(() => refreshInFlight.delete(account.id));
+  refreshInFlight.set(account.id, p);
+  return p;
+}
+
+async function doRefresh(account: QwenAccount): Promise<QwenAccount> {
   // API-key connections don't expire
   if (account.auth_type === "apikey") return account;
 
@@ -37,10 +48,18 @@ export async function checkAndRefreshAccount(account: QwenAccount): Promise<Qwen
   if (!adapter?.refresh) return account;
 
   const providerData = parseProviderData(account.provider_data);
-  const refreshed = await adapter.refresh({
-    refreshToken: account.refresh_token || null,
-    providerData,
-  });
+  let refreshed;
+  try {
+    refreshed = await adapter.refresh({
+      refreshToken: account.refresh_token || null,
+      providerData,
+    });
+  } catch (err) {
+    console.error(
+      `[grouter] token refresh failed for ${account.id}: ${err instanceof Error ? err.message : err}`
+    );
+    return account;
+  }
   if (!refreshed) return account;
 
   const patch: Partial<QwenAccount> = {
@@ -55,7 +74,13 @@ export async function checkAndRefreshAccount(account: QwenAccount): Promise<Qwen
     patch.provider_data = JSON.stringify(merged);
   }
 
-  updateAccount(account.id, patch);
+  try {
+    updateAccount(account.id, patch);
+  } catch (err) {
+    console.error(
+      `[grouter] failed to persist token refresh for ${account.id}: ${err instanceof Error ? err.message : err}`
+    );
+  }
   return { ...account, ...patch };
 }
 

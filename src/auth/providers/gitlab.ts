@@ -73,6 +73,11 @@ export const gitlabAdapter: OAuthAdapter = {
     const email = (user.email as string | undefined) ?? (user.public_email as string | undefined) ?? null;
     const username = (user.username as string | undefined) ?? null;
 
+    // NOTE: clientSecret is stored in plaintext in the local SQLite DB.
+    // This is acceptable for a local-only tool but should be noted.
+    // The refresh flow requires client_id + client_secret, so it cannot be omitted.
+    // Future improvement: encrypt sensitive fields at rest.
+    // See SEC-06 in audit report.
     const result: NormalizedTokens = {
       accessToken: tokens.access_token as string,
       refreshToken: (tokens.refresh_token as string | undefined) ?? null,

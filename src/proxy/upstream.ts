@@ -21,6 +21,7 @@ import {
   buildKimiCodingHeaders,
 } from "./claude-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
+import { refreshCopilotToken } from "../auth/providers/github.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -110,10 +111,18 @@ function buildQwen(ctx: BuildContext): UpstreamRequest {
   };
 }
 
-function buildGithub(ctx: BuildContext): UpstreamResult {
+async function buildGithub(ctx: BuildContext): Promise<UpstreamResult> {
   // GitHub Copilot uses a short-lived copilotToken fetched from copilot_internal/v2/token.
-  // We stored it in provider_data on the first exchange; if missing, refresh via /copilot_internal.
-  const pd = parseProviderData(ctx.account.provider_data);
+  // We stored it in provider_data on the first exchange; refresh proactively when near expiry.
+  let pd = parseProviderData(ctx.account.provider_data);
+  if (
+    !pd?.copilotToken ||
+    (pd.copilotTokenExpiresAt != null &&
+      Date.now() >= (pd.copilotTokenExpiresAt as number) * 1_000 - 60_000)
+  ) {
+    const fresh = await refreshCopilotToken(ctx.account);
+    pd = parseProviderData(fresh.provider_data);
+  }
   const copilotToken = pd?.copilotToken as string | undefined;
   if (!copilotToken) {
     return { kind: "unsupported", reason: "Copilot token missing — reconnect GitHub Copilot via the dashboard." };
@@ -132,7 +141,7 @@ function buildGithub(ctx: BuildContext): UpstreamResult {
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────
 
-export function buildUpstream(ctx: BuildContext): UpstreamResult {
+export async function buildUpstream(ctx: BuildContext): Promise<UpstreamResult> {
   const provider = ctx.account.provider;
 
   // API key providers → plain OpenAI-compat

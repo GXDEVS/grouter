@@ -1,6 +1,6 @@
 import { db, getStrategy, getStickyLimit } from "../db/index.ts";
 import { updateAccount } from "../db/accounts.ts";
-import { isModelLockActive, setModelLock, clearModelLock, getEarliestLockUntil } from "./lock.ts";
+import { setModelLock, clearModelLock, getEarliestLockUntil } from "./lock.ts";
 import { checkFallbackError, formatDuration } from "./fallback.ts";
 import type { Connection, QwenAccount, RateLimitedResult, FallbackDecision } from "../types.ts";
 
@@ -18,14 +18,25 @@ export function selectAccount(
     )
     .all(provider);
 
+  const now = new Date().toISOString();
+  const modelKey = model ?? "__all";
+  const lockedIds = new Set(
+    db()
+      .query<{ account_id: string }, [string, string]>(
+        `SELECT account_id FROM model_locks WHERE (model = ? OR model = '__all') AND locked_until > ?`
+      )
+      .all(modelKey, now)
+      .map((r) => r.account_id)
+  );
+
   const candidates = all.filter((a) => {
     if (excludeIds?.has(a.id)) return false;
-    if (isModelLockActive(a.id, model)) return false;
+    if (lockedIds.has(a.id)) return false;
     return true;
   });
 
   if (candidates.length === 0) {
-    const anyLocked = all.some((a) => !excludeIds?.has(a.id) && isModelLockActive(a.id, model));
+    const anyLocked = all.some((a) => !excludeIds?.has(a.id) && lockedIds.has(a.id));
     if (anyLocked) {
       const earliest = getEarliestLockUntil(model);
       const retryAfter = earliest ?? new Date(Date.now() + 60_000).toISOString();
@@ -45,11 +56,11 @@ export function selectAccount(
     if (withoutUsage.length > 0) {
       selected = withoutUsage[0]!;
     } else {
-      const sorted = withUsage.sort(
+      const sorted = [...withUsage].sort(
         (a, b) => new Date(a.last_used_at!).getTime() - new Date(b.last_used_at!).getTime()
       );
       // Check if most-recently-used is under sticky limit
-      const mostRecent = withUsage.sort(
+      const mostRecent = [...withUsage].sort(
         (a, b) => new Date(b.last_used_at!).getTime() - new Date(a.last_used_at!).getTime()
       )[0];
       selected = (mostRecent && mostRecent.consecutive_use_count < stickyLimit)

@@ -111,7 +111,7 @@ Every provider gets its own dedicated port so requests never get misrouted. The 
 
 ### API-key providers
 
-OpenRouter · Groq · DeepSeek · OpenAI · Anthropic · Google Gemini · NVIDIA NIM — add multiple keys per provider; all of them can round-robin.
+OpenRouter · Groq · DeepSeek · OpenAI · Anthropic · Google Gemini · NVIDIA NIM · Ollama Cloud — add multiple keys per provider; all of them can round-robin.
 
 Providers marked **FREE** need no credit card. Free-tier API keys (OpenRouter, NVIDIA, Gemini) are flagged with a badge in the dashboard.
 

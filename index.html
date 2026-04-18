@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>grouter</title>
+<meta name="description" content="Roteador universal de IA. Conecte Claude, GPT, Gemini e 20+ provedores via OAuth ou API key num único endpoint local compatível com OpenAI. Rotação de contas, zero MITM, sempre grátis.">
+<meta name="theme-color" content="#0AB9DC">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23000000'/><text x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-weight='700' font-size='20' fill='%230AB9DC'>G</text></svg>">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:title" content="grouter · Roteador Universal de IA">
+<meta property="og:description" content="Toda IA. Sempre grátis. Um único endpoint local compatível com OpenAI para Claude, GPT, Gemini e 20+ provedores.">
+<meta property="og:type" content="website">
+<link rel="canonical" href="https://grouter.dev"><!-- TODO: confirm URL — domain not yet registered -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://code.iconify.design https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https://cdn.livepix.gg; connect-src 'self'; frame-src 'none'; object-src 'none';">
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Tailwind & Icons & Three.js -->
+<script src="https://cdn.tailwindcss.com" defer></script>
+<script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js" defer></script>
+<script src="https://unpkg.com/lucide@latest" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+/* ============================================================
+   RESET DE SELEÇÃO — desabilita text-select globalmente para
+   evitar destaque acidental durante scroll; reativa em elementos
+   onde o usuário genuinamente precisa selecionar texto
+============================================================ */
+* { user-select: none; -webkit-user-select: none; }
+a, button, input, textarea, select, [contenteditable],
+code, pre, .selectable { user-select: auto; -webkit-user-select: auto; }
+
+/* ============================================================
+   TOKENS GLOBAIS — todas as cores derivam daqui; mudar
+   --accent troca o ciano em todo o site de uma vez
+============================================================ */
+:root {
+  --accent: #0AB9DC;                   /* ciano principal — botões, links, glows */
+  --accent-dark: #0891b0;              /* variante hover/active do accent */
+  --accent-dim: rgba(10,185,220,0.12); /* fundo sutil de badges e ícones */
+  --bg: #09090b;                       /* fundo base — quase preto com tom azulado */
+  --surface: #111113;                  /* superfície elevada (cards, sidebar) */
+  --border: rgba(63,63,70,0.4);        /* bordas entre elementos */
+}
+
+/* ============================================================
+   BASE DO DOCUMENTO
+============================================================ */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg);
+  color: #fafafa;
+}
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+/* text-balance distribui quebras de linha de forma mais uniforme nos títulos grandes */
+.text-balance { text-wrap: balance; }
+
+/* ============================================================
+   GRID OVERLAY — grade sutil no hero; mask radial faz ela
+   desaparecer nas bordas para não competir com o conteúdo
+============================================================ */
+.grid-overlay {
+  background-size: 2rem 2rem;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+  /* concentra a grade no centro e dissolve nas bordas */
+  mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+  -webkit-mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+}
+
+/* ============================================================
+   ANIMAÇÃO PADRÃO — usada no hero body e em outros elementos
+   que devem aparecer com slide-up após carregamento
+============================================================ */
+@keyframes fadeIn {
+  0%   { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 1.2s ease-out forwards; }
+::selection { background: rgba(10,185,220,0.3); color: #fff; }
+
+code, pre {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ============================================================
+   BOTÃO VOLTAR AO TOPO — inicia invisível (opacity:0 +
+   visibility:hidden) e ganha classe .visible via JS quando
+   scroll > 300px; visibility garante que o botão não receba
+   foco por teclado enquanto oculto (opacity:0 sozinho não
+   impediria isso)
+============================================================ */
+#back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 34px;
+  height: 34px;
+  background: rgba(9,9,11,0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(236,72,153,0.45);
+  border-radius: 50%;
+  color: #ec4899;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  /* inicia deslocado + encolhido para criar entrada com spring */
+  transform: translateY(10px) scale(0.88);
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease,
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.18s ease,
+    border-color 0.18s ease;
+  padding: 0;
+}
+#back-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+#back-to-top:hover {
+  background: rgba(236,72,153,0.08);
+  border-color: rgba(236,72,153,0.6);
+  transform: scale(1.08);
+}
+#back-to-top:active {
+  transform: scale(0.96);
+}
+
+/* ============================================================
+   SIDEBAR MOBILE — overlay semitransparente que bloqueia
+   interação com o conteúdo atrás enquanto o menu está aberto;
+   pointer-events:none no estado oculto impede cliques fantasma
+   mesmo quando opacity já chegou a 0
+============================================================ */
+.gq-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 200;
+  display: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.gq-sidebar-overlay.active {
+  display: block;
+  opacity: 1;
+  pointer-events: auto;
+}
+.gq-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 260px;
+  height: 100%;
+  background: rgba(9,9,11,0.97);
+  border-left: 1px solid rgba(63,63,70,0.4);
+  z-index: 300;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.gq-sidebar.active {
+  transform: translateX(0);
+}
+.gq-sidebar-header {
+  height: 56px;
+  padding: 0 1.25rem 0 1.25rem;
+  border-bottom: 1px solid rgba(63,63,70,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.gq-sidebar-close {
+  padding: 0.5rem;
+  border-radius: 0.4rem;
+  background: rgba(10,185,220,0.1);
+  border: 1px solid rgba(10,185,220,0.3);
+  color: #0AB9DC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+.gq-sidebar-close:hover {
+  background: rgba(10,185,220,0.2);
+}
+.gq-sidebar-nav {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+.gq-sidebar-link {
+  display: block;
+  padding: 0.625rem 0.75rem;
+  border-radius: 6px;
+  color: #a1a1aa;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8125rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  transition: background 0.15s, color 0.15s;
+}
+.gq-sidebar-link:hover {
+  background: rgba(10,185,220,0.07);
+  color: #fafafa;
+}
+.gq-sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid rgba(63,63,70,0.4);
+  flex-shrink: 0;
+}
+.gq-hamburger {
+  display: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid rgba(63,63,70,0.5);
+  color: #0AB9DC;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.gq-hamburger:hover {
+  background: rgba(10,185,220,0.08);
+  border-color: rgba(10,185,220,0.4);
+}
+@media (max-width: 767px) {
+  .gq-hamburger { display: flex; }
+}
+/* will-change cria uma camada de composição GPU dedicada para o canvas;
+   evita que o re-paint do Three.js afete o restante do DOM */
+#canvas-container canvas { will-change: transform; }
+
+/* ============================================================
+   LOADING SCREEN — sobrepõe toda a página (z-index: 99999)
+   enquanto o Three.js inicializa; oculto via opacity + display
+   após 3 s para garantir que a cena já esteja renderizada
+============================================================ */
+#grouter-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #09090b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s ease;
+}
+/* slide-up com spring ao entrar; both preenche forwards e backwards */
+.gq-loader-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: gqLoaderFadeUp 0.75s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes gqLoaderFadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* texto de status começa com opacity:0; JS o faz aparecer antes de trocar a mensagem */
+#grouter-loader-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: rgba(10,185,220,0.6);
+  letter-spacing: 0.05em;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 1rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+/* ponto animado antes do texto de status — criado via ::before para não poluir o HTML */
+#grouter-loader-status::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: gqStatusDot 1.6s ease-in-out infinite;
+}
+/* pulso do ponto: alterna entre 25% e 100% de opacidade + leve escala */
+@keyframes gqStatusDot {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50%       { opacity: 1;    transform: scale(1.4); }
+}
+
+/* ============================================================
+   BARRA DE PROGRESSO DO LOADER — curva não-linear: avança
+   rápido até 72%, desacelera até 88% e só completa quando
+   hideLoader() é chamado; simula carregamento realista sem
+   precisar de um progresso real para acompanhar
+============================================================ */
+.gq-progress-container {
+  width: 200px;
+  height: 2px;
+  background: rgba(10,185,220,0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  display: block;
+  margin: 0 auto;
+}
+.gq-progress-bar {
+  height: 100%;
+  background: #0AB9DC;
+  width: 0%;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(10,185,220,0.4);
+  animation: gqFillProgress 2s cubic-bezier(0.4, 0, 0.15, 1) forwards;
+}
+@keyframes gqFillProgress {
+  0%   { width: 0%; }
+  55%  { width: 72%; }  /* avanço rápido inicial */
+  80%  { width: 88%; }  /* desaceleração — "aguardando" */
+  100% { width: 100%; } /* completado ao fim da animação */
+}
+
+/* ============================================================
+   BOTÃO COPIAR NO TERMINAL — inline no texto de comando;
+   line-height:0 evita que o ícone empurre a altura da linha
+============================================================ */
+.gq-term-copy {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-left: 0.4rem;
+  cursor: pointer;
+  color: rgba(10,185,220,0.5);
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  transition: color 0.15s ease;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.gq-term-copy:hover { color: #0AB9DC; }
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(10, 185, 220, 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(10, 185, 220, 0.5);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(10, 185, 220, 0.25) transparent;
+}
+/* ============================================================
+   PING DO INSTALL — anel de onda que pulsa 7x no botão de
+   instalação quando o usuário clica em um card de provedor;
+   sinaliza "volte aqui para instalar" sem texto adicional
+============================================================ */
+@keyframes installPing {
+  0%   { box-shadow: 0 0 0 0 rgba(10,185,220,0.5); }
+  70%  { box-shadow: 0 0 0 12px rgba(10,185,220,0); }
+  100% { box-shadow: 0 0 0 0 rgba(10,185,220,0); }
+}
+
+/* ============================================================
+   SCROLL REVEAL — estado inicial oculto; .visible é adicionado
+   pelo IntersectionObserver quando o elemento entra na viewport;
+   unobserve() após a primeira entrada garante que a animação
+   ocorra apenas uma vez (não reverte ao sair)
+============================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+</style>
+</head>
+
+<body class="antialiased overflow-x-hidden">
+
+<!-- ============================================================
+     LOADING SCREEN — cobre toda a página enquanto o Three.js
+     e os ícones Lucide carregam; o texto de status é ciclado
+     via JS (statusMessages[]) e a barra de progresso é pura
+     CSS (sem progresso real); removido após 3 s via fadeOut
+============================================================ -->
+<div id="grouter-loader">
+  <div class="gq-loader-body">
+    <!-- texto preenchido e trocado por JS; começa vazio para evitar flash -->
+    <p id="grouter-loader-status"></p>
+    <div class="gq-progress-container">
+      <div class="gq-progress-bar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════════════ -->
+<header style="position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 3rem;display:flex;justify-content:space-between;align-items:center;background:rgba(9,9,11,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid rgba(63,63,70,0.25);">
+  <span style="display:flex;align-items:center;gap:0.5rem;">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 6px rgba(10,185,220,0.8)) drop-shadow(0 0 14px rgba(10,185,220,0.4)) drop-shadow(0 0 28px rgba(10,185,220,0.2));">
+      <line x1="12" y1="12" x2="5" y2="6" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="12" y1="12" x2="19" y2="6" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+      <line x1="12" y1="12" x2="12" y2="20" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="2.5" fill="#0AB9DC"/>
+      <circle cx="5" cy="6" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+      <circle cx="19" cy="6" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+      <circle cx="12" cy="20" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+    </svg>
+    <span style="font-family:'Inter',sans-serif;font-weight:700;letter-spacing:0.05em;"><span style="color:#0AB9DC;font-size:1.75rem;text-shadow:0 0 10px rgba(10,185,220,0.8),0 0 30px rgba(10,185,220,0.4);">g</span><span style="color:#ffffff;font-size:1.75rem;text-shadow:0 0 6px rgba(255,255,255,0.9),0 0 15px rgba(10,185,220,0.6),0 0 30px rgba(10,185,220,0.3);">router</span></span>
+  </span>
+  <button class="gq-hamburger" id="gq-hamburger" title="Abrir menu" aria-label="Abrir menu">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+  </button>
+  <nav class="pointer-events-auto hidden md:flex items-center gap-8">
+    <a href="#features" class="font-mono text-sm text-zinc-400 hover:text-white transition-colors uppercase tracking-widest">Recursos</a>
+    <a href="#providers" class="font-mono text-sm text-zinc-400 hover:text-white transition-colors uppercase tracking-widest">Provedores</a>
+    <a href="https://livepix.gg/vaquinha/gqwen-auth" target="_blank" rel="noopener noreferrer"
+       class="text-base px-5 py-2 font-medium hover:opacity-90 transition-all rounded-full flex items-center gap-2"
+       style="background:#ec4899;color:#fff;text-decoration:none;">
+      <!-- TODO: confirm URL — slug will change to grouter-auth when updated on LivePix -->
+      <iconify-icon icon="solar:heart-bold-duotone" style="font-size:1rem;color:#fff;"></iconify-icon>
+      Apoiar
+    </a>
+  </nav>
+</header>
+
+<!-- ============================================================
+     HERO SECTION — ocupa 100vh; empilha em z:
+       z-0  grade pontilhada (grid-overlay)
+       z-1  canvas Three.js (esfera de partículas)
+       z-2  glow atmosférico radial sobre a esfera
+       z-0  blob desfocado (luz ambiente)
+       z-20 conteúdo textual (acima de tudo)
+     pointer-events:none nos elementos decorativos garante que
+     cliques passem direto para o conteúdo
+============================================================ -->
+<section class="relative w-full h-screen flex flex-col justify-center px-6 md:px-12 overflow-hidden border-b border-zinc-900">
+  <div class="absolute inset-0 pointer-events-none grid-overlay z-0"></div>
+  <!-- container onde o renderer Three.js injeta o <canvas> via appendChild -->
+  <div id="canvas-container" class="absolute inset-0 z-[1]"></div>
+  <!-- glow radial posicionado no lado direito, alinhado ao centro da esfera em desktop -->
+  <div class="absolute inset-0 pointer-events-none z-[2]"
+       style="background:radial-gradient(ellipse 60% 60% at 70% 50%, rgba(10,185,220,0.07) 0%, transparent 70%);"></div>
+  <!-- blob desfocado de luz ambiente; filter:blur(120px) simula emissão de luz difusa -->
+  <div class="absolute top-1/4 left-1/4 w-96 h-96 rounded-full z-0 pointer-events-none"
+       style="background:rgba(10,185,220,0.07);filter:blur(120px);"></div>
+
+  <!-- ── Hero body ── -->
+  <!-- animation-delay:0.4s aguarda o loader começar a sair antes de revelar o texto -->
+  <div class="relative z-20 w-full max-w-4xl animate-fade-in opacity-0"
+       style="animation-delay:3.4s;margin-top:10rem;">
+
+    <!-- Tag above headline -->
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+      <div style="width:2rem;height:1px;background:#0AB9DC;flex-shrink:0;"></div>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;letter-spacing:0.15em;color:#0AB9DC;text-transform:uppercase;">PROXY LOCAL · opensource</span>
+    </div>
+
+    <h1 class="text-6xl md:text-8xl lg:text-9xl text-white leading-[0.9] tracking-tight font-medium text-balance">
+      <span style="background:linear-gradient(to right,#0AB9DC,#ffffff);-webkit-background-clip:text;background-clip:text;color:transparent;">Toda IA. Sempre grátis.</span>
+    </h1>
+
+    <!-- Subtitle -->
+    <p style="font-family:'Inter',sans-serif;font-size:clamp(1rem,2vw,1.2rem);color:rgba(255,255,255,0.55);line-height:1.6;margin:1.25rem 0 0;">
+      Do terminal ao primeiro token em menos de 60 segundos. Rotação automática de contas, zero configuração, compatível com qualquer ferramenta e sem API keys para gerenciar.
+    </p>
+
+    <div class="mt-10 flex flex-wrap items-center gap-4 pointer-events-auto">
+      <!-- ============================================================
+           BOTÃO DE INSTALAÇÃO — clicar no bloco inteiro copia o
+           comando; o botão interno é separado para o click do bloco
+           não disparar duas vezes (stopPropagation em copy-btn).
+           Dois ícones sobrepostos (position:absolute no mesmo espaço):
+           copy-icon visível por padrão; check-icon aparece por 1,65 s
+           após cópia bem-sucedida — troca feita via opacity para
+           preservar layout (display:none causaria colapso do espaço)
+      ============================================================ -->
+      <div id="install-cmd" class="flex items-stretch rounded overflow-hidden font-mono font-medium text-base" style="background:var(--accent);">
+        <div class="flex items-center gap-3 text-[#09090b] px-5 py-3">
+          <iconify-icon icon="solar:terminal-bold-duotone" class="w-4 h-4 shrink-0"></iconify-icon>
+          bun install -g grouter-auth
+        </div>
+        <button id="copy-btn" onclick="copyInstall()"
+                class="flex items-center justify-center px-3 text-[#09090b] border-l border-[#09090b]/20 hover:bg-[#0891b0] transition-colors"
+                title="Copiar comando">
+          <span style="position:relative;display:flex;width:1rem;height:1rem;">
+            <i id="copy-icon" data-lucide="copy" class="w-4 h-4" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:1;"></i>
+            <i id="check-icon" data-lucide="check" class="w-4 h-4" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:0;"></i>
+          </span>
+        </button>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+             style="box-shadow:0 0 8px rgba(34,197,94,0.6);"></div>
+        <span class="font-mono text-sm text-zinc-500 tracking-widest uppercase">Proxy Online: 3099</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating stats widget -->
+  <div id="proxy-status-widget"
+       style="position:absolute;bottom:3rem;right:2rem;width:220px;background:rgba(10,10,20,0.85);border:1px solid rgba(10,185,220,0.2);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:0.75rem;padding:1rem 1.25rem;z-index:30;opacity:0;transform:translateY(12px);"
+       class="hidden md:block">
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0AB9DC" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.1em;color:rgba(255,255,255,0.4);text-transform:uppercase;">PROXY STATUS</span>
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:0.75rem;"></div>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(255,255,255,0.4);">Endpoint</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#0AB9DC;">localhost:3099/v1</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(255,255,255,0.4);">Protocolo</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#fff;">API-compat.</span>
+      </div>
+    </div>
+    <div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:0.75rem;"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:rgba(255,255,255,0.4);">Status</span>
+      <div style="display:flex;align-items:center;gap:0.375rem;">
+        <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,0.7);"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#22c55e;">ATIVO</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom-left version info -->
+  <div style="position:absolute;bottom:1.5rem;left:2rem;display:flex;flex-direction:column;gap:0.25rem;"
+       class="hidden md:flex">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;color:rgba(255,255,255,0.25);text-transform:uppercase;">grouter · NPM</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;letter-spacing:0.08em;color:rgba(255,255,255,0.25);text-transform:uppercase;">SEM CERTIFICADOS · SEM MITM</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FEATURES  (adapted from "What We Automate")
+═══════════════════════════════════════════════════════════════ -->
+<section id="features" class="py-24 px-6 md:px-12 max-w-7xl mx-auto relative z-20">
+  <div class="mb-16 reveal">
+    <h2 class="text-3xl md:text-4xl tracking-tight font-medium text-white mb-4">Como o <span style="color:#0AB9DC">g</span>router funciona</h2>
+    <p class="text-zinc-400 text-base md:text-lg max-w-xl font-light">Serviço local em background. Qualquer provedor. Seus dados nunca saem da máquina.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Card 1 -->
+    <div class="p-6 rounded-xl bg-zinc-900/40 border border-zinc-800/50 hover:bg-zinc-900/80 hover:border-zinc-700 transition-all duration-300 group reveal reveal-delay-1">
+      <div class="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+           style="color:var(--accent);">
+        <iconify-icon icon="solar:refresh-circle-bold-duotone" class="text-xl"></iconify-icon>
+      </div>
+      <h3 class="text-xl font-medium text-white tracking-tight mb-2">Rotação de Contas</h3>
+      <div class="text-base text-zinc-400 font-light leading-relaxed space-y-3">
+        <p><code class="text-[0.8em] px-1 py-0.5 rounded bg-zinc-800 text-zinc-300">fill-first</code> esgota a conta principal antes de avançar para a próxima.</p>
+        <p><code class="text-[0.8em] px-1 py-0.5 rounded bg-zinc-800 text-zinc-300">round-robin</code> distribui requisições entre contas com stickiness por sessão configurável.</p>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="p-6 rounded-xl bg-zinc-900/40 border border-zinc-800/50 hover:bg-zinc-900/80 hover:border-zinc-700 transition-all duration-300 group reveal reveal-delay-2">
+      <div class="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+           style="color:var(--accent);">
+        <iconify-icon icon="solar:shield-check-bold-duotone" class="text-xl"></iconify-icon>
+      </div>
+      <h3 class="text-xl font-medium text-white tracking-tight mb-2">Zero MITM · Apenas Local</h3>
+      <p class="text-base text-zinc-400 font-light leading-relaxed">
+        Sem certificados. Sem interceptação.
+      </p>
+      <p class="text-base text-zinc-400 font-light leading-relaxed">O tráfego passa por <code class="text-[0.8em] px-1 py-0.5 rounded bg-zinc-800 text-zinc-300">localhost:3099</code> e os dados ficam em <code class="text-[0.8em] px-1 py-0.5 rounded bg-zinc-800 text-zinc-300">~/.grouter/grouter.db</code>.</p>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="p-6 rounded-xl bg-zinc-900/40 border border-zinc-800/50 hover:bg-zinc-900/80 hover:border-zinc-700 transition-all duration-300 group reveal reveal-delay-3">
+      <div class="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"
+           style="color:var(--accent);">
+        <iconify-icon icon="solar:key-bold-duotone" class="text-xl"></iconify-icon>
+      </div>
+      <h3 class="text-xl font-medium text-white tracking-tight mb-2">Login Automático (OAuth)</h3>
+      <p class="text-base text-zinc-400 font-light leading-relaxed">
+        Você faz login uma vez no browser. 
+      </p>
+      <p class="text-base text-zinc-400 font-light leading-relaxed">
+        O <span style="color:#0AB9DC">g</span>router salva o token, renova quando expira e gerencia o fluxo de redirect sozinho, sem intervenção manual.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HOW IT WORKS  (adapted from "Case Study")
+═══════════════════════════════════════════════════════════════ -->
+<section id="how-it-works" class="py-24 border-y border-zinc-900 bg-zinc-950/50 relative z-20">
+  <div class="px-6 md:px-12 max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 items-center">
+
+    <!-- Left: terminal mockup -->
+    <div class="w-full lg:w-1/2 relative reveal reveal-delay-1">
+      <div class="relative w-full rounded-2xl overflow-hidden border border-zinc-800 group"
+           style="background:#0d0d0f;">
+        <!-- Terminal top bar -->
+        <div class="flex items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <div class="w-3 h-3 rounded-full" style="background:#FF5F57;"></div>
+          <div class="w-3 h-3 rounded-full" style="background:#FEBC2E;"></div>
+          <div class="w-3 h-3 rounded-full" style="background:#28C840;"></div>
+          <span class="ml-2 font-mono text-xs text-zinc-500" style="letter-spacing:0.18em;">TERMINAL</span>
+        </div>
+        <!-- Terminal body -->
+        <div class="p-6 font-mono text-base leading-relaxed space-y-3">
+          <div class="text-zinc-500"># 1. adiciona uma conexão — guia pelo OAuth</div>
+          <div><span style="color:var(--accent);">$</span> <span class="text-white">grouter add</span><button class="gq-term-copy" onclick="copyCmd('grouter add','tc-copy-1','tc-check-1')" title="Copiar"><span style="position:relative;display:flex;width:0.875rem;height:0.875rem;"><i id="tc-copy-1" data-lucide="copy" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:1;width:0.875rem;height:0.875rem;"></i><i id="tc-check-1" data-lucide="check" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:0;width:0.875rem;height:0.875rem;"></i></span></button></div>
+          <div class="text-green-400 pl-4">✔ Device code received</div>
+          <div class="text-zinc-400 pl-4">  Authorize: <span style="color:var(--accent);">https://claude.ai/authorize?user_code=...</span></div>
+          <div class="text-green-400 pl-4">✔ Authorization successful!</div>
+          <div class="text-green-400 pl-4">✔ Account saved (priority 1)</div>
+
+          <div class="pt-2 text-zinc-500"># 2. inicia o daemon proxy</div>
+          <div><span style="color:var(--accent);">$</span> <span class="text-white">grouter serve on</span><button class="gq-term-copy" onclick="copyCmd('grouter serve on','tc-copy-2','tc-check-2')" title="Copiar"><span style="position:relative;display:flex;width:0.875rem;height:0.875rem;"><i id="tc-copy-2" data-lucide="copy" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:1;width:0.875rem;height:0.875rem;"></i><i id="tc-check-2" data-lucide="check" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:0;width:0.875rem;height:0.875rem;"></i></span></button></div>
+          <div class="text-zinc-400 pl-4">● Proxy started &nbsp; PID 80708 &nbsp; → &nbsp;<span style="color:var(--accent);">http://localhost:3099</span></div>
+          <div class="text-zinc-400 pl-4">  stop: &nbsp;grouter serve off</div>
+          <div class="text-zinc-400 pl-4">  logs: &nbsp;grouter serve logs</div>
+
+          <div class="pt-2 text-zinc-500"># 3. conecta sua ferramenta ao proxy</div>
+          <div><span style="color:var(--accent);">$</span> <span class="text-white">grouter up openclaude</span><button class="gq-term-copy" onclick="copyCmd('grouter up openclaude','tc-copy-3','tc-check-3')" title="Copiar"><span style="position:relative;display:flex;width:0.875rem;height:0.875rem;"><i id="tc-copy-3" data-lucide="copy" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:1;width:0.875rem;height:0.875rem;"></i><i id="tc-check-3" data-lucide="check" style="position:absolute;inset:0;transition:opacity 150ms ease;opacity:0;width:0.875rem;height:0.875rem;"></i></span></button></div>
+          <div class="text-green-400 pl-4">✔ ~/.openclaude/settings.json &nbsp; → env block written</div>
+          <div class="text-green-400 pl-4">✔ PowerShell profile &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→ updated</div>
+          <div class="text-zinc-400 pl-4">  endpoint &nbsp; <span style="color:var(--accent);">http://localhost:3099/v1</span></div>
+          
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: copy -->
+    <div class="w-full lg:w-1/2 space-y-8 reveal reveal-delay-2">
+      <div class="flex items-center gap-2">
+        <iconify-icon icon="solar:routing-3-bold-duotone" class="text-xl" style="color:var(--accent);"></iconify-icon>
+        <span class="font-mono text-sm uppercase tracking-widest" style="color:var(--accent);">3 comandos para começar</span>
+      </div>
+
+      <h2 class="text-3xl md:text-5xl tracking-tight font-medium text-white leading-tight">
+        Do install à primeira requisição em menos de 60 segundos.
+      </h2>
+
+      <p class="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+        <span style="color:#0AB9DC">grouter</span> expõe um único endpoint OpenAI-compatível em <code class="text-base px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-200">:3099</code>. Qualquer ferramenta que já usa a API OpenAI conecta na hora, sem alterar config, sem gerenciar API keys e sem re-autenticar toda vez que o token expira.
+      </p>
+
+      <div class="grid grid-cols-2 gap-8 pt-6 border-t border-zinc-900">
+        <div>
+          <div class="text-4xl tracking-tighter font-medium text-white mb-1">22+</div>
+          <div class="text-sm font-mono text-zinc-500 uppercase tracking-widest">Provedores Suportados</div>
+        </div>
+        <div>
+          <div class="text-4xl tracking-tighter font-medium text-white mb-1">0 certs</div>
+          <div class="text-sm font-mono text-zinc-500 uppercase tracking-widest">Sem MITM</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PROVIDERS  (adapted from "Integrations")
+═══════════════════════════════════════════════════════════════ -->
+<section id="providers" class="py-32 px-6 md:px-12 max-w-7xl mx-auto relative z-20 border-b border-zinc-900">
+  <div class="text-center mb-16 max-w-2xl mx-auto flex flex-col items-center reveal">
+    <h2 class="text-4xl md:text-5xl tracking-tight font-medium text-white mb-6">Todo modelo. Um endpoint.</h2>
+    <p class="text-base md:text-lg text-zinc-400 font-light text-balance leading-relaxed">
+      Conecte Claude, GPT, Gemini e mais de 20 provedores via OAuth ou API key. Adicione várias contas por provedor e o <span style="color:#0AB9DC">grouter</span> rotaciona automaticamente quando uma atinge o limite.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto reveal reveal-delay-1">
+
+    <!-- Qwen Code (deprecated) -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">QW</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">QWEN CODE</span>
+      </div>
+      <div>
+        <span style="font-size:0.65rem;font-family:'JetBrains Mono',monospace;color:#f43f5e;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.4);padding:0.1rem 0.4rem;border-radius:3px;letter-spacing:0.04em;">DESCONTINUADO</span>
+      </div>
+    </div>
+
+    <!-- GitHub Copilot -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">GH</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">GITHUB COPILOT</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Kimi Coding -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">KM</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">KIMI CODING</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- KiloCode -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">KL</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">KILOCODE</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Claude (OAuth) -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">CL</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">CLAUDE</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- OpenAI Codex -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">OA</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">OPENAI CODEX</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Gemini CLI -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">GC</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">GEMINI CLI</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Antigravity -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">AG</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">ANTIGRAVITY</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Kiro -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">KI</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">KIRO</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- iFlow -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">IF</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">IFLOW</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Qoder -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">QD</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">QODER</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Cline -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">CN</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">CLINE</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Cursor -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">CS</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">CURSOR</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- GitLab Duo -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">GL</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">GITLAB DUO</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- OpenCode -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">OC</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">OPENCODE</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- OpenRouter -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">OR</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">OPENROUTER</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Groq -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">GR</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">GROQ</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- DeepSeek -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">DS</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">DEEPSEEK</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- OpenAI -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">OA</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">OPENAI</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Anthropic -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">AN</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">ANTHROPIC</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Google Gemini -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">GG</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">GOOGLE GEMINI</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- NVIDIA NIM -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">NV</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">NVIDIA NIM</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+    <!-- Ollama Cloud -->
+    <div class="group p-6 rounded-xl bg-[#0c0c0e] border border-zinc-800/60 hover:bg-[#121214] hover:border-zinc-700 transition-all flex flex-col gap-4">
+      <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.2);">
+        <span class="text-xs font-bold font-mono tracking-wide" style="color:#0AB9DC;">OL</span>
+      </div>
+      <div class="flex-1">
+        <span class="text-sm font-semibold text-white uppercase tracking-wider font-mono">OLLAMA CLOUD</span>
+      </div>
+      <div>
+        <span class="flex items-center gap-1 text-base text-blue-400 font-medium">
+          Conectar <i data-lucide="arrow-right" stroke-width="2" class="w-3 h-3"></i>
+        </span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     VAQUINHA / APOIE O PROJETO
+═══════════════════════════════════════════════════════════════ -->
+<section class="relative py-24 md:py-32 px-6 md:px-12 bg-[#09090b] z-20 border-b border-zinc-900">
+  <div class="max-w-3xl mx-auto flex flex-col gap-6">
+
+    <!-- Header da campanha -->
+    <div class="flex flex-col items-center text-center gap-5">
+      <iconify-icon icon="solar:heart-bold-duotone" style="font-size:2.8rem;color:#ec4899;"></iconify-icon>
+      <h2 class="text-3xl md:text-4xl tracking-tight font-medium text-white reveal">Apoie o <span style="color:#0AB9DC">g</span>router</h2>
+      <p class="text-base text-zinc-400 font-light max-w-xl leading-relaxed">
+        <span style="color:#0AB9DC">g</span>router é 100% gratuito. Se ele economiza seu tempo e dinheiro, considere contribuir para manter o projeto vivo.
+      </p>
+      <a href="https://livepix.gg/vaquinha/gqwen-auth" target="_blank" rel="noopener noreferrer"
+         class="flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-base text-white transition-all hover:opacity-90"
+         style="background:#ec4899;">
+        <!-- TODO: confirm URL — slug will change to grouter-auth when updated on LivePix -->
+        <i data-lucide="heart" stroke-width="2" class="w-4 h-4"></i>
+        Contribuir na Vaquinha
+      </a>
+    </div>
+
+    <!-- Card de progresso geral -->
+    <div class="p-6 rounded-2xl border border-zinc-800 reveal reveal-delay-1" style="background:rgba(255,255,255,0.03);">
+      <div class="flex justify-between items-end mb-4">
+        <div>
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest block mb-1">Arrecadado</span>
+          <span class="text-3xl font-bold" style="color:#ec4899;">R$ 2.931,72</span>
+        </div>
+        <div class="text-right">
+          <span class="text-xs font-mono text-zinc-500 uppercase tracking-widest block mb-1">Meta atual</span>
+          <span class="text-3xl font-bold text-white">R$ 5.000,00</span>
+        </div>
+      </div>
+      <div class="w-full rounded-full bg-zinc-800 overflow-hidden" style="height:0.5rem;">
+        <div class="h-full rounded-full transition-all duration-700" style="background:#ec4899;width:58.6%;"></div>
+      </div>
+    </div>
+
+    <!-- Cards de metas individuais -->
+    <div class="flex flex-col gap-4">
+
+      <!-- Meta 1 -->
+      <div class="p-5 rounded-xl border reveal reveal-delay-1" style="background:rgba(34,197,94,0.04);border-color:rgba(34,197,94,0.2);">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-widest"
+                  style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">Meta 1 ✓</span>
+            <span class="text-base font-bold text-white">R$ 800,00</span>
+          </div>
+          <span class="text-base font-medium text-green-400">Concluída</span>
+        </div>
+        <p class="text-base text-zinc-400 font-light mb-3">Website, domínio, incluir mais templates e integrações.</p>
+        <div class="w-full rounded-full bg-zinc-800 overflow-hidden" style="height:0.375rem;">
+          <div class="h-full rounded-full" style="background:#22c55e;width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Meta 2 -->
+      <div class="p-5 rounded-xl border reveal reveal-delay-2" style="background:rgba(34,197,94,0.04);border-color:rgba(34,197,94,0.2);">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-widest"
+                  style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">Meta 2 ✓</span>
+            <span class="text-base font-bold text-white">R$ 2.000,00</span>
+          </div>
+          <span class="text-base font-medium text-green-400">Concluída</span>
+        </div>
+        <p class="text-base text-zinc-400 font-light mb-3">Sistema de Agentes: cada modelo/fornecedor possui sua própria missão.</p>
+        <div class="w-full rounded-full bg-zinc-800 overflow-hidden" style="height:0.375rem;">
+          <div class="h-full rounded-full" style="background:#22c55e;width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- Meta 3 -->
+      <div class="p-5 rounded-xl border border-zinc-800 reveal reveal-delay-3" style="background:rgba(255,255,255,0.02);">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full font-mono uppercase tracking-widest"
+                  style="background:rgba(236,72,153,0.15);color:#ec4899;border:1px solid rgba(236,72,153,0.3);">Meta 3</span>
+            <span class="text-base font-bold text-white">R$ 5.000,00</span>
+          </div>
+          <span class="text-base font-medium" style="color:#ec4899;">58,6%</span>
+        </div>
+        <p class="text-base text-zinc-400 font-light mb-3">Escalar o projeto internacionalmente.</p>
+        <div class="w-full rounded-full bg-zinc-800 overflow-hidden" style="height:0.375rem;">
+          <div class="h-full rounded-full" style="background:#ec4899;width:58.6%;"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ranking de apoiadores -->
+    <div class="p-6 rounded-2xl border border-zinc-800 reveal reveal-delay-2" style="background:rgba(255,255,255,0.03);">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-sm font-bold px-3 py-1 rounded-full"
+              style="background:rgba(236,72,153,0.15);color:#ec4899;border:1px solid rgba(236,72,153,0.3);">273 apoiadores</span>
+        <span class="text-base font-medium text-white">Ranking de apoiadores</span>
+      </div>
+      <div class="divide-y divide-zinc-800/60">
+
+        <div class="flex items-center justify-between py-2.5">
+          <div class="flex items-center gap-3">
+            <span style="display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:0.25rem;background:rgba(255,215,0,0.1);border:1px solid #FFD700;font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;color:#FFD700;flex-shrink:0;">1</span>
+            <span class="text-base font-medium text-white">Matheus</span>
+          </div>
+          <span class="text-base font-medium" style="color:#ec4899;">R$ 500,00</span>
+        </div>
+
+        <div class="flex items-center justify-between py-2.5">
+          <div class="flex items-center gap-3">
+            <span style="display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:0.25rem;background:rgba(192,192,192,0.1);border:1px solid #C0C0C0;font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;color:#C0C0C0;flex-shrink:0;">2</span>
+            <span class="text-base font-medium text-white">Enzo Amaral</span>
+          </div>
+          <span class="text-base font-medium" style="color:#ec4899;">R$ 500,00</span>
+        </div>
+
+        <div class="flex items-center justify-between py-2.5">
+          <div class="flex items-center gap-3">
+            <span style="display:flex;align-items:center;justify-content:center;width:1.5rem;height:1.5rem;border-radius:0.25rem;background:rgba(205,127,50,0.1);border:1px solid #CD7F32;font-family:'JetBrains Mono',monospace;font-size:0.7rem;font-weight:700;color:#CD7F32;flex-shrink:0;">3</span>
+            <span class="text-base font-medium text-white">Alcino Ribeiro da Silva Junior</span>
+          </div>
+          <span class="text-base font-medium" style="color:#ec4899;">R$ 400,00</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- CTA final -->
+    <div class="flex flex-col items-center gap-4 pt-2 reveal reveal-delay-3">
+      <a href="https://livepix.gg/vaquinha/gqwen-auth" target="_blank" rel="noopener noreferrer"
+         class="flex items-center gap-2 px-8 py-3.5 rounded-full font-bold text-base text-white transition-all hover:opacity-90"
+         style="background:#ec4899;">
+        <!-- TODO: confirm URL — slug will change to grouter-auth when updated on LivePix -->
+        <i data-lucide="heart" stroke-width="2" class="w-4 h-4"></i>
+        Contribuir no LivePix
+      </a>
+      <p class="text-sm text-zinc-500 text-center">Qualquer valor ajuda. Obrigado pelo apoio!</p>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════════════════ -->
+<footer class="bg-[#09090b] pt-20 pb-10 px-6 md:px-12 relative z-20 border-t border-zinc-900" style="font-family:'JetBrains Mono',monospace;">
+  <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
+
+    <!-- Column 1 — Brand -->
+    <div class="flex flex-col items-start reveal">
+      <div class="flex items-center gap-3 mb-5">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <line x1="12" y1="12" x2="5" y2="6" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="12" y1="12" x2="19" y2="6" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="12" y1="12" x2="12" y2="20" stroke="#0AB9DC" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="2.5" fill="#0AB9DC"/>
+          <circle cx="5" cy="6" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+          <circle cx="19" cy="6" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+          <circle cx="12" cy="20" r="1.8" fill="none" stroke="#0AB9DC" stroke-width="1.2"/>
+        </svg>
+        <span class="text-lg tracking-tight text-white font-medium font-mono" style="font-family:'Inter',sans-serif;"><span style="color:#0AB9DC;">g</span><span style="color:#ffffff;">router</span></span>
+      </div>
+      <p class="text-sm text-zinc-500 font-light leading-relaxed max-w-xs">
+        Roteador universal de IA. Conecte Claude Code, Copilot, Gemini, Kimi, Kiro e mais de 20 ferramentas via um único endpoint local compatível com OpenAI. Rotação de contas, OAuth integrado e zero MITM.
+      </p>
+    </div>
+
+    <!-- Column 2 — Links -->
+    <div class="reveal reveal-delay-1">
+      <h4 class="text-xs font-mono text-white uppercase tracking-widest mb-5">Links</h4>
+      <ul class="space-y-4">
+        <li>
+          <a href="https://youtube.com/@gxdevv" target="_blank" rel="noopener noreferrer"
+             class="footer-link flex items-center gap-2.5 text-sm transition-colors">
+            <svg class="footer-icon w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            @gxdevv
+          </a>
+        </li>
+        <li>
+          <a href="https://github.com/gxdevs" target="_blank" rel="noopener noreferrer"
+             class="footer-link flex items-center gap-2.5 text-sm transition-colors">
+            <svg class="footer-icon w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            github.com/gxdevs
+          </a>
+        </li>
+        <li>
+          <a href="https://discord.gg/GXV3TFAg" target="_blank" rel="noopener noreferrer"
+             class="footer-link flex items-center gap-2.5 text-sm transition-colors">
+            <svg class="footer-icon w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+            </svg>
+            discord.gg/GXV3TFAg
+          </a>
+        </li>
+        <li>
+          <a href="https://livepix.gg/vaquinha/gqwen-auth" target="_blank" rel="noopener noreferrer"
+             class="footer-link flex items-center gap-2.5 text-sm transition-colors">
+            <!-- TODO: confirm URL — slug will change to grouter-auth when updated on LivePix -->
+            <i data-lucide="heart" stroke-width="1.5" class="footer-icon w-4 h-4 shrink-0"></i>
+            livepix.gg/vaquinha
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Column 3 — Produto -->
+    <div class="reveal reveal-delay-2">
+      <h4 class="text-xs font-mono text-white uppercase tracking-widest mb-5">Produto</h4>
+      <ul class="space-y-4">
+        <li><a href="#features" class="text-sm text-zinc-500 hover:text-[#0AB9DC] transition-colors">Funcionalidades</a></li>
+        <li><a href="#how-it-works" class="text-sm text-zinc-500 hover:text-[#0AB9DC] transition-colors">Como Funciona</a></li>
+        <li><a href="#providers" class="text-sm text-zinc-500 hover:text-[#0AB9DC] transition-colors">Provedores</a></li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="max-w-7xl mx-auto pt-8 border-t border-zinc-900/60 flex flex-col md:flex-row items-center justify-between gap-4 uppercase">
+    <span class="text-sm font-light text-zinc-600">©2026 <a href="https://github.com/gxdevs" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-400 transition-colors">gxdevs</a> | <a href="https://github.com/arthurcontato10" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-400 transition-colors">arthur</a></span>
+    <div class="flex items-center gap-2">
+      <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+      <span class="text-xs font-mono text-zinc-500 tracking-widest">localhost:3099</span>
+    </div>
+  </div>
+</footer>
+
+<style>
+.footer-link { color: #9ca3af; }
+.footer-link:hover { color: #0AB9DC; }
+.footer-link .footer-icon { color: inherit; }
+</style>
+
+
+<!-- ============================================================
+     SHADERS GLSL — armazenados em tags <script> com type não
+     executável para que o browser ignore o conteúdo; Three.js
+     os lê via .textContent e compila na GPU em runtime.
+
+     VERTEX SHADER — executa uma vez por partícula (vértice).
+       Uniforms (enviados pelo JS a cada frame):
+         uTime        → tempo acumulado; drive a animação do ruído
+         uDistortion  → amplitude do deslocamento radial (0.6)
+         uSize        → tamanho base das partículas (1.5)
+         uMouse       → posição normalizada do mouse [-1, 1]
+       Varyings (passados ao fragment shader):
+         vNoise → valor de ruído local; controla brilho por partícula
+         vPos   → posição final; disponível no fragment mas não usado
+
+     snoise(vec3) — Simplex Noise 3D (implementação canônica de
+       Stefan Gustavson); produz ruído suave e derivável sem artefatos
+       de grade; noiseFreq=0.8 define a escala espacial do ruído.
+       O componente X inclui uTime*0.2 para animar o ruído ao longo
+       do tempo sem alterar Y/Z, criando deformação "viva".
+
+     gl_PointSize escalado por (20/-mvPosition.z) aplica perspectiva
+     manual: partículas mais distantes ficam menores.
+============================================================ -->
+<script type="x-shader/x-vertex" id="vertexShader">
+  uniform float uTime;
+  uniform float uDistortion;
+  uniform float uSize;
+  uniform vec2 uMouse;
+  varying float vAlpha;
+  varying vec3 vPos;
+  varying float vNoise;
+
+  /* funções auxiliares do Simplex Noise — redução modular para evitar
+     overflow nas permutações de inteiros na GPU */
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+  /* Simplex Noise 3D — retorna valor em [-1, 1] */
+  float snoise(vec3 v) {
+    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+    vec3 i  = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+    vec3 x1 = x0 - i1 + 1.0 * C.xxx;
+    vec3 x2 = x0 - i2 + 2.0 * C.xxx;
+    vec3 x3 = x0 - 1.0 + 3.0 * C.xxx;
+    i = mod289(i);
+    vec4 p = permute(permute(permute(
+                i.z + vec4(0.0, i1.z, i2.z, 1.0))
+              + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+              + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+    float n_ = 1.0/7.0;
+    vec3 ns = n_ * D.wyz - D.xzx;
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+    vec4 s0 = floor(b0)*2.0 + 1.0;
+    vec4 s1 = floor(b1)*2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+    vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+    vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+    p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+    vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+    m = m * m;
+    return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+  }
+
+  void main() {
+    vec3 pos = position;
+    float noiseFreq = 0.8;
+    /* anima apenas o eixo X com o tempo; Y e Z estáticos = deformação direcional */
+    float noise = snoise(vec3(pos.x * noiseFreq + uTime * 0.2, pos.y * noiseFreq, pos.z * noiseFreq));
+    vNoise = noise;
+    /* desloca cada vértice para fora/dentro ao longo da normal (radial) */
+    vec3 newPos = pos + (normalize(pos) * (noise * uDistortion));
+    vec4 mvPosition = modelViewMatrix * vec4(newPos, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    /* perspectiva manual: tamanho inversamente proporcional à profundidade */
+    gl_PointSize = uSize * (20.0 / -mvPosition.z) * (1.0 + noise * 0.2);
+    vAlpha = 1.0;
+    vPos = newPos;
+  }
+</script>
+
+<!-- ============================================================
+     FRAGMENT SHADER — executa uma vez por pixel de cada partícula.
+       Uniforms:
+         uColor   → cor base (#0AB9DC) enviada como THREE.Color
+         uOpacity → opacidade global (0.8)
+       Lógica:
+         - gl_PointCoord vai de [0,0] a [1,1] dentro do quad da
+           partícula; subtrair 0.5 centraliza em [-0.5, 0.5]
+         - pixels com dist > 0.5 são descartados → partícula circular
+         - smoothstep(0.5, 0.1, dist) cria borda suave (antialiasing)
+         - vNoise mapeia cor entre escuro (30%) e claro (250%) do
+           accent, criando variação de brilho orgânica entre partículas
+============================================================ -->
+<script type="x-shader/x-fragment" id="fragmentShader">
+  uniform vec3 uColor;
+  uniform float uOpacity;
+  varying float vNoise;
+  varying vec3 vPos;
+
+  void main() {
+    vec2 center = gl_PointCoord - vec2(0.5);
+    float dist = length(center);
+    /* descarta pixels fora do círculo — transforma o quad padrão em disco */
+    if (dist > 0.5) discard;
+    /* borda suavizada para evitar aliasing nas bordas das partículas */
+    float alpha = smoothstep(0.5, 0.1, dist) * uOpacity;
+    vec3 darkColor  = uColor * 0.3;   /* partículas "em sombra" */
+    vec3 lightColor = uColor * 2.5;   /* partículas "em destaque" */
+    /* vNoise*0.6+0.4 mapeia [-1,1] para [~-0.2, 1.0] — evita partículas totalmente escuras */
+    vec3 finalColor = mix(darkColor, lightColor, vNoise * 0.6 + 0.4);
+    gl_FragColor = vec4(finalColor, alpha);
+  }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+
+  /* ============================================================
+     SETUP THREE.JS — cena, câmera e renderer
+     FogExp2 com densidade 0.035 dissipa partículas distantes
+     gradualmente, evitando corte abrupto no far plane (100)
+  ============================================================ */
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x09090b, 0.035);
+
+  /* FOV 50° + posição z=18 enquadram a esfera (raio 4) com espaço para os anéis */
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0, 18);
+
+  /* alpha:true permite que o fundo da página apareça atrás das partículas */
+  const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, powerPreference: 'high-performance' });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  /* cap em 2 evita custo excessivo em telas Retina de alta densidade */
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  /* grupo pai que recebe rotação global — orbits e partículas giram juntos */
+  const systemsGroup = new THREE.Group();
+  scene.add(systemsGroup);
+
+  /* ============================================================
+     GEOMETRIA DE PARTÍCULAS — detalhe 24 → ~5.762 vértices.
+     Em mobile fraco (largura<480 + menos de 4 cores lógicas)
+     usa detalhe 18 (~3.242 vértices) para aliviar a GPU.
+  ============================================================ */
+  const isMobileLow = window.innerWidth < 480 && (navigator.hardwareConcurrency || 4) < 4;
+  const geometry = new THREE.IcosahedronGeometry(4.0, isMobileLow ? 18 : 24);
+  const uniforms = {
+    uTime:           { value: 0 },         /* tempo acumulado — avança ~0.015/frame */
+    uDistortion:     { value: 0.6 },       /* amplitude de deslocamento radial */
+    uSize:           { value: 1.5 },       /* tamanho base das partículas em pixels */
+    uColor:          { value: new THREE.Color('#0AB9DC') },
+    uOpacity:        { value: 0.8 },
+    uMouse:          { value: new THREE.Vector2(0, 0) } /* posição suavizada do mouse */
+  };
+
+  /* AdditiveBlending soma as cores sobrepostas, criando brilho onde partículas se agrupam */
+  const material = new THREE.ShaderMaterial({
+    vertexShader:   document.getElementById('vertexShader').textContent,
+    fragmentShader: document.getElementById('fragmentShader').textContent,
+    uniforms, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+
+  const particles = new THREE.Points(geometry, material);
+  systemsGroup.add(particles);
+
+  /* ============================================================
+     ANÉIS ORBITAIS — 3 elipses com raios e inclinações diferentes
+     criam profundidade visual; cada anel tem velocidade de rotação
+     proporcional ao índice (i+1) para movimento assíncrono
+  ============================================================ */
+  const lineGroup = new THREE.Group();
+  systemsGroup.add(lineGroup);
+
+  /**
+   * Cria um anel orbital elíptico e o adiciona ao lineGroup.
+   * @param {number} radius - raio do anel em unidades de cena
+   * @param {{x:number, y:number}} rotation - inclinação em radianos
+   * @returns {THREE.Line} objeto de linha criado
+   */
+  function createOrbit(radius, rotation) {
+    const curve = new THREE.EllipseCurve(0, 0, radius, radius, 0, 2 * Math.PI, false, 0);
+    const geo   = new THREE.BufferGeometry().setFromPoints(curve.getPoints(64));
+    const mat   = new THREE.LineBasicMaterial({ color: 0x1a3a42, transparent: true, opacity: 0.5 });
+    const orbit = new THREE.Line(geo, mat);
+    orbit.rotation.x = rotation.x;
+    orbit.rotation.y = rotation.y;
+    lineGroup.add(orbit);
+    return orbit;
+  }
+
+  /* três anéis com raios e inclinações propositalmente diferentes para assimetria orgânica */
+  const orbits = [
+    createOrbit(5.5, { x: Math.PI / 2,   y: 0           }),
+    createOrbit(5.2, { x: Math.PI / 3,   y: Math.PI / 6 }),
+    createOrbit(6.0, { x: Math.PI / 1.8, y: Math.PI / 4 })
+  ];
+
+  let time = 0, speed = 0.1, mouseX = 0, mouseY = 0;
+
+  /**
+   * Reposiciona e redimensiona o grupo 3D conforme a largura da janela.
+   * Em desktop (≥1024px) a esfera fica deslocada para a direita (x=4.5)
+   * para dar espaço ao texto hero à esquerda. Em mobile fica centralizada
+   * e recuada no eixo Z para caber na viewport vertical.
+   */
+  function adjustLayout() {
+    if (window.innerWidth < 1024) {
+      systemsGroup.position.set(0, 1.5, -5);
+      systemsGroup.scale.set(0.8, 0.8, 0.8);
+    } else {
+      systemsGroup.position.set(4.5, 0, 0);
+      systemsGroup.scale.set(1, 1, 1);
+    }
+  }
+  adjustLayout();
+
+  /* normaliza coordenadas do mouse para [-1, 1] relativo ao canvas */
+  document.addEventListener('mousemove', (e) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouseX = ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+    mouseY = ((e.clientY - rect.top)  / rect.height) * 2 - 1;
+  });
+
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      adjustLayout();
+    }, 150);
+  });
+
+  /**
+   * Loop de animação principal — chamado a cada frame via rAF.
+   * Todas as interpolações usam lerp manual (valor += (alvo - valor) * fator)
+   * para suavização sem dependência de biblioteca; fator 0.05 na câmera
+   * cria lag suave; fator 0.12 no uMouse é mais responsivo para o shader.
+   */
+  function animate() {
+    requestAnimationFrame(animate);
+    if (document.hidden) return;
+    time += 0.01 + (speed * 0.05);
+
+    /* rotação lenta do grupo inteiro — anéis e esfera giram juntos */
+    systemsGroup.rotation.y = time * 0.08;
+    /* oscilação sutil no eixo Z para dar sensação de "respiração" */
+    systemsGroup.rotation.z = Math.sin(time * 0.1) * 0.05;
+    /* oscilação mais lenta nos anéis — frequência 0.05 ≠ 0.1 cria dessincronismo */
+    lineGroup.rotation.x = Math.sin(time * 0.05) * 0.2;
+    /* cada anel gira no eixo Z com velocidade proporcional ao índice */
+    orbits.forEach((o, i) => { o.rotation.z += 0.003 * (i + 1); });
+
+    /* câmera segue o mouse com lerp — fator 0.05 cria paralaxe suave */
+    camera.position.x += (mouseX * 0.5 - camera.position.x) * 0.05;
+    camera.position.y += (mouseY * 0.5 - camera.position.y) * 0.05;
+    camera.lookAt(0, 0, 0);
+
+    /* atualiza uniforms do shader */
+    uniforms.uTime.value = time;
+    /* uMouse suavizado separadamente (fator 0.12) para o shader reagir mais rápido que a câmera */
+    uniforms.uMouse.value.x += (mouseX - uniforms.uMouse.value.x) * 0.12;
+    uniforms.uMouse.value.y += (mouseY - uniforms.uMouse.value.y) * 0.12;
+
+    /* as partículas inclinam individualmente em direção ao mouse — efeito de "olhar" */
+    const targetAngle = 0.5;
+    const leanFactor = 0.06;
+    particles.rotation.y += (uniforms.uMouse.value.x * targetAngle - particles.rotation.y) * leanFactor;
+    particles.rotation.x += (uniforms.uMouse.value.y * targetAngle - particles.rotation.x) * leanFactor;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('beforeunload', () => {
+    renderer.dispose();
+    geometry.dispose();
+    material.dispose();
+  });
+
+  /* ============================================================
+     LOADER — ciclo de mensagens de status com fade entre cada uma;
+     intervalo de 900 ms + 150 ms de fade = ~1050 ms por mensagem;
+     3 mensagens × 900 ms ≈ 2700 ms, dentro do timeout de 3000 ms
+  ============================================================ */
+  const loader = document.getElementById('grouter-loader');
+  const statusEl = document.getElementById('grouter-loader-status');
+  const statusMessages = ['ROTEANDO...', 'VERIFICANDO PROVEDORES...', 'CONECTANDO...'];
+  let statusIdx = 0;
+  statusEl.textContent = statusMessages[0];
+  statusEl.style.opacity = '1';
+  const statusInterval = setInterval(() => {
+    statusEl.style.opacity = '0';
+    /* aguarda o fade-out (150 ms) antes de trocar o texto */
+    setTimeout(() => {
+      statusIdx++;
+      if (statusIdx >= statusMessages.length) { clearInterval(statusInterval); return; }
+      statusEl.textContent = statusMessages[statusIdx];
+      statusEl.style.opacity = '1';
+    }, 150);
+  }, 900);
+
+  /**
+   * Remove o loader com fade de 500 ms e libera o scroll do body.
+   * display:none após a transição remove o elemento do fluxo de
+   * eventos e da acessibilidade (pointer-events, tab focus).
+   */
+  function hideLoader() {
+    loader.style.transition = 'opacity 0.5s ease';
+    loader.style.opacity = '0';
+    document.body.style.overflow = '';
+    setTimeout(() => loader.style.display = 'none', 500);
+  }
+  setTimeout(hideLoader, 3000);
+
+  /* revela o widget flutuante de stats 500 ms após o loader sumir;
+     usa timer em vez de IntersectionObserver pois o elemento está
+     dentro da viewport desde o carregamento (absolute no hero) */
+  setTimeout(() => {
+    const widget = document.getElementById('proxy-status-widget');
+    if (widget) {
+      widget.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      widget.style.opacity = '1';
+      widget.style.transform = 'translateY(0)';
+    }
+  }, 3500);
+
+  /* ============================================================
+     COPY INSTALL — troca ícone copy→check por 1,65 s;
+     .catch(() => {}) silencia rejeição em contextos sem
+     permissão de clipboard (iframes, HTTP não-seguro)
+  ============================================================ */
+  function copyInstall() {
+    navigator.clipboard.writeText('bun install -g grouter-auth').catch(() => {});
+    const copyIcon  = document.getElementById('copy-icon');
+    const checkIcon = document.getElementById('check-icon');
+    if (copyIcon && checkIcon) {
+      copyIcon.style.opacity  = '0';
+      checkIcon.style.opacity = '1';
+      setTimeout(() => {
+        checkIcon.style.opacity = '0';
+        copyIcon.style.opacity  = '1';
+      }, 1650);
+    }
+  }
+  window.copyInstall = copyInstall;
+
+  /**
+   * Copia um comando de terminal e anima os ícones copy/check da linha.
+   * @param {string} text    - texto a copiar
+   * @param {string} copyId  - id do ícone de cópia a ocultar
+   * @param {string} checkId - id do ícone de confirmação a mostrar
+   */
+  function copyCmd(text, copyId, checkId) {
+    navigator.clipboard.writeText(text).catch(() => {});
+    const ci = document.getElementById(copyId);
+    const ck = document.getElementById(checkId);
+    if (ci && ck) {
+      ci.style.opacity = '0';
+      ck.style.opacity = '1';
+      setTimeout(() => { ck.style.opacity = '0'; ci.style.opacity = '1'; }, 1650);
+    }
+  }
+  window.copyCmd = copyCmd;
+
+  /* exibe/oculta o botão de volta ao topo quando scroll passa de 300 px */
+  window.addEventListener('scroll', () => {
+    document.getElementById('back-to-top').classList.toggle('visible', window.scrollY > 300);
+  });
+
+  /* ============================================================
+     SIDEBAR MOBILE — toggle via classe .active; stopPropagation
+     no sidebar impede que cliques internos fechem o menu
+     (o overlay captura cliques externos e fecha)
+  ============================================================ */
+  function gqToggleSidebar(show) {
+    document.getElementById('gq-sidebar').classList.toggle('active', show);
+    document.getElementById('gq-sidebar-overlay').classList.toggle('active', show);
+  }
+  document.getElementById('gq-hamburger').addEventListener('click', () => gqToggleSidebar(true));
+  document.getElementById('gq-sidebar-close').addEventListener('click', (e) => { e.stopPropagation(); gqToggleSidebar(false); });
+  document.getElementById('gq-sidebar-overlay').addEventListener('click', () => gqToggleSidebar(false));
+  /* impede que cliques dentro do sidebar propaguem para o overlay */
+  document.getElementById('gq-sidebar').addEventListener('click', (e) => e.stopPropagation());
+  document.querySelectorAll('.gq-sidebar-link').forEach(l => l.addEventListener('click', () => gqToggleSidebar(false)));
+
+  /* ============================================================
+     SMOOTH SCROLL — intercepta links âncora internos (href^="#")
+     e usa scrollIntoView; preventDefault é necessário para evitar
+     o salto nativo do browser antes da animação CSS
+  ============================================================ */
+  document.querySelectorAll('a[href^="#"]').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var href = this.getAttribute('href');
+      if (href === '#') return; /* links "#" puros não scrollam */
+      var target = document.querySelector(href);
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  /* ============================================================
+     BLOCO DE INSTALAÇÃO CLICÁVEL — o div inteiro copia o comando;
+     stopPropagation no copy-btn evita que o clique no botão
+     dispare o handler do div pai e copie duas vezes
+  ============================================================ */
+  var installCmdEl = document.getElementById('install-cmd');
+  if (installCmdEl) {
+    installCmdEl.style.cursor = 'pointer';
+    installCmdEl.addEventListener('click', function() { copyInstall(); });
+    var copyBtnEl = document.getElementById('copy-btn');
+    if (copyBtnEl) {
+      copyBtnEl.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+  }
+
+  /* stopPropagation no link "Conectar" evita que o clique propague
+     para o card pai e dispare scroll + ping desnecessariamente */
+  document.querySelectorAll('#providers .grid > div > div:last-child').forEach(function(connectDiv) {
+    connectDiv.addEventListener('click', function(e) { e.stopPropagation(); });
+  });
+
+  /* ============================================================
+     CLIQUE EM CARD DE PROVEDOR — sequência em 3 etapas:
+       1. Borda do card pisca ciano por 400 ms (feedback imediato)
+       2. Scroll suave para o topo (direciona ao comando de instalação)
+       3. Após 600 ms (tempo do scroll), 7 pulsos de ping no botão
+          install-cmd comunicam "instale para usar este provedor"
+  ============================================================ */
+  document.querySelectorAll('#providers .grid > div').forEach(function(card) {
+    card.addEventListener('click', function() {
+      card.style.transition = 'border-color 150ms ease';
+      card.style.borderColor = '#0AB9DC';
+      setTimeout(function() { card.style.borderColor = ''; }, 400);
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      /* aguarda o scroll completar (~600 ms) antes de animar o botão */
+      setTimeout(function() {
+        var installCmd = document.getElementById('install-cmd');
+        if (installCmd) {
+          /* 7 iterações × 700 ms = 4900 ms ≈ 5 s de animação */
+          installCmd.style.animation = 'installPing 0.7s ease-out 7';
+          setTimeout(function() { installCmd.style.animation = ''; }, 5000);
+        }
+      }, 600);
+    });
+  });
+
+  /* ============================================================
+     SCROLL REVEAL — IntersectionObserver dispara quando 12% do
+     elemento entra na viewport; unobserve() após a primeira
+     entrada garante animação one-shot (não reverte ao sair)
+  ============================================================ */
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => {
+    revealObserver.observe(el);
+  });
+});
+</script>
+
+<div class="gq-sidebar-overlay" id="gq-sidebar-overlay"></div>
+<aside class="gq-sidebar" id="gq-sidebar">
+  <div class="gq-sidebar-header">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:700;color:#0AB9DC;letter-spacing:0.08em;">grouter</span>
+    <button class="gq-sidebar-close" id="gq-sidebar-close" title="Fechar" aria-label="Fechar menu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <nav class="gq-sidebar-nav">
+    <a href="#features" class="gq-sidebar-link">Recursos</a>
+    <a href="#how-it-works" class="gq-sidebar-link">Como Funciona</a>
+    <a href="#providers" class="gq-sidebar-link">Provedores</a>
+  </nav>
+  <div class="gq-sidebar-footer">
+    <a href="https://livepix.gg/vaquinha/gqwen-auth" target="_blank" rel="noopener noreferrer"
+       class="text-base px-5 py-2 font-medium hover:opacity-90 transition-all rounded-full flex items-center gap-2"
+       style="background:#ec4899;color:#fff;text-decoration:none;justify-content:center;">
+      <!-- TODO: confirm URL — slug will change to grouter-auth when updated on LivePix -->
+      <iconify-icon icon="solar:heart-bold-duotone" style="font-size:1rem;color:#fff;"></iconify-icon>
+      Apoiar
+    </a>
+  </div>
+</aside>
+
+<button id="back-to-top" title="Voltar ao topo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+</button>
+
+</body>
+</html>

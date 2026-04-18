@@ -203,9 +203,9 @@ export function claudeChunkToOpenAI(rawLine: string, state: ClaudeStreamState): 
   try { chunk = JSON.parse(jsonStr) as Record<string, unknown>; } catch { return []; }
 
   // If we captured an event type from the previous line, inject it
-  if ((state as unknown as { _pendingEvent?: string })._pendingEvent) {
-    if (!chunk.type) chunk.type = (state as unknown as { _pendingEvent?: string })._pendingEvent;
-    delete (state as unknown as { _pendingEvent?: string })._pendingEvent;
+  if (state._pendingEvent) {
+    if (!chunk.type) chunk.type = state._pendingEvent;
+    delete state._pendingEvent;
   }
 
   const results: string[] = [];

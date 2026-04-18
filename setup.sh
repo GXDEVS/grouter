@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 BOLD="\033[1m"
 GREEN="\033[32m"
@@ -28,7 +28,7 @@ if command -v grouter &>/dev/null; then
   PREV=$(which grouter)
   echo -e "  ${GRAY}old${RESET}     ${YELLOW}↻${RESET} removing previous install ${GRAY}(${PREV})${RESET}"
   # Try bun unlink from wherever it was installed
-  PREV_DIR=$(readlink -f "$PREV" 2>/dev/null | xargs dirname 2>/dev/null || true)
+  PREV_DIR=$(dirname "$(readlink -f "$PREV" 2>/dev/null)" 2>/dev/null || true)
   if [[ -n "$PREV_DIR" && -f "$PREV_DIR/../package.json" ]]; then
     (cd "$PREV_DIR/.." && bun unlink &>/dev/null || true)
   fi
@@ -39,7 +39,10 @@ fi
 # ── Install dependencies ───────────────────────────────────────────────────────
 echo -e "  ${GRAY}deps${RESET}    ${CYAN}…${RESET} running bun install"
 cd "$SCRIPT_DIR"
-bun install --frozen-lockfile 2>&1 | grep -E "installed|error" | sed 's/^/         /' || bun install 2>&1 | tail -1 | sed 's/^/         /'
+if ! bun install --frozen-lockfile; then
+  echo "[grouter] bun install --frozen-lockfile failed, retrying without frozen lockfile..."
+  bun install
+fi
 echo -e "  ${GRAY}deps${RESET}    ${GREEN}✓${RESET}"
 
 # ── Register globally via bun link ────────────────────────────────────────────
@@ -57,7 +60,7 @@ if ! command -v grouter &>/dev/null; then
   exit 0
 fi
 
-INSTALLED_VER=$(grouter --version 2>/dev/null)
+INSTALLED_VER=$(grouter --version 2>/dev/null || echo "unknown")
 echo -e "  ${GRAY}─────────────────────────────────────────${RESET}"
 echo -e "  ${GREEN}✓${RESET} ${BOLD}grouter v${INSTALLED_VER}${RESET} installed"
 echo ""

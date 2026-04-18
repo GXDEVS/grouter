@@ -1,4 +1,6 @@
 import type { OAuthAdapter, NormalizedTokens } from "../types.ts";
+import type { Connection } from "../../types.ts";
+import { updateAccount } from "../../db/accounts.ts";
 
 const CONFIG = {
   clientId: "Iv1.b507a08c87ecfe98",
@@ -45,6 +47,28 @@ function normalize(tokens: Record<string, unknown>, copilot: { token?: string; e
       githubLogin: user?.login ?? null,
     },
   };
+}
+
+export async function refreshCopilotToken(account: Connection): Promise<Connection> {
+  const headers = {
+    Authorization: `Bearer ${account.access_token}`,
+    Accept: "application/json",
+    "X-GitHub-Api-Version": CONFIG.apiVersion,
+    "User-Agent": CONFIG.userAgent,
+  };
+  try {
+    const resp = await fetch(CONFIG.copilotTokenUrl, { headers });
+    if (!resp.ok) return account;
+    const copilot = await resp.json() as { token?: string; expires_at?: number };
+    if (!copilot.token) return account;
+    const existing = account.provider_data ? JSON.parse(account.provider_data) as Record<string, unknown> : {};
+    const newPd = { ...existing, copilotToken: copilot.token, copilotTokenExpiresAt: copilot.expires_at ?? null };
+    const providerDataStr = JSON.stringify(newPd);
+    updateAccount(account.id, { provider_data: providerDataStr });
+    return { ...account, provider_data: providerDataStr };
+  } catch {
+    return account;
+  }
 }
 
 export const githubAdapter: OAuthAdapter = {

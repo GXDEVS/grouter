@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 BOLD="\033[1m"
 GREEN="\033[32m"

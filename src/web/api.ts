@@ -1,3 +1,8 @@
+// TODO(security): Management API endpoints (/api/*) have no authentication.
+// Any process or script on the same machine can stop the proxy, delete accounts,
+// or add connections. A future release should add X-Grouter-Token header auth.
+// See SEC-04 in audit report. Track this as a priority issue.
+
 import {
   startDeviceFlow,
   pollDeviceFlow,
@@ -121,7 +126,8 @@ export async function handleAuthStart(req: Request): Promise<Response> {
     const device = await startDeviceFlow(providerId);
     return json(device);
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -143,7 +149,8 @@ export async function handleAuthPoll(req: Request): Promise<Response> {
     // pending | slow_down | denied | expired
     return json({ status: result.status === "slow_down" ? "pending" : result.status });
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -177,7 +184,8 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       redirect_uri: started.redirectUri,
     });
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -203,7 +211,8 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
     const connection = await completeAuthCodeFlow(sessionId, capture.code, capture.state);
     return json({ status: "complete", account: connection });
   } catch (err) {
-    return json({ status: "error", message: String(err) });
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -217,7 +226,8 @@ export async function handleAuthImport(req: Request): Promise<Response> {
     const connection = await importToken(body.provider, body.input, body.meta);
     return json({ status: "complete", account: connection });
   } catch (err) {
-    return json({ status: "error", message: String(err) });
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -287,7 +297,8 @@ export async function handleSetConfig(req: Request): Promise<Response> {
 
     return json({ ok: true, strategy: getStrategy(), stickyLimit: getStickyLimit(), port: getProxyPort() });
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -366,7 +377,8 @@ export async function handleAddConnection(req: Request): Promise<Response> {
     const port = getProviderPort(body.provider);
     return json({ ok: true, connection, port });
   } catch (err) {
-    return json({ error: String(err) }, 500);
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
   }
 }
 
@@ -387,7 +399,10 @@ export async function handleCreateProxyPool(req: Request): Promise<Response> {
     if (!body.proxy_url) return json({ error: "proxy_url is required" }, 400);
     const pool = createProxyPool({ name: body.name, proxy_url: body.proxy_url, no_proxy: body.no_proxy ?? null });
     return json({ ok: true, pool });
-  } catch (err) { return json({ error: String(err) }, 500); }
+  } catch (err) {
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
+  }
 }
 
 // ── DELETE /api/proxy-pools/:id ───────────────────────────────────────────────
@@ -408,7 +423,10 @@ export async function handleUpdateProxyPool(id: string, req: Request): Promise<R
     const body = (await req.json()) as Partial<{ name: string; proxy_url: string; no_proxy: string | null; is_active: number }>;
     updateProxyPool(id, body);
     return json({ ok: true, pool: getProxyPoolById(id) });
-  } catch (err) { return json({ error: String(err) }, 500); }
+  } catch (err) {
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
+  }
 }
 
 // ── PATCH /api/connections/:id ─────────────────────────────────────────────────
@@ -420,7 +438,10 @@ export async function handleUpdateConnection(id: string, req: Request): Promise<
     const body = (await req.json()) as { proxy_pool_id?: string | null };
     updateAccount(id, body);
     return json({ ok: true });
-  } catch (err) { return json({ error: String(err) }, 500); }
+  } catch (err) {
+    console.error("[grouter] internal error:", err);
+    return json({ error: "Internal server error" }, 500);
+  }
 }
 
 // ── POST /api/proxy-pools/:id/test ────────────────────────────────────────────
@@ -436,6 +457,34 @@ export function handleProxyStop(): Response {
   // Send the response first, then exit cleanly after a brief delay
   setTimeout(() => { try { removePid(); } catch {} process.exit(0); }, 300);
   return json({ ok: true });
+}
+
+// ── GET /api/donors ───────────────────────────────────────────────────────────
+export function handleGetDonors(): Response {
+  return json({
+    donors: [
+      { name: "Apoiadores anteriores", amount: 2635.72, anonymous: false },
+      { name: "Lucas",        amount: 50.00, anonymous: false },
+      { name: "luismartins",  amount: 50.00, anonymous: false },
+      { name: "Júnior",       amount: 30.00, anonymous: false },
+      { name: "Leonardo",     amount: 30.00, anonymous: false },
+      { name: "Mãozinha",     amount: 25.00, anonymous: false },
+      { name: "Roberto",      amount: 20.00, anonymous: false },
+      { name: "Ovenilson",    amount: 15.00, anonymous: false },
+      { name: "Carlos",       amount: 10.00, anonymous: false },
+      { name: "Daniel",       amount: 10.00, anonymous: false },
+      { name: "Vanderson",    amount: 10.00, anonymous: false },
+      { name: "rafafelipe91", amount: 10.00, anonymous: false },
+      { name: "Rodolfo",      amount: 10.00, anonymous: false },
+      { name: "Pangaré",      amount: 10.00, anonymous: false },
+      { name: "Soho",         amount: 10.00, anonymous: false },
+      { name: "Anônimo",      amount: 10.00, anonymous: true  },
+      { name: "Jeferson",     amount:  2.00, anonymous: false },
+      { name: "Gabriel",      amount:  2.00, anonymous: false },
+      { name: "Álvaro",       amount:  1.00, anonymous: false },
+      { name: "Carlos",       amount:  1.00, anonymous: false },
+    ],
+  });
 }
 
 // ── POST /api/unlock ──────────────────────────────────────────────────────────

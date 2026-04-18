@@ -35,6 +35,7 @@ import {
   handleDeleteProxyPool,
   handleTestProxyPool,
   handleUpdateConnection,
+  handleGetDonors,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
 import { listProviderPorts } from "../db/ports.ts";
@@ -127,6 +128,11 @@ function parseProviderModel(raw: string | null, pinnedProvider?: string): { prov
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// NOTE: CORS wildcard is intentional for the proxy routes (/v1/*).
+// Management routes (/api/*) also use wildcard because the dashboard is served
+// from the same origin (localhost:3099) and requires it. A future improvement
+// would be to add token-based authentication to /api/* routes to compensate.
+// See: SEC-03 in audit report.
 function corsHeaders(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -267,6 +273,10 @@ export function startServer(port: number) {
         PATCH:   (req: BunRequest) => handleUpdateConnection(req.params.id!, req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
+      "/api/donors": {
+        GET:     () => handleGetDonors(),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
       "/api/proxy/stop": {
         POST:    () => handleProxyStop(),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
@@ -393,7 +403,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       ? await checkAndRefreshAccount(selected)
       : selected;
 
-    const dispatch = buildUpstream({ account, body: normalizedBody, stream });
+    const dispatch = await buildUpstream({ account, body: normalizedBody, stream });
     if (dispatch.kind === "unsupported") {
       logReq("POST", "/v1/chat/completions", 501, Date.now() - start, { model: rawModel, account: label, rotated: rotations });
       return jsonResponse({
@@ -492,13 +502,28 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
           if (usage) recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total });
         },
       });
-      upstreamResp.body!.pipeTo(writable).catch(() => {});
+      upstreamResp.body?.pipeTo(writable).catch((err) => {
+        console.error(
+          `[grouter] stream pipe error: ${err instanceof Error ? err.message : err}`
+        );
+      });
+      if (!upstreamResp.body) {
+        writable.close();
+      }
       return new Response(readable, {
         headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive", "X-Accel-Buffering": "no", ...corsHeaders() },
       });
     }
 
-    let data = (await upstreamResp.json()) as Record<string, unknown>;
+    let data: Record<string, unknown>;
+    try {
+      data = (await upstreamResp.json()) as Record<string, unknown>;
+    } catch {
+      return jsonResponse(
+        { error: { message: "Upstream returned non-JSON response", code: 502 } },
+        502
+      );
+    }
 
     // Translate non-stream responses → OpenAI format
     if (dispatch.format === "claude") data = translateClaudeNonStream(data);

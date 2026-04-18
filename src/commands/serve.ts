@@ -1,4 +1,5 @@
-import { openSync } from "node:fs";
+import { openSync, mkdirSync, existsSync } from "node:fs";
+import { dirname } from "node:path";
 import chalk from "chalk";
 import { getStrategy, getStickyLimit, getProxyPort } from "../db/index.ts";
 import { startServer, startAllServers } from "../proxy/server.ts";
@@ -17,7 +18,16 @@ export function serveOnCommand(options: { port?: number }): void {
   const port = options.port ?? getProxyPort();
 
   // Spawn detached child — pipes stdout+stderr to log file
-  const logFd = openSync(LOG_FILE, "a");
+  let logFd: number;
+  try {
+    mkdirSync(dirname(LOG_FILE), { recursive: true });
+    logFd = openSync(LOG_FILE, "a");
+  } catch (err) {
+    console.error(
+      `[grouter] Failed to open log file at ${LOG_FILE}: ${err instanceof Error ? err.message : err}`
+    );
+    process.exit(1);
+  }
   const child = Bun.spawn(["bun", Bun.main, "_daemon", "--port", String(port)], {
     detached: true,
     stdio: ["ignore", logFd, logFd],
@@ -161,6 +171,10 @@ export async function serveRestartCommand(options: { port?: number }): Promise<v
 // ── Logs ──────────────────────────────────────────────────────────────────────
 
 export function serveLogsCommand(): void {
+  if (!existsSync(LOG_FILE)) {
+    console.log("[grouter] No log file found. Start the proxy first with: grouter serve on");
+    process.exit(0);
+  }
   console.log(chalk.gray(`\n  Tailing ${LOG_FILE}  (Ctrl+C to stop)\n`));
   Bun.spawn(["tail", "-f", "-n", "50", LOG_FILE], {
     stdio: ["ignore", "inherit", "inherit"],
