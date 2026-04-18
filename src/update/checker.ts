@@ -14,8 +14,8 @@ const NPM_REGISTRY_URL  = `https://registry.npmjs.org/${pkg.name}/latest`;
 
 export function isNewer(remote: string, local: string): boolean {
   const parse = (v: string) => v.replace(/^v/, "").split(".").map(Number);
-  const [rMaj, rMin, rPat] = parse(remote);
-  const [lMaj, lMin, lPat] = parse(local);
+  const [rMaj = 0, rMin = 0, rPat = 0] = parse(remote);
+  const [lMaj = 0, lMin = 0, lPat = 0] = parse(local);
   if (rMaj !== lMaj) return rMaj > lMaj;
   if (rMin !== lMin) return rMin > lMin;
   return rPat > lPat;

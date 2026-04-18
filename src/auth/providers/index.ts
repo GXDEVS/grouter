@@ -4,7 +4,7 @@ import { githubAdapter } from "./github.ts";
 import { kimiAdapter } from "./kimi.ts";
 import { kilocodeAdapter } from "./kilocode.ts";
 import { claudeAdapter } from "./claude.ts";
-import { codexAdapter } from "./codex.ts";
+import { codexAdapter, chatgptAdapter } from "./codex.ts";
 import { gitlabAdapter } from "./gitlab.ts";
 import { kiroAdapter } from "./kiro.ts";
 import { iflowAdapter } from "./iflow.ts";
@@ -12,6 +12,7 @@ import { qoderAdapter } from "./qoder.ts";
 import { clineAdapter } from "./cline.ts";
 import { cursorAdapter } from "./cursor.ts";
 import { opencodeAdapter } from "./opencode.ts";
+import { geminiCliAdapter } from "./gemini-cli.ts";
 
 const ADAPTERS: Record<string, OAuthAdapter> = {
   [qwenAdapter.id]: qwenAdapter,
@@ -20,6 +21,7 @@ const ADAPTERS: Record<string, OAuthAdapter> = {
   [kilocodeAdapter.id]: kilocodeAdapter,
   [claudeAdapter.id]: claudeAdapter,
   [codexAdapter.id]: codexAdapter,
+  [chatgptAdapter.id]: chatgptAdapter,
   [gitlabAdapter.id]: gitlabAdapter,
   [kiroAdapter.id]: kiroAdapter,
   [iflowAdapter.id]: iflowAdapter,
@@ -27,6 +29,7 @@ const ADAPTERS: Record<string, OAuthAdapter> = {
   [clineAdapter.id]: clineAdapter,
   [cursorAdapter.id]: cursorAdapter,
   [opencodeAdapter.id]: opencodeAdapter,
+  [geminiCliAdapter.id]: geminiCliAdapter,
 };
 
 export function getAdapter(providerId: string): OAuthAdapter | null {

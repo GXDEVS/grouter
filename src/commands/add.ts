@@ -203,7 +203,7 @@ async function runImportFlow(providerId: string, p: Provider): Promise<void> {
     : await editor({
         message: "Token",
         default: "",
-        waitForUseInput: false,
+        waitForUserInput: false,
       }).catch(() => "");
 
   if (!token.trim()) { console.log(chalk.yellow("  Empty token — aborting.\n")); return; }

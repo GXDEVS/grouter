@@ -177,6 +177,7 @@ export interface ClaudeStreamState {
   finishReason: string | null;
   finishReasonSent: boolean;
   serverToolBlockIndex: number;
+  _pendingEvent?: string;
 }
 
 export function newClaudeStreamState(): ClaudeStreamState {

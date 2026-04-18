@@ -271,6 +271,46 @@ export const PROVIDERS: Record<string, Provider> = {
     freeTier: { notice: "No sign-up required — routes to a shared free pool." },
   },
 
+  "gemini-cli": {
+    id: "gemini-cli",
+    name: "Gemini CLI (OAuth)",
+    description: "Google Gemini subscription via Gemini CLI OAuth — no API key required",
+    category: "oauth",
+    authType: "oauth",
+    color: "#4285f4",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    logo: "/public/logos/Gemini-CLI.png",
+    models: [
+      { id: "gemini-2.5-pro",                name: "Gemini 2.5 Pro"         },
+      { id: "gemini-2.5-flash",              name: "Gemini 2.5 Flash"       },
+      { id: "gemini-3.1-pro-preview",        name: "Gemini 3.1 Pro Preview" },
+      { id: "gemini-3.1-flash-lite-preview", name: "Gemini 3.1 Flash Lite"  },
+      { id: "gemini-3-flash-preview",        name: "Gemini 3 Flash Preview" },
+      { id: "gemini-2.0-flash",              name: "Gemini 2.0 Flash"       },
+    ],
+  },
+
+  chatgpt: {
+    id: "chatgpt",
+    name: "ChatGPT (OAuth)",
+    description: "ChatGPT Plus/Pro subscription via native OpenAI OAuth — no API key required",
+    category: "oauth",
+    authType: "oauth",
+    color: "#22c55e",
+    baseUrl: "https://api.openai.com/v1",
+    logo: "/public/logos/chatgpt.png",
+    models: [
+      { id: "gpt-5.4",      name: "GPT-5.4"      },
+      { id: "gpt-5.4-mini", name: "GPT-5.4 Mini" },
+      { id: "gpt-5.2",      name: "GPT-5.2"      },
+      { id: "gpt-5",        name: "GPT-5"        },
+      { id: "gpt-4o",       name: "GPT-4o"       },
+      { id: "gpt-4.1",      name: "GPT-4.1"      },
+      { id: "o3",           name: "o3"           },
+      { id: "o4-mini",      name: "o4-mini"      },
+    ],
+  },
+
   gitlab: {
     id: "gitlab",
     name: "GitLab Duo",

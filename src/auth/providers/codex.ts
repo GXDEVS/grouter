@@ -87,5 +87,6 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
   return adapter;
 }
 
-export const codexAdapter  = buildAdapter("codex",  "codex_cli_rs");
-export const openaiAdapter = buildAdapter("openai", "openai_native");
+export const codexAdapter   = buildAdapter("codex", "codex_cli_rs");
+export const openaiAdapter  = buildAdapter("openai", "openai_native");
+export const chatgptAdapter = buildAdapter("chatgpt", "chatgpt_native");

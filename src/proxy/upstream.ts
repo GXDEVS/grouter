@@ -100,7 +100,7 @@ function openaiCompat(
 // ── Provider-specific builders ────────────────────────────────────────────────
 
 function buildQwen(ctx: BuildContext): UpstreamRequest {
-  const body = { ...ctx.body, messages: [QWEN_SYSTEM_MSG, ...((ctx.body.messages as unknown[]) ?? [])] };
+  const body: Record<string, unknown> = { ...ctx.body, messages: [QWEN_SYSTEM_MSG, ...((ctx.body.messages as unknown[]) ?? [])] };
   if (ctx.stream) body.stream_options = { include_usage: true };
   return {
     url:     buildQwenUrl(ctx.account.resource_url),

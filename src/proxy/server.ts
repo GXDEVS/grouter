@@ -47,8 +47,13 @@ import DASHBOARD_HTML from "../web/dashboard.html"    with { type: "text" };
 import ANIMATION_JS   from "../public/animation.js"  with { type: "text" };
 import { serveLogo } from "../web/logos.ts";
 
-function serveWizard():    Response { return new Response(WIZARD_HTML,    { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
-function serveDashboard(): Response { return new Response(DASHBOARD_HTML, { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
+// Bun route params — not in the standard Request type
+interface BunRequest extends Request {
+  params: Record<string, string>;
+}
+
+function serveWizard():    Response { return new Response(WIZARD_HTML    as unknown as string, { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
+function serveDashboard(): Response { return new Response(DASHBOARD_HTML as unknown as string, { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
 
 const MAX_RETRIES = 3;
 
@@ -174,10 +179,10 @@ export function startServer(port: number) {
       },
       "/setup": { GET: () => serveWizard() },
       "/public/animation.js": {
-        GET: () => new Response(ANIMATION_JS, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "public, max-age=86400" } }),
+        GET: () => new Response(ANIMATION_JS as string, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "public, max-age=86400" } }),
       },
       "/public/logos/:file": {
-        GET: (req: Request) => serveLogo(req.params.file),
+        GET: (req: BunRequest) => serveLogo(req.params.file!),
       },
       "/dashboard": { GET: () => serveDashboard() },
 
@@ -207,11 +212,11 @@ export function startServer(port: number) {
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/accounts/:id/toggle": {
-        POST: (req: Request) => handleAccountToggle(req.params.id),
+        POST: (req: BunRequest) => handleAccountToggle(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/accounts/:id": {
-        DELETE: (req: Request) => handleAccountRemove(req.params.id),
+        DELETE: (req: BunRequest) => handleAccountRemove(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/setup-status": {
@@ -236,7 +241,7 @@ export function startServer(port: number) {
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/providers/:id/connections": {
-        GET:     (req: Request) => handleGetProviderConnections(req.params.id),
+        GET:     (req: BunRequest) => handleGetProviderConnections(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/connections": {
@@ -249,16 +254,16 @@ export function startServer(port: number) {
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/proxy-pools/:id": {
-        PATCH:   (req: Request) => handleUpdateProxyPool(req.params.id, req),
-        DELETE:  (req: Request) => handleDeleteProxyPool(req.params.id),
+        PATCH:   (req: BunRequest) => handleUpdateProxyPool(req.params.id!, req),
+        DELETE:  (req: BunRequest) => handleDeleteProxyPool(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/proxy-pools/:id/test": {
-        POST:    (req: Request) => handleTestProxyPool(req.params.id),
+        POST:    (req: BunRequest) => handleTestProxyPool(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/connections/:id": {
-        PATCH:   (req: Request) => handleUpdateConnection(req.params.id, req),
+        PATCH:   (req: BunRequest) => handleUpdateConnection(req.params.id!, req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/proxy/stop": {
