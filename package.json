@@ -1,0 +1,57 @@
+{
+  "name": "grouter-auth",
+  "version": "4.7.0",
+  "description": "Qwen OAuth account manager and OpenAI-compatible proxy CLI",
+  "author": "gxdev",
+  "license": "MIT",
+  "keywords": [
+    "qwen",
+    "ai",
+    "openai",
+    "proxy",
+    "oauth",
+    "cli"
+  ],
+  "bin": {
+    "grouter": "./dist/grouter"
+  },
+  "files": [
+    "dist/grouter"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "module": "index.ts",
+  "type": "module",
+  "private": false,
+  "scripts": {
+    "dev": "bun --hot index.ts serve fg",
+    "start": "bun index.ts serve fg",
+    "prebuild": "bun run scripts/embed-logos.ts",
+    "build": "bun build index.ts --target bun --outfile dist/grouter && chmod +x dist/grouter",
+    "deploy": "bun run build && bun link && echo '\\n✓ Global binary updated — run: grouter serve'",
+    "prepublishOnly": "bun run build",
+    "install:cli": "bash setup.sh",
+    "uninstall:cli": "bash uninstall.sh",
+    "docker:install": "bash scripts/docker-install.sh",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f grouter",
+    "docker:shell": "docker compose exec grouter sh",
+    "docker:add": "docker compose exec grouter grouter add",
+    "docker:rebuild": "docker compose build --pull && docker compose up -d"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.4.1",
+    "chalk": "^5.4.1",
+    "commander": "^12.1.0",
+    "open": "^11.0.0",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

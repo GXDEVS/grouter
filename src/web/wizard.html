@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>grouter · setup</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #121212; color: #e8e8e8; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; min-height: 100vh; }
+    .ascii-logo { font-family: 'Courier New', Courier, monospace; color: #0AB9DC; line-height: 1.2; white-space: pre; letter-spacing: 0; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.5rem; }
+    .btn-primary { background: #0AB9DC; color: #121212; border-radius: 9999px; height: 3rem; padding: 0 1.75rem; font-weight: 700; font-size: 0.875rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s, transform 0.1s; white-space: nowrap; }
+    .btn-primary:hover { background: #0891b0; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: #6b7280; border-radius: 9999px; height: 3rem; padding: 0 1.5rem; font-weight: 500; font-size: 0.875rem; border: 1px solid #2a2a2a; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: border-color 0.2s, color 0.2s; white-space: nowrap; }
+    .btn-ghost:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .btn-sm { height: 2.25rem; padding: 0 1rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+    .btn-sm-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+    .btn-sm-danger:hover { background: rgba(239,68,68,0.12); }
+    .btn-sm-ghost { background: transparent; color: #6b7280; border: 1px solid #2a2a2a; }
+    .btn-sm-ghost:hover { border-color: #0AB9DC; color: #0AB9DC; }
+    .btn-icon { background: transparent; border: 1px solid #2a2a2a; border-radius: 9999px; height: 2.25rem; width: 2.25rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; color: #6b7280; flex-shrink: 0; }
+    .btn-icon:hover { border-color: #0AB9DC; color: #0AB9DC; background: rgba(10,185,220,0.06); }
+    .code-block { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem 1.25rem; font-family: 'Courier New', Courier, monospace; font-size: 0.78rem; color: #0AB9DC; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .tag { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.68rem; font-weight: 600; }
+    .tag-active { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .tag-unavail { background: rgba(239,68,68,0.12); color: #ef4444; }
+    .tag-unknown { background: rgba(245,158,11,0.12); color: #f59e0b; }
+    .tag-disabled { background: rgba(55,65,81,0.25); color: #9ca3af; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-on { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .dot-off { background: #374151; }
+    .dot-warn { background: #f59e0b; }
+    .dot-pulse { animation: dpulse 2s ease-in-out infinite; }
+    @keyframes dpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .kpi-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 2rem; width: 100%; max-width: 480px; position: relative; }
+    /* wstep: inactive steps are hidden; active step is in normal flow */
+    .wstep { display: none; }
+    .wstep.active { display: block; }
+    .wstep-wrap { position: relative; overflow: hidden; }
+    .sdot { width: 8px; height: 8px; border-radius: 50%; background: #2a2a2a; transition: background 0.3s; }
+    .sdot.s-active { background: #0AB9DC; }
+    .sdot.s-done { background: #22c55e; }
+    .spinner { width: 20px; height: 20px; border: 2px solid #2a2a2a; border-top-color: #0AB9DC; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .lang-select { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 9999px; color: #9ca3af; font-size: 0.75rem; padding: 0.3rem 0.75rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+    .lang-select:focus, .lang-select:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border-radius: 12px; font-size: 0.875rem; font-weight: 500; border: none; cursor: pointer; color: #6b7280; background: transparent; transition: background 0.15s, color 0.15s; text-align: left; }
+    .nav-item:hover { background: #1e1e1e; color: #e8e8e8; }
+    .nav-item.active { background: rgba(10,185,220,0.1); color: #0AB9DC; }
+    .os-tab { flex: 1; height: 2.25rem; font-size: 0.78rem; font-weight: 600; border-radius: 9999px; border: 1px solid #2a2a2a; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.375rem; color: #6b7280; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+    .os-tab:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .os-tab.active { border-color: #0AB9DC; color: #0AB9DC; background: rgba(10,185,220,0.06); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+    .hidden { display: none !important; }
+    .footer-link { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:12px; border:1px solid #2a2a2a; background:#222; text-decoration:none; color:#6b7280; transition:border-color 0.2s,background 0.2s; }
+    .footer-link:hover { border-color:#0AB9DC; background:rgba(10,185,220,0.06); }
+    .footer-link iconify-icon { color:#0AB9DC; }
+  </style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash" style="position:fixed;inset:0;background:#121212;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <pre id="splash-art" style="font-family:'Courier New',Courier,monospace;font-size:clamp(4px,0.85vw,9px);line-height:1;color:#0AB9DC;white-space:pre;text-align:center;user-select:none;"></pre>
+</div>
+
+<!-- WIZARD -->
+<div id="wizard" style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;">
+  <div style="width:100%;max-width:480px;">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:1.5rem;">
+      <div class="ascii-logo" style="font-size:clamp(5px,1vw,11px);display:inline-block;text-align:left;"> ██████╗  ██████╗ ██╗    ██╗███████╗███╗   ██╗
+██╔════╝ ██╔═══██╗██║    ██║██╔════╝████╗  ██║
+██║  ███╗██║   ██║██║ █╗ ██║█████╗  ██╔██╗ ██║
+██║   ██║██║▄▄ ██║██║███╗██║██╔══╝  ██║╚██╗██║
+╚██████╔╝╚██████╔╝╚███╔███╔╝███████╗██║ ╚████║
+ ╚═════╝  ╚══▀▀═╝  ╚══╝╚══╝ ╚══════╝╚═╝  ╚═══╝</div>
+      <p id="wiz-subtitle" style="color:#6b7280;font-size:0.78rem;margin-top:0.5rem;">Qwen OAuth proxy · OpenAI-compatible</p>
+    </div>
+
+    <!-- Step dots -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:1.75rem;">
+      <div class="sdot s-active" id="dot-0"></div>
+      <div style="width:2rem;height:1px;background:#2a2a2a;"></div>
+      <div class="sdot" id="dot-1"></div>
+      <div style="width:2rem;height:1px;background:#2a2a2a;"></div>
+      <div class="sdot" id="dot-2"></div>
+      <div style="width:2rem;height:1px;background:#2a2a2a;"></div>
+      <div class="sdot" id="dot-3"></div>
+    </div>
+
+    <div class="wstep-wrap" id="wstep-wrap">
+
+      <!-- Step 0: Welcome -->
+      <div id="step-0" class="wstep active card">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:12px;background:rgba(10,185,220,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <iconify-icon icon="solar:rocket-bold-duotone" style="color:#0AB9DC;font-size:1.25rem;"></iconify-icon>
+          </div>
+          <div>
+            <h2 id="s0-title" style="font-weight:700;font-size:1.1rem;">Welcome to grouter-auth</h2>
+            <p id="s0-sub" style="color:#6b7280;font-size:0.82rem;">Let's get you set up in 3 quick steps</p>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:0.625rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:12px;background:#222;">
+            <iconify-icon icon="solar:user-plus-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;flex-shrink:0;"></iconify-icon>
+            <div><p id="s0-f1" style="font-size:0.85rem;font-weight:500;">Add Qwen account</p><p id="s0-f1s" style="font-size:0.75rem;color:#6b7280;">OAuth device flow — no password stored</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:12px;background:#222;">
+            <iconify-icon icon="solar:code-square-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;flex-shrink:0;"></iconify-icon>
+            <div><p id="s0-f2" style="font-size:0.85rem;font-weight:500;">Configure OpenClaude</p><p id="s0-f2s" style="font-size:0.75rem;color:#6b7280;">Connect via OPENAI_BASE_URL env variable</p></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem;border-radius:12px;background:#222;">
+            <iconify-icon icon="solar:chart-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;flex-shrink:0;"></iconify-icon>
+            <div><p id="s0-f3" style="font-size:0.85rem;font-weight:500;">Monitor from dashboard</p><p id="s0-f3s" style="font-size:0.75rem;color:#6b7280;">Usage, status and account rotation</p></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+          <button class="btn-ghost" onclick="skipWizard()"><iconify-icon icon="solar:skip-next-bold-duotone"></iconify-icon><span id="s0-skip">Skip setup</span></button>
+          <button class="btn-primary" onclick="goStep(1)"><span id="s0-begin">Begin setup</span><iconify-icon icon="solar:arrow-right-bold-duotone"></iconify-icon></button>
+        </div>
+      </div>
+
+      <!-- Step 1: Add Account -->
+      <div id="step-1" class="wstep card">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:12px;background:rgba(10,185,220,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path opacity=".3" d="M12 2a5 5 0 1 0 0 10A5 5 0 0 0 12 2Z" fill="#0AB9DC"/>
+              <path d="M15.75 14h-7.5A4.25 4.25 0 0 0 4 18.25V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-.75A4.25 4.25 0 0 0 15.75 14Z" fill="#0AB9DC" opacity=".3"/>
+              <path d="M18.5 13a.75.75 0 0 1 .75.75v1h1a.75.75 0 0 1 0 1.5h-1v1a.75.75 0 0 1-1.5 0v-1h-1a.75.75 0 0 1 0-1.5h1v-1A.75.75 0 0 1 18.5 13Z" fill="#0AB9DC"/>
+            </svg>
+          </div>
+          <div><h2 id="s1-title" style="font-weight:700;font-size:1.1rem;">Add Qwen Account</h2><p id="s1-sub" style="color:#6b7280;font-size:0.82rem;">Authorize via Qwen OAuth device flow</p></div>
+        </div>
+        <div id="s1-idle">
+          <p id="s1-desc" style="font-size:0.85rem;color:#6b7280;line-height:1.6;margin-bottom:1.25rem;">Click the button below to start the authorization flow. A code will be generated — open the link and enter the code to authorize.</p>
+          <div style="display:flex;gap:0.75rem;">
+            <button class="btn-ghost" onclick="goStep(0)"><iconify-icon icon="solar:arrow-left-bold-duotone"></iconify-icon><span id="s1-back">Back</span></button>
+            <button class="btn-primary" style="flex:1;justify-content:center;" onclick="startAuth()"><iconify-icon icon="solar:login-3-bold-duotone"></iconify-icon><span id="s1-start">Start authorization</span></button>
+          </div>
+        </div>
+        <div id="s1-started" class="hidden">
+          <div style="background:rgba(10,185,220,0.07);border:1px solid rgba(10,185,220,0.2);border-radius:14px;padding:1rem;margin-bottom:1rem;">
+            <p id="s1-codelabel" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:0.25rem;">Your code</p>
+            <p id="s1-usercode" style="font-size:2rem;font-weight:800;letter-spacing:0.25em;color:#0AB9DC;font-family:monospace;"></p>
+          </div>
+          <a id="s1-urllink" href="#" target="_blank" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:#0AB9DC;margin-bottom:1rem;word-break:break-all;">
+            <iconify-icon icon="solar:link-bold-duotone" style="flex-shrink:0;"></iconify-icon><span id="s1-urltext"></span>
+          </a>
+          <div style="display:flex;align-items:center;gap:0.75rem;padding-top:0.75rem;border-top:1px solid #2a2a2a;">
+            <div class="spinner"></div><p id="s1-pollstatus" style="font-size:0.85rem;color:#6b7280;"></p>
+          </div>
+        </div>
+        <div id="s1-success" class="hidden" style="text-align:center;padding:0.5rem 0;">
+          <div style="width:3.5rem;height:3.5rem;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;">
+            <iconify-icon icon="solar:check-circle-bold-duotone" style="color:#22c55e;font-size:2rem;"></iconify-icon>
+          </div>
+          <p id="s1-successmsg" style="font-weight:700;margin-bottom:0.25rem;">Account authorized!</p>
+          <p id="s1-successemail" style="font-size:0.85rem;color:#6b7280;margin-bottom:1.25rem;"></p>
+          <button class="btn-primary" onclick="goStep(2)"><span id="s1-continue">Continue</span><iconify-icon icon="solar:arrow-right-bold-duotone"></iconify-icon></button>
+        </div>
+      </div>
+
+      <!-- Step 2: Configure -->
+      <div id="step-2" class="wstep card">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:12px;background:rgba(10,185,220,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path opacity=".3" d="M3 5.5C3 4.119 4.119 3 5.5 3h13C19.881 3 21 4.119 21 5.5v13c0 1.381-1.119 2.5-2.5 2.5h-13C4.119 21 3 19.881 3 18.5v-13Z" fill="#0AB9DC"/>
+              <path d="M7.5 8.25a.75.75 0 0 0-1.06 1.06l2.72 2.72-2.72 2.72a.75.75 0 1 0 1.06 1.06l3.25-3.25a.75.75 0 0 0 0-1.06L7.5 8.25ZM12 15.25a.75.75 0 0 0 0 1.5h4a.75.75 0 0 0 0-1.5h-4Z" fill="#0AB9DC"/>
+            </svg>
+          </div>
+          <div><h2 id="s2-title" style="font-weight:700;font-size:1.1rem;">Configure OpenClaude</h2><p id="s2-sub" style="color:#6b7280;font-size:0.82rem;">Set env variables before launching</p></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+          <button class="os-tab active" id="tab-linux" onclick="setOsTab('linux')"><iconify-icon icon="solar:monitor-bold-duotone"></iconify-icon>Linux / macOS</button>
+          <button class="os-tab" id="tab-windows" onclick="setOsTab('windows')"><iconify-icon icon="solar:laptop-bold-duotone"></iconify-icon>Windows</button>
+        </div>
+        <div id="os-linux">
+          <div style="position:relative;">
+            <div class="code-block" id="code-linux">export CLAUDE_CODE_USE_OPENAI=1
+export OPENAI_BASE_URL="http://localhost:3099/v1"
+export OPENAI_API_KEY="grouter"
+export OPENAI_MODEL=qwen3-coder-plus</div>
+            <button class="btn-icon" style="position:absolute;top:0.5rem;right:0.5rem;width:2rem;height:2rem;" onclick="copyCode('linux')" title="Copy"><iconify-icon icon="solar:copy-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>
+          </div>
+          <p id="s2-linhint" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Then run: <code style="color:#0AB9DC;">openclaude</code></p>
+        </div>
+        <div id="os-windows" class="hidden">
+          <div style="position:relative;">
+            <div class="code-block" id="code-windows">$env:CLAUDE_CODE_USE_OPENAI = "1"
+$env:OPENAI_BASE_URL = "http://localhost:3099/v1"
+$env:OPENAI_API_KEY = "grouter"
+$env:OPENAI_MODEL = "qwen3-coder-plus"</div>
+            <button class="btn-icon" style="position:absolute;top:0.5rem;right:0.5rem;width:2rem;height:2rem;" onclick="copyCode('windows')" title="Copy"><iconify-icon icon="solar:copy-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>
+          </div>
+          <p id="s2-winhint" style="font-size:0.75rem;color:#6b7280;margin-top:0.5rem;">Open PowerShell as Administrator, paste and run: <code style="color:#0AB9DC;">openclaude</code></p>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:1.25rem;">
+          <button class="btn-ghost" onclick="goStep(1)"><iconify-icon icon="solar:arrow-left-bold-duotone"></iconify-icon><span id="s2-back">Back</span></button>
+          <button class="btn-primary" style="flex:1;justify-content:center;" onclick="goStep(3)"><span id="s2-done">Done</span><iconify-icon icon="solar:arrow-right-bold-duotone"></iconify-icon></button>
+        </div>
+      </div>
+
+      <!-- Step 3: Done -->
+      <div id="step-3" class="wstep card" style="text-align:center;padding:2rem 1.5rem;">
+        <div style="width:4rem;height:4rem;border-radius:50%;background:rgba(10,185,220,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none">
+            <path opacity=".3" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2Z" fill="#0AB9DC"/>
+            <path d="M16.03 8.97a.75.75 0 0 1 0 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 1 1 1.06-1.06l1.47 1.47 3.97-3.97a.75.75 0 0 1 1.06 0Z" fill="#0AB9DC"/>
+          </svg>
+        </div>
+        <h2 id="s3-title" style="font-weight:700;font-size:1.25rem;margin-bottom:0.5rem;">All set!</h2>
+        <p id="s3-sub" style="color:#6b7280;font-size:0.85rem;line-height:1.6;margin-bottom:1.5rem;">grouter-auth is ready. Open the dashboard to manage accounts and monitor usage.</p>
+        <button class="btn-primary" style="margin:0 auto;" onclick="openDashboard()"><iconify-icon icon="solar:chart-2-bold-duotone"></iconify-icon><span id="s3-btn">Open dashboard</span></button>
+      </div>
+
+    </div>
+
+    <!-- ── Wizard footer ── -->
+    <div style="margin-top:1.5rem;padding:1.25rem 1.5rem;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;">
+
+      <!-- Lang selector row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:15px;"></iconify-icon>
+          <span style="font-size:0.78rem;color:#6b7280;font-weight:500;" id="footer-lang-label">Language</span>
+        </div>
+        <select class="lang-select" id="lang-select" onchange="setLang(this.value)" style="padding:0.3rem 1rem 0.3rem 0.75rem;">
+          <option value="en" selected>🌐 English</option>
+          <option value="pt">🇧🇷 PT-BR</option>
+          <option value="zh">🇨🇳 中文</option>
+        </select>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:#2a2a2a;margin-bottom:1.1rem;"></div>
+
+      <!-- Credits grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.625rem;margin-bottom:1rem;">
+        <a href="https://github.com/gxdevs" target="_blank" class="footer-link">
+          <iconify-icon icon="mdi:github" style="font-size:1.4rem;flex-shrink:0;color:#e8e8e8;"></iconify-icon>
+          <div>
+            <p style="font-size:0.75rem;font-weight:600;color:#e8e8e8;">GitHub</p>
+            <p style="font-size:0.68rem;color:#6b7280;">github.com/gxdevs</p>
+          </div>
+        </a>
+        <a href="https://youtube.com/@gxdevv" target="_blank" class="footer-link">
+          <iconify-icon icon="mdi:youtube" style="font-size:1.4rem;flex-shrink:0;color:#ef4444;"></iconify-icon>
+          <div>
+            <p style="font-size:0.75rem;font-weight:600;color:#e8e8e8;">YouTube</p>
+            <p style="font-size:0.68rem;color:#6b7280;">@gxdevv</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Bottom info -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <div style="width:5px;height:5px;border-radius:50%;background:#0AB9DC;"></div>
+          <span style="font-size:0.72rem;color:#6b7280;">grouter-auth <span style="color:#0AB9DC;font-weight:600;">v1.0.0</span></span>
+        </div>
+        <span id="footer-made-by" style="font-size:0.7rem;color:#6b7280;">made with ♥ by <span style="color:#0AB9DC;font-weight:600;">gxdev</span></span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD ACCOUNT MODAL -->
+<div id="add-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeAddModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <div style="width:2.5rem;height:2.5rem;border-radius:12px;background:rgba(10,185,220,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><iconify-icon icon="solar:user-plus-bold-duotone" style="color:#0AB9DC;font-size:1.25rem;"></iconify-icon></div>
+      <div><h2 id="modal-title" style="font-weight:700;font-size:1.1rem;">Add Account</h2><p id="modal-sub" style="color:#6b7280;font-size:0.82rem;">Qwen OAuth device flow</p></div>
+    </div>
+    <div id="modal-idle">
+      <p id="modal-desc" style="font-size:0.85rem;color:#6b7280;line-height:1.6;margin-bottom:1.25rem;">Click Start to request an authorization code. Open the link, enter the code, and the account will be added automatically.</p>
+      <button class="btn-primary" style="width:100%;justify-content:center;" onclick="startModalAuth()"><iconify-icon icon="solar:login-3-bold-duotone"></iconify-icon><span id="modal-start-btn">Start authorization</span></button>
+    </div>
+    <div id="modal-started" class="hidden">
+      <div style="background:rgba(10,185,220,0.07);border:1px solid rgba(10,185,220,0.2);border-radius:14px;padding:1rem;margin-bottom:1rem;">
+        <p id="modal-codelabel" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:0.25rem;">Your code</p>
+        <p id="modal-usercode" style="font-size:2rem;font-weight:800;letter-spacing:0.25em;color:#0AB9DC;font-family:monospace;"></p>
+      </div>
+      <a id="modal-urllink" href="#" target="_blank" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:#0AB9DC;margin-bottom:1rem;word-break:break-all;"><iconify-icon icon="solar:link-bold-duotone" style="flex-shrink:0;"></iconify-icon><span id="modal-urltext"></span></a>
+      <div style="display:flex;align-items:center;gap:0.75rem;padding-top:0.75rem;border-top:1px solid #2a2a2a;"><div class="spinner"></div><p id="modal-pollstatus" style="font-size:0.85rem;color:#6b7280;"></p></div>
+    </div>
+    <div id="modal-success" class="hidden" style="text-align:center;padding:0.5rem 0;">
+      <div style="width:3.5rem;height:3.5rem;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;"><iconify-icon icon="solar:check-circle-bold-duotone" style="color:#22c55e;font-size:2rem;"></iconify-icon></div>
+      <p id="modal-successmsg" style="font-weight:700;margin-bottom:0.25rem;">Account added!</p>
+      <p id="modal-successemail" style="font-size:0.85rem;color:#6b7280;margin-bottom:1.25rem;"></p>
+      <button class="btn-primary" style="margin:0 auto;" onclick="closeAddModal();goStep(2);"><iconify-icon icon="solar:arrow-right-bold-duotone"></iconify-icon><span id="modal-done-btn">Continue</span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── i18n ────────────────────────────────────────────────────────────
+const I18N = {
+  en: {
+    subtitle:'Qwen OAuth proxy · OpenAI-compatible',
+    s0_title:'Welcome to grouter-auth',s0_sub:"Let's get you set up in 3 quick steps",
+    s0_f1:'Add Qwen account',s0_f1s:'OAuth device flow — no password stored',
+    s0_f2:'Configure OpenClaude',s0_f2s:'Connect via OPENAI_BASE_URL env variable',
+    s0_f3:'Monitor from dashboard',s0_f3s:'Usage, status and account rotation',
+    s0_skip:'Skip setup',s0_begin:'Begin setup',
+    s1_title:'Add Qwen Account',s1_sub:'Authorize via Qwen OAuth device flow',
+    s1_desc:'Click the button below to start the authorization flow. A code will be generated — open the link and enter the code to authorize.',
+    s1_back:'Back',s1_start:'Start authorization',s1_codelabel:'Your code',
+    s1_pollwait:'Open the URL above and enter the code…',
+    s1_successmsg:'Account authorized!',s1_continue:'Continue',
+    s2_title:'Configure OpenClaude',s2_sub:'Set env variables before launching',
+    s2_linhint:'Then run: openclaude',s2_winhint:'Open PowerShell as Administrator, paste and run: openclaude',
+    s2_back:'Back',s2_done:'Done',
+    s3_title:'All set!',s3_sub:'grouter-auth is ready. Open the dashboard to manage accounts and monitor usage.',s3_btn:'Open dashboard',
+    nav_overview:'Overview',nav_accounts:'Accounts',nav_settings:'Settings',
+    page_overview:'Overview',page_overview_sub:'Real-time proxy status and usage',
+    page_accounts:'Accounts',page_accounts_sub:'Manage your Qwen accounts',
+    btn_add_acc:'Add account',
+    kpi_accounts:'Accounts',kpi_active:'Active',kpi_reqs:'Requests',kpi_tokens:'Tokens',
+    kpi_active_sub:'healthy & rotating',kpi_reqs_sub:'total proxied',kpi_tokens_sub:'total consumed',
+    proxy_title:'Proxy server',proxy_endpoint:'Endpoint',proxy_strategy:'Strategy',proxy_status:'Status',proxy_envvars:'OpenClaude — env vars',
+    model_title:'Usage by model',no_usage:'No usage data yet.',
+    acc_title:'Accounts',all_acc_title:'All Accounts',
+    modal_title:'Add Account',modal_sub:'Qwen OAuth device flow',
+    modal_desc:'Click Start to request an authorization code. Open the link, enter the code, and the account will be added automatically.',
+    modal_start:'Start authorization',modal_codelabel:'Your code',modal_pollwait:'Open the URL above and enter the code…',
+    modal_successmsg:'Account added!',modal_done:'Done',
+    status_running:'Running',status_stopped:'Stopped',
+    no_accounts:'No accounts yet',add_first:'Add first account',
+    toggle_disable:'Disable',toggle_enable:'Enable',remove:'Remove',confirm_remove:'Remove account',
+    never:'Never',last_used:'last used',sb_tagline:'auth proxy',sb_made_by:'made by',
+    footer_lang:'Language',footer_made:'made with ♥ by',
+    cfg_strategy_title:'Rotation Strategy',cfg_strategy_desc:'How grouter-auth selects the next account for each request.',
+    cfg_fill_desc:'Always use the highest-priority account until it hits a rate limit, then fall back.',
+    cfg_rr_desc:'Distribute requests evenly across all active accounts, cycling through them.',
+    cfg_sticky_label:'Sticky limit',cfg_sticky_hint:'Consecutive requests before switching to the next account.',
+    cfg_save:'Save changes',cfg_saved:'Saved!',
+    cfg_proxy_title:'Proxy',cfg_port_label:'Port',cfg_port_hint:'Requires proxy restart to take effect.',
+    cfg_endpoint_label:'Endpoint',cfg_port_save:'Save',
+    cfg_maint_title:'Maintenance',
+    cfg_unlock_label:'Unlock all accounts',cfg_unlock_hint:'Clear all rate-limit locks and reset backoff state.',
+    cfg_unlock_btn:'Unlock',cfg_unlocked:'Unlocked!',
+    page_settings:'Settings',page_settings_sub:'Proxy configuration and maintenance',
+  },
+  pt: {
+    subtitle:'Proxy OAuth Qwen · compatível com OpenAI',
+    s0_title:'Bem-vindo ao grouter-auth',s0_sub:'Configure em 3 passos rápidos',
+    s0_f1:'Adicionar conta Qwen',s0_f1s:'OAuth device flow — sem senha armazenada',
+    s0_f2:'Configurar Claude Code',s0_f2s:'Conectar via variável OPENAI_BASE_URL',
+    s0_f3:'Monitorar no dashboard',s0_f3s:'Uso, status e rotação de contas',
+    s0_skip:'Pular configuração',s0_begin:'Iniciar configuração',
+    s1_title:'Adicionar Conta Qwen',s1_sub:'Autorize via OAuth device flow da Qwen',
+    s1_desc:'Clique no botão abaixo para iniciar o fluxo de autorização. Um código será gerado — abra o link e insira o código para autorizar.',
+    s1_back:'Voltar',s1_start:'Iniciar autorização',s1_codelabel:'Seu código',
+    s1_pollwait:'Abra o link acima e insira o código…',
+    s1_successmsg:'Conta autorizada!',s1_continue:'Continuar',
+    s2_title:'Configurar Claude Code',s2_sub:'Defina as variáveis de ambiente antes de iniciar',
+    s2_linhint:'Depois execute:',s2_winhint:'Abra o PowerShell como Administrador, cole e execute:',
+    s2_back:'Voltar',s2_done:'Concluído',
+    s3_title:'Tudo pronto!',s3_sub:'O grouter-auth está configurado. Abra o dashboard para gerenciar contas e monitorar o uso.',s3_btn:'Abrir dashboard',
+    nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
+    page_overview:'Visão Geral',page_overview_sub:'Status do proxy e uso em tempo real',
+    page_accounts:'Contas',page_accounts_sub:'Gerencie suas contas Qwen',
+    btn_add_acc:'Adicionar conta',
+    kpi_accounts:'Contas',kpi_active:'Ativas',kpi_reqs:'Requisições',kpi_tokens:'Tokens',
+    kpi_active_sub:'saudáveis e em rotação',kpi_reqs_sub:'total enviadas',kpi_tokens_sub:'total consumidos',
+    proxy_title:'Servidor proxy',proxy_endpoint:'Endpoint',proxy_strategy:'Estratégia',proxy_status:'Status',proxy_envvars:'Variáveis de ambiente — Claude Code',
+    model_title:'Uso por modelo',no_usage:'Sem dados de uso ainda.',
+    acc_title:'Contas',all_acc_title:'Todas as Contas',
+    modal_title:'Adicionar Conta',modal_sub:'OAuth device flow da Qwen',
+    modal_desc:'Clique em Iniciar para solicitar um código de autorização. Abra o link, insira o código e a conta será adicionada automaticamente.',
+    modal_start:'Iniciar autorização',modal_codelabel:'Seu código',modal_pollwait:'Abra o link acima e insira o código…',
+    modal_successmsg:'Conta adicionada!',modal_done:'Concluído',
+    status_running:'Rodando',status_stopped:'Parado',
+    no_accounts:'Nenhuma conta ainda',add_first:'Adicionar primeira conta',
+    toggle_disable:'Desativar',toggle_enable:'Ativar',remove:'Remover',confirm_remove:'Remover conta',
+    never:'Nunca',last_used:'usado em',sb_tagline:'proxy de auth',sb_made_by:'feito por',
+    footer_lang:'Idioma',footer_made:'feito com ♥ por',
+    cfg_strategy_title:'Estratégia de Rotação',cfg_strategy_desc:'Como o grouter-auth seleciona a próxima conta para cada requisição.',
+    cfg_fill_desc:'Sempre usa a conta de maior prioridade até atingir o limite de requisições, depois cai para a próxima.',
+    cfg_rr_desc:'Distribui as requisições entre todas as contas ativas, alternando em ordem.',
+    cfg_sticky_label:'Limite sticky',cfg_sticky_hint:'Requisições consecutivas antes de trocar para a próxima conta.',
+    cfg_save:'Salvar alterações',cfg_saved:'Salvo!',
+    cfg_proxy_title:'Proxy',cfg_port_label:'Porta',cfg_port_hint:'Requer reinicialização do proxy para ter efeito.',
+    cfg_endpoint_label:'Endpoint',cfg_port_save:'Salvar',
+    cfg_maint_title:'Manutenção',
+    cfg_unlock_label:'Desbloquear todas as contas',cfg_unlock_hint:'Limpa todos os bloqueios de rate limit e reseta o estado de backoff.',
+    cfg_unlock_btn:'Desbloquear',cfg_unlocked:'Desbloqueado!',
+    page_settings:'Configurações',page_settings_sub:'Configurações do proxy e manutenção',
+  },
+  zh: {
+    subtitle:'Qwen OAuth 代理 · 兼容 OpenAI',
+    s0_title:'欢迎使用 grouter-auth',s0_sub:'3 个简单步骤完成配置',
+    s0_f1:'添加 Qwen 账户',s0_f1s:'OAuth 设备流程 — 不存储密码',
+    s0_f2:'配置 Claude Code',s0_f2s:'通过 OPENAI_BASE_URL 环境变量连接',
+    s0_f3:'在仪表板中监控',s0_f3s:'使用量、状态和账户轮换',
+    s0_skip:'跳过设置',s0_begin:'开始配置',
+    s1_title:'添加 Qwen 账户',s1_sub:'通过 Qwen OAuth 设备流程授权',
+    s1_desc:'点击下方按钮启动授权流程。将生成一个代码 — 打开链接并输入代码以授权。',
+    s1_back:'返回',s1_start:'开始授权',s1_codelabel:'您的代码',
+    s1_pollwait:'打开上方链接并输入代码…',
+    s1_successmsg:'账户已授权！',s1_continue:'继续',
+    s2_title:'配置 Claude Code',s2_sub:'启动前设置环境变量',
+    s2_linhint:'然后运行：',s2_winhint:'以管理员身份打开 PowerShell，粘贴并运行：',
+    s2_back:'返回',s2_done:'完成',
+    s3_title:'一切就绪！',s3_sub:'grouter-auth 已准备好。打开仪表板管理账户并监控使用情况。',s3_btn:'打开仪表板',
+    nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
+    page_overview:'概览',page_overview_sub:'实时代理状态和使用情况',
+    page_accounts:'账户',page_accounts_sub:'管理您的 Qwen 账户',
+    btn_add_acc:'添加账户',
+    kpi_accounts:'账户',kpi_active:'活跃',kpi_reqs:'请求',kpi_tokens:'Tokens',
+    kpi_active_sub:'健康并轮换中',kpi_reqs_sub:'总代理数',kpi_tokens_sub:'总消耗',
+    proxy_title:'代理服务器',proxy_endpoint:'端点',proxy_strategy:'策略',proxy_status:'状态',proxy_envvars:'Claude Code 环境变量',
+    model_title:'按模型使用量',no_usage:'暂无使用数据。',
+    acc_title:'账户',all_acc_title:'所有账户',
+    modal_title:'添加账户',modal_sub:'Qwen OAuth 设备流程',
+    modal_desc:'点击开始请求授权码。打开链接，输入代码，账户将自动添加。',
+    modal_start:'开始授权',modal_codelabel:'您的代码',modal_pollwait:'打开上方链接并输入代码…',
+    modal_successmsg:'账户已添加！',modal_done:'完成',
+    status_running:'运行中',status_stopped:'已停止',
+    no_accounts:'暂无账户',add_first:'添加第一个账户',
+    toggle_disable:'禁用',toggle_enable:'启用',remove:'移除',confirm_remove:'移除账户',
+    never:'从未',last_used:'最后使用',sb_tagline:'认证代理',sb_made_by:'作者',
+    footer_lang:'语言',footer_made:'用 ♥ 制作，作者',
+    cfg_strategy_title:'轮换策略',cfg_strategy_desc:'grouter-auth 为每个请求选择下一个账户的方式。',
+    cfg_fill_desc:'始终使用最高优先级的账户，直到触发限速，然后切换到下一个。',
+    cfg_rr_desc:'在所有活跃账户之间均匀分配请求，按顺序轮换。',
+    cfg_sticky_label:'粘性限制',cfg_sticky_hint:'切换到下一个账户之前的连续请求数。',
+    cfg_save:'保存更改',cfg_saved:'已保存！',
+    cfg_proxy_title:'代理',cfg_port_label:'端口',cfg_port_hint:'需要重启代理才能生效。',
+    cfg_endpoint_label:'端点',cfg_port_save:'保存',
+    cfg_maint_title:'维护',
+    cfg_unlock_label:'解锁所有账户',cfg_unlock_hint:'清除所有限速锁定并重置退避状态。',
+    cfg_unlock_btn:'解锁',cfg_unlocked:'已解锁！',
+    page_settings:'设置',page_settings_sub:'代理配置和维护',
+  }
+};
+
+let lang = 'en', T = I18N.en, currentStep = 0;
+let pollTimer = null, modalPollTimer = null;
+
+function setLang(l) {
+  lang = l; T = I18N[l] || I18N.en;
+  const ls = document.getElementById('lang-select');
+  if (ls) ls.value = l;
+  applyI18n();
+}
+
+function applyI18n() {
+  const s = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  s('wiz-subtitle',T.subtitle);
+  s('s0-title',T.s0_title);s('s0-sub',T.s0_sub);s('s0-f1',T.s0_f1);s('s0-f1s',T.s0_f1s);
+  s('s0-f2',T.s0_f2);s('s0-f2s',T.s0_f2s);s('s0-f3',T.s0_f3);s('s0-f3s',T.s0_f3s);
+  s('s0-skip',T.s0_skip);s('s0-begin',T.s0_begin);
+  s('s1-title',T.s1_title);s('s1-sub',T.s1_sub);s('s1-desc',T.s1_desc);
+  s('s1-back',T.s1_back);s('s1-start',T.s1_start);s('s1-codelabel',T.s1_codelabel);
+  s('s1-successmsg',T.s1_successmsg);s('s1-continue',T.s1_continue);
+  s('s2-title',T.s2_title);s('s2-sub',T.s2_sub);s('s2-back',T.s2_back);s('s2-done',T.s2_done);
+  s('s3-title',T.s3_title);s('s3-sub',T.s3_sub);s('s3-btn',T.s3_btn);
+  s('sb-tagline',T.sb_tagline);s('sb-made-by',T.sb_made_by);
+  s('footer-lang-label', T.footer_lang || 'Language');
+  const fmb = document.getElementById('footer-made-by');
+  if (fmb) fmb.innerHTML = (T.footer_made||'made with ♥ by')+' <span style="color:#0AB9DC;font-weight:600;">gxdev</span>';
+}
+
+// ── Wizard step transition ───────────────────────────────────────────
+let isAnimating = false;
+function goStep(n) {
+  if (n === currentStep || isAnimating) return;
+  isAnimating = true;
+
+  const prev = document.getElementById('step-' + currentStep);
+  const next = document.getElementById('step-' + n);
+  const dir  = n > currentStep ? 1 : -1;
+  const wrap = document.getElementById('wstep-wrap');
+
+  gsap.killTweensOf([prev, next]);
+
+  // 1. Snapshot prev height and lock wrapper so it doesn't collapse
+  const prevH = prev.offsetHeight;
+  wrap.style.height = prevH + 'px';
+
+  // 2. Lay out next (invisible) beside prev using absolute so it doesn't push layout
+  next.style.position = 'absolute';
+  next.style.top = '0';
+  next.style.left = '0';
+  next.style.right = '0';
+  next.classList.add('active'); // display:block via CSS
+  gsap.set(next, { opacity: 0, x: dir * 48 });
+
+  const nextH = next.offsetHeight;
+
+  // 3. Animate wrapper to next height
+  gsap.to(wrap, { height: nextH, duration: 0.3, ease: 'power2.inOut' });
+
+  // 4. Slide prev out
+  gsap.to(prev, {
+    opacity: 0, x: -dir * 48, duration: 0.22, ease: 'power2.in',
+    onComplete: () => {
+      prev.classList.remove('active');
+      gsap.set(prev, { clearProps: 'all' });
+    }
+  });
+
+  // 5. Slide next in, then restore it to normal flow
+  gsap.to(next, {
+    opacity: 1, x: 0, duration: 0.28, delay: 0.08, ease: 'power2.out',
+    onComplete: () => {
+      // Remove absolute positioning — next is now the active in-flow step
+      next.style.position = '';
+      next.style.top = '';
+      next.style.left = '';
+      next.style.right = '';
+      gsap.set(next, { clearProps: 'x,opacity' });
+      wrap.style.height = '';
+      isAnimating = false;
+    }
+  });
+
+  // 6. Update dots
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('dot-' + i);
+    d.classList.toggle('s-active', i === n);
+    d.classList.toggle('s-done', i < n);
+  }
+  currentStep = n;
+}
+
+function skipWizard()   { toDashboard(); }
+function openDashboard(){ toDashboard(); }
+function toDashboard() {
+  fetch('/api/setup-done', { method:'POST' }).catch(()=>{});
+  gsap.to('#wizard', { opacity:0, y:-16, duration:0.3, ease:'power2.in', onComplete:() => {
+    window.location.href = '/dashboard';
+  }});
+}
+
+// ── OS tabs ──────────────────────────────────────────────────────────
+function setOsTab(os) {
+  ['linux','windows'].forEach(k => {
+    document.getElementById('tab-'+k).classList.toggle('active', k===os);
+    document.getElementById('os-'+k).classList.toggle('hidden', k!==os);
+  });
+}
+function copyCode(os) {
+  const el = document.getElementById('code-'+os);
+  navigator.clipboard.writeText(el.textContent.trim()).catch(()=>{});
+}
+
+// ── Auth flow shared ─────────────────────────────────────────────────
+async function startAuthFlow(target) {
+  const pfx = target === 'wizard' ? 's1' : 'modal';
+  document.getElementById(pfx+'-idle').classList.add('hidden');
+  document.getElementById(pfx+'-started').classList.remove('hidden');
+  document.getElementById(pfx+'-pollstatus').textContent = target==='wizard' ? T.s1_pollwait : T.modal_pollwait;
+  try {
+    const res  = await fetch('/api/auth/start', { method:'POST' });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById(pfx+'-usercode').textContent = data.user_code;
+    document.getElementById(pfx+'-codelabel').textContent = target==='wizard' ? T.s1_codelabel : T.modal_codelabel;
+    const url = data.verification_uri_complete || data.verification_uri;
+    document.getElementById(pfx+'-urllink').href = url;
+    document.getElementById(pfx+'-urltext').textContent = url;
+    document.getElementById(pfx+'-pollstatus').textContent = target==='wizard' ? T.s1_pollwait : T.modal_pollwait;
+    const timer = setInterval(() => doPoll(data.device_code, target), (data.interval||5)*1000);
+    if (target==='wizard') pollTimer = timer; else modalPollTimer = timer;
+  } catch(e) {
+    document.getElementById(pfx+'-pollstatus').textContent = 'Error: '+e.message;
+  }
+}
+function startAuth()      { startAuthFlow('wizard'); }
+function startModalAuth() { startAuthFlow('modal'); }
+
+async function doPoll(deviceCode, target) {
+  try {
+    const res  = await fetch('/api/auth/poll', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({device_code:deviceCode}) });
+    const data = await res.json();
+    if (data.status === 'complete') {
+      clearInterval(target==='wizard' ? pollTimer : modalPollTimer);
+      if (target==='wizard') showWizardSuccess(data.account);
+      else showModalSuccess(data.account);
+    } else if (['expired','denied','error'].includes(data.status)) {
+      clearInterval(target==='wizard' ? pollTimer : modalPollTimer);
+      const pfx = target==='wizard'?'s1':'modal';
+      document.getElementById(pfx+'-pollstatus').textContent = data.status==='denied'?'Authorization denied.':'Code expired. Please try again.';
+    }
+  } catch {}
+}
+
+function showWizardSuccess(account) {
+  document.getElementById('s1-started').classList.add('hidden');
+  const el = document.getElementById('s1-success');
+  el.classList.remove('hidden');
+  document.getElementById('s1-successmsg').textContent = T.s1_successmsg;
+  document.getElementById('s1-successemail').textContent = account?.email || account?.id?.slice(0,8) || '';
+  gsap.fromTo(el, {opacity:0,scale:0.94},{opacity:1,scale:1,duration:0.3,ease:'back.out(1.4)'});
+}
+function showModalSuccess(account) {
+  document.getElementById('modal-started').classList.add('hidden');
+  const el = document.getElementById('modal-success');
+  el.classList.remove('hidden');
+  document.getElementById('modal-successmsg').textContent = T.modal_successmsg;
+  document.getElementById('modal-done-btn').textContent = T.modal_done;
+  document.getElementById('modal-successemail').textContent = account?.email || account?.id?.slice(0,8) || '';
+  gsap.fromTo(el, {opacity:0,scale:0.94},{opacity:1,scale:1,duration:0.3,ease:'back.out(1.4)'});
+}
+
+// ── Modal ────────────────────────────────────────────────────────────
+function openAddModal() {
+  resetModal(); applyI18n();
+  const ov = document.getElementById('add-modal');
+  ov.classList.remove('hidden');
+  gsap.fromTo(ov,{opacity:0},{opacity:1,duration:0.2});
+  gsap.fromTo('.modal-box',{y:18,scale:0.97},{y:0,scale:1,duration:0.3,ease:'back.out(1.4)'});
+}
+function closeAddModal() {
+  clearInterval(modalPollTimer); modalPollTimer = null;
+  gsap.to('#add-modal',{opacity:0,duration:0.18,onComplete:()=>{
+    document.getElementById('add-modal').classList.add('hidden'); resetModal();
+  }});
+}
+function resetModal() {
+  document.getElementById('modal-idle').classList.remove('hidden');
+  document.getElementById('modal-started').classList.add('hidden');
+  document.getElementById('modal-success').classList.add('hidden');
+}
+document.getElementById('add-modal').addEventListener('click', e => { if(e.target.id==='add-modal') closeAddModal(); });
+
+window.addEventListener('load', () => {
+  applyI18n();
+  // Wizard starts hidden — splash will reveal it
+  document.getElementById('wizard').style.opacity = '0';
+  runSplash();
+});
+
+function runSplash() {
+  const art  = document.getElementById('splash-art');
+  const SPLASH_DURATION = 3000; // ms
+  const FPS = 15; // 45 frames / 15fps = 3s
+
+  // asciiFrames is set by /public/animation.js via window.asciiFrames = frames
+  const asciiFrames = window.asciiFrames;
+  if (!Array.isArray(asciiFrames) || !asciiFrames.length) {
+    endSplash(); return;
+  }
+
+  let idx = 0;
+  art.textContent = asciiFrames[0];
+
+  const interval = setInterval(() => {
+    idx = (idx + 1) % asciiFrames.length;
+    art.textContent = asciiFrames[idx];
+  }, 1000 / FPS);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    endSplash();
+  }, SPLASH_DURATION);
+}
+
+function endSplash() {
+  gsap.to('#splash', {
+    opacity: 0, duration: 0.6, ease: 'power2.inOut',
+    onComplete: () => {
+      document.getElementById('splash').style.display = 'none';
+    }
+  });
+  gsap.fromTo('#wizard', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, delay: 0.3, ease: 'power3.out' });
+}
+</script>
+<script src="/public/animation.js"></script>
+</body>
+</html>

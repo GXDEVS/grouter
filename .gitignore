@@ -1,0 +1,74 @@
+# ── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ────────────────────────────────────────────────────────────
+# dist/grouter is the packaged binary produced by `bun run build`.
+# It's published to npm via the `files` field, not shipped via git.
+dist/
+out/
+build/
+*.tgz
+
+# ── Environment / secrets ───────────────────────────────────────────────────
+# Bun auto-loads .env — never commit any variant.
+.env
+.env.*
+!.env.example
+
+# Local user data written by the running proxy (tokens, refresh tokens,
+# SQLite DB, PID, logs). Normally lives under ~/.grouter, but guard the repo
+# in case someone symlinks or copies it here.
+.grouter/
+grouter.db
+grouter.db-*
+*.sqlite
+*.sqlite-*
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Credential-looking files
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+credentials.*
+
+# ── Runtime artifacts ───────────────────────────────────────────────────────
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# ── Caches / coverage ───────────────────────────────────────────────────────
+.cache/
+coverage/
+*.lcov
+*.tsbuildinfo
+.eslintcache
+
+# ── Foreign lockfiles (project uses bun.lock only) ──────────────────────────
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ── Editor / IDE ────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── OS ──────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Claude Code local config ────────────────────────────────────────────────
+# Shared project settings (.claude/settings.json) should be committed;
+# *.local.json holds per-developer overrides (permission allowlists, etc.).
+.claude/settings.local.json
+.claude/*.local.json

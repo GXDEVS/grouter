@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>grouter · dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #121212; color: #e8e8e8; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; min-height: 100vh; }
+    .ascii-logo { font-family: 'Courier New', Courier, monospace; color: #0AB9DC; line-height: 1.2; white-space: pre; letter-spacing: 0; }
+    .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.5rem; }
+    .btn-primary { background: #0AB9DC; color: #121212; border-radius: 9999px; height: 3rem; padding: 0 1.75rem; font-weight: 700; font-size: 0.875rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: background 0.2s, transform 0.1s; white-space: nowrap; }
+    .btn-primary:hover { background: #0891b0; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-ghost { background: transparent; color: #6b7280; border-radius: 9999px; height: 3rem; padding: 0 1.5rem; font-weight: 500; font-size: 0.875rem; border: 1px solid #2a2a2a; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: border-color 0.2s, color 0.2s; white-space: nowrap; }
+    .btn-ghost:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .btn-sm { height: 2.25rem; padding: 0 1rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; transition: background 0.2s, color 0.2s; white-space: nowrap; }
+    .btn-sm-danger { background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+    .btn-sm-danger:hover { background: rgba(239,68,68,0.12); }
+    .btn-sm-ghost { background: transparent; color: #6b7280; border: 1px solid #2a2a2a; }
+    .btn-sm-ghost:hover { border-color: #0AB9DC; color: #0AB9DC; }
+    .btn-icon { background: transparent; border: 1px solid #2a2a2a; border-radius: 9999px; height: 2.25rem; width: 2.25rem; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s, background 0.2s, color 0.2s; color: #6b7280; flex-shrink: 0; }
+    .btn-icon:hover { border-color: #0AB9DC; color: #0AB9DC; background: rgba(10,185,220,0.06); }
+    .btn-icon.autopoll-on { border-color: #22c55e; color: #22c55e; background: rgba(34,197,94,0.08); }
+    .btn-server { height: 2.25rem; padding: 0 0.875rem; border-radius: 9999px; border: 1px solid #2a2a2a; background: transparent; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.78rem; font-weight: 600; color: #6b7280; transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap; flex-shrink: 0; }
+    .btn-server.power-on { color: #9ca3af; border-color: #2a2a2a; }
+    .btn-server.power-on:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.07); }
+    .btn-server.power-confirming { border-color: #ef4444 !important; color: #ef4444 !important; background: rgba(239,68,68,0.12) !important; animation: power-pulse 0.65s ease-in-out infinite alternate; }
+    .btn-server.power-off { color: #374151; border-color: #1e1e1e; cursor: default; opacity: 0.55; }
+    @keyframes power-pulse { from { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); } to { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
+    @keyframes spin-once { to { transform: rotate(360deg); } }
+    .spin-once iconify-icon { display:inline-flex; animation: spin-once 0.5s ease-out; }
+    .code-block { background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 12px; padding: 1rem 1.25rem; font-family: 'Courier New', Courier, monospace; font-size: 0.78rem; color: #0AB9DC; overflow-x: auto; white-space: pre; line-height: 1.6; }
+    .tag { display: inline-flex; align-items: center; gap: 0.2rem; padding: 0.15rem 0.6rem; border-radius: 9999px; font-size: 0.68rem; font-weight: 600; }
+    .tag-active { background: rgba(34,197,94,0.12); color: #22c55e; }
+    .tag-unavail { background: rgba(239,68,68,0.12); color: #ef4444; }
+    .tag-unknown { background: rgba(245,158,11,0.12); color: #f59e0b; }
+    .tag-disabled { background: rgba(55,65,81,0.25); color: #9ca3af; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot-on { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+    .dot-off { background: #374151; }
+    .dot-warn { background: #f59e0b; }
+    .dot-pulse { animation: dpulse 2s ease-in-out infinite; }
+    @keyframes dpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .kpi-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 2rem; width: 100%; max-width: 480px; position: relative; }
+    /* wstep: JS controls opacity/pointer-events so iconify loads on all steps */
+    .wstep { position: absolute; top: 0; left: 0; right: 0; will-change: transform, opacity; }
+    .wstep.active { position: relative; }
+    .wstep-wrap { position: relative; overflow: hidden; }
+    .sdot { width: 8px; height: 8px; border-radius: 50%; background: #2a2a2a; transition: background 0.3s; }
+    .sdot.s-active { background: #0AB9DC; }
+    .sdot.s-done { background: #22c55e; }
+    .spinner { width: 20px; height: 20px; border: 2px solid #2a2a2a; border-top-color: #0AB9DC; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .lang-select { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 9999px; color: #9ca3af; font-size: 0.75rem; padding: 0.3rem 0.75rem; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; transition: border-color 0.2s; }
+    .lang-select:focus, .lang-select:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; border-radius: 12px; font-size: 0.875rem; font-weight: 500; border: none; cursor: pointer; color: #6b7280; background: transparent; transition: background 0.15s, color 0.15s; text-align: left; }
+    .nav-item:hover { background: #1e1e1e; color: #e8e8e8; }
+    .nav-item.active { background: rgba(10,185,220,0.1); color: #0AB9DC; }
+    .os-tab { flex: 1; height: 2.25rem; font-size: 0.78rem; font-weight: 600; border-radius: 9999px; border: 1px solid #2a2a2a; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.375rem; color: #6b7280; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+    .os-tab:hover { border-color: #0AB9DC; color: #e8e8e8; }
+    .os-tab.active { border-color: #0AB9DC; color: #0AB9DC; background: rgba(10,185,220,0.06); }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+    .hidden { display: none !important; }
+    .footer-link { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:12px; border:1px solid #2a2a2a; background:#222; text-decoration:none; color:#6b7280; transition:border-color 0.2s,background 0.2s; }
+    .footer-link:hover { border-color:#0AB9DC; background:rgba(10,185,220,0.06); }
+    .footer-link iconify-icon { color:#0AB9DC; }
+    .provider-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; }
+    .provider-card { background:#1e1e1e; border:1px solid #2a2a2a; border-radius:14px; padding:1rem; display:flex; align-items:center; gap:0.75rem; cursor:pointer; transition:border-color 0.2s, background 0.2s; position:relative; }
+    .provider-card:hover { border-color:#0AB9DC; background:rgba(10,185,220,0.04); }
+    .provider-card.connected { border-color:rgba(34,197,94,0.35); }
+    .provider-card.deprecated { opacity:0.55; cursor:not-allowed; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.03); }
+    .provider-card.deprecated:hover { border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.04); }
+    .provider-icon { width:2.25rem; height:2.25rem; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; letter-spacing:0.03em; color:#121212; flex-shrink:0; overflow:hidden; }
+    .provider-icon iconify-icon { font-size:1.5rem; color:#fff; }
+    .provider-icon.logo-light { background:#ffffff; }
+    .provider-icon.logo-light iconify-icon { color:inherit; }
+    .provider-badge { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(34,197,94,0.15); color:#22c55e; }
+    .provider-badge-deprecated { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(239,68,68,0.18); color:#ef4444; text-transform:uppercase; letter-spacing:0.05em; }
+    .provider-badge-free { position:absolute; top:0.5rem; left:0.5rem; font-size:0.56rem; font-weight:800; padding:0.1rem 0.4rem; border-radius:9999px; background:linear-gradient(135deg,#10b981,#22c55e); color:#0a0a0a; text-transform:uppercase; letter-spacing:0.06em; box-shadow:0 0 6px rgba(34,197,94,0.3); }
+    .provider-port-tag { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.6rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:6px; background:#0d0d0d; color:#0AB9DC; font-family:monospace; }
+    .apikey-row { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:10px; background:#0d0d0d; border:1px solid #1f1f1f; }
+    .apikey-row:not(:last-child) { margin-bottom:0.5rem; }
+    .apikey-mask { font-family:monospace; font-size:0.78rem; color:#9ca3af; letter-spacing:0.05em; }
+    .apikey-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .section-divider { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.875rem; }
+    .section-divider h3 { font-size:0.78rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap; }
+    .section-divider::after { content:''; flex:1; height:1px; background:#2a2a2a; }
+    @media (max-width: 768px) { .provider-grid { grid-template-columns:repeat(2,1fr) !important; gap:0.5rem !important; } }
+    @media (max-width: 390px) { .provider-grid { grid-template-columns:1fr !important; } }
+    .pool-row { display:flex; align-items:center; gap:0.75rem; padding:0.75rem; border-radius:12px; background:#1a1a1a; border:1px solid #2a2a2a; transition:border-color 0.2s; }
+    .pool-row:hover { border-color:#2e2e2e; }
+    .pool-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+    .connected-providers-strip { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
+    .cp-pill { display:inline-flex; align-items:center; gap:0.5rem; padding:0.35rem 0.75rem 0.35rem 0.35rem; border-radius:9999px; background:#1a1a1a; border:1px solid #2a2a2a; font-size:0.75rem; font-weight:600; color:#e8e8e8; }
+    .cp-icon { width:1.5rem; height:1.5rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.55rem; font-weight:800; color:#121212; flex-shrink:0; }
+    /* ── Mobile navbar ──────────────────────────────────────────────── */
+    .mob-navbar { display:none; position:fixed; top:0; left:0; right:0; z-index:30; height:56px; background:rgba(18,18,18,0.82); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-bottom:1px solid rgba(255,255,255,0.06); padding:0 1rem; align-items:center; justify-content:space-between; gap:0.75rem; }
+    .mob-logo { font-family:'Courier New',Courier,monospace; color:#0AB9DC; font-size:0.75rem; font-weight:700; letter-spacing:0.1em; }
+    /* ── Mobile drawer ──────────────────────────────────────────────── */
+    .mob-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(3px); z-index:38; }
+    .mob-drawer { position:fixed; top:0; left:-290px; bottom:0; width:270px; background:#151515; border-right:1px solid #1e1e1e; z-index:39; transition:left 0.28s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; overflow-y:auto; }
+    .mob-drawer.open { left:0; }
+    .mob-overlay.open { display:block; }
+    /* ── Mobile bottom nav ──────────────────────────────────────────── */
+    .mob-bottomnav { display:none; position:fixed; bottom:0; left:0; right:0; z-index:30; background:rgba(18,18,18,0.9); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-top:1px solid rgba(255,255,255,0.06); padding-bottom:env(safe-area-inset-bottom); }
+    .mob-bottomnav-inner { display:flex; align-items:stretch; }
+    .mob-tab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.2rem; padding:0.625rem 0.5rem; border:none; background:transparent; cursor:pointer; color:#4b5563; transition:color 0.15s; font-size:0.6rem; font-weight:600; letter-spacing:0.03em; text-transform:uppercase; position:relative; }
+    .mob-tab iconify-icon { font-size:1.5rem; transition:color 0.15s; }
+    .mob-tab.active { color:#0AB9DC; }
+    .mob-tab.active::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:2.25rem; height:3px; border-radius:0 0 4px 4px; background:#0AB9DC; }
+    /* ── Responsive breakpoints ─────────────────────────────────────── */
+    @media (max-width: 768px) {
+      /* layout */
+      body { overflow-x:hidden; }
+      #desktop-sidebar { display:none !important; }
+      #dashboard-main { margin-left:0 !important; padding:calc(56px + 0.875rem) 0.875rem calc(72px + env(safe-area-inset-bottom)) !important; min-width:0; }
+      .mob-navbar { display:flex; }
+      .mob-bottomnav { display:block; }
+      .mob-hide { display:none !important; }
+      /* grids */
+      .kpi-grid { grid-template-columns:repeat(2,1fr) !important; gap:0.625rem !important; }
+      .overview-two-col { grid-template-columns:1fr !important; gap:0.625rem !important; }
+      .strategy-grid { grid-template-columns:1fr !important; }
+      /* cards */
+      .card { padding:1rem !important; }
+      .kpi-card { padding:0.875rem 1rem !important; }
+      /* kpi numbers scale down */
+      #kpi-total, #kpi-active, #kpi-requests, #kpi-tokens-in, #kpi-tokens-out { font-size:1.6rem !important; }
+      /* page header */
+      #page-title { font-size:1.1rem !important; }
+      /* code block — prevent overflow */
+      .code-block { font-size:0.65rem !important; white-space:pre !important; overflow-x:auto !important; max-width:100% !important; }
+      /* proxy endpoint code */
+      #dashboard-main code { font-size:0.65rem !important; word-break:break-all !important; }
+      /* account row — wrap actions on tight screens */
+      .acc-row-actions { flex-wrap:wrap; gap:0.375rem !important; }
+      /* remove btn text hidden on very small */
+      .btn-sm-danger span.btn-remove-lbl { display:none; }
+    }
+    /* extra-small: ≤ 390px */
+    @media (max-width: 390px) {
+      #dashboard-main { padding-left:0.75rem !important; padding-right:0.75rem !important; }
+      .kpi-grid { gap:0.5rem !important; }
+      .kpi-card { padding:0.75rem !important; }
+      #kpi-total, #kpi-active, #kpi-requests, #kpi-tokens-in, #kpi-tokens-out { font-size:1.4rem !important; }
+      .card { padding:0.875rem !important; }
+      .strategy-grid button { padding:0.75rem !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- UPDATE BANNER -->
+<div id="dash-update-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:100;background:#1a1a0a;border-bottom:1px solid rgba(245,158,11,0.4);padding:0.5rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+  <div style="display:flex;align-items:center;gap:0.625rem;">
+    <iconify-icon icon="solar:bell-bold-duotone" style="color:#f59e0b;font-size:1rem;flex-shrink:0;"></iconify-icon>
+    <span id="dash-update-msg" style="font-size:0.8rem;color:#fbbf24;font-weight:500;"></span>
+  </div>
+  <button onclick="document.getElementById('dash-update-banner').classList.add('hidden')" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1.1rem;line-height:1;flex-shrink:0;">✕</button>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="dash-loading" style="position:fixed;inset:0;background:#121212;z-index:9999;display:flex;align-items:center;justify-content:center;">
+  <pre id="dash-loading-art" style="font-family:'Courier New',Courier,monospace;font-size:clamp(4px,0.85vw,9px);line-height:1;color:#0AB9DC;white-space:pre;text-align:center;user-select:none;"></pre>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="min-height:100vh;display:flex;max-width:100%;overflow-x:hidden;">
+  <aside id="desktop-sidebar" style="width:220px;flex-shrink:0;background:#151515;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:20;">
+    <div style="padding:1rem 0.5rem 0.875rem;border-bottom:1px solid #1e1e1e;display:flex;justify-content:center;">
+      <div class="ascii-logo" style="font-size:6.5px;line-height:1.2;"> ██████╗  ██████╗ ██╗    ██╗███████╗███╗   ██╗
+██╔════╝ ██╔═══██╗██║    ██║██╔════╝████╗  ██║
+██║  ███╗██║   ██║██║ █╗ ██║█████╗  ██╔██╗ ██║
+██║   ██║██║▄▄ ██║██║███╗██║██╔══╝  ██║╚██╗██║
+╚██████╔╝╚██████╔╝╚███╔███╔╝███████╗██║ ╚████║
+ ╚═════╝  ╚══▀▀═╝  ╚══╝╚══╝ ╚══════╝╚═╝  ╚═══╝</div>
+    </div>
+    <nav style="flex:1;padding:0.75rem;display:flex;flex-direction:column;gap:0.25rem;">
+      <button class="nav-item active" id="nav-overview" onclick="showTab('overview')"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-overview-label">Overview</span></button>
+      <button class="nav-item" id="nav-providers" onclick="showTab('providers')"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-providers-label">Providers</span></button>
+      <button class="nav-item" id="nav-accounts" onclick="showTab('accounts')"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-accounts-label">Accounts</span></button>
+      <button class="nav-item" id="nav-settings" onclick="showTab('settings')"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-settings-label">Settings</span></button>
+    </nav>
+    <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
+      <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
+        <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:13px;flex-shrink:0;"></iconify-icon>
+        <select class="lang-select" style="width:100%;" id="lang-select-dash" onchange="setLang(this.value)">
+          <option value="en">English</option>
+          <option value="pt">PT-BR</option>
+          <option value="zh">中文</option>
+        </select>
+      </div>
+      <p id="sb-made-by" style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;">made by</p>
+      <div style="display:flex;flex-direction:column;gap:0.375rem;">
+        <a href="https://github.com/gxdevs" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:github" style="font-size:1rem;flex-shrink:0;"></iconify-icon>github.com/gxdevs</a>
+        <a href="https://youtube.com/@gxdevv" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:youtube" style="font-size:1rem;flex-shrink:0;color:#ef4444;"></iconify-icon>youtube @gxdevv</a>
+      </div>
+    </div>
+  </aside>
+  <main id="dashboard-main" style="margin-left:220px;flex:1;padding:1.5rem;min-height:100vh;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:1rem;">
+      <div>
+        <h1 id="page-title" style="font-size:1.25rem;font-weight:700;">Overview</h1>
+        <p id="page-sub" style="color:#6b7280;font-size:0.82rem;margin-top:0.15rem;"></p>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.625rem;flex-shrink:0;">
+        <div id="proxy-pill" class="mob-hide" style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.875rem;border-radius:9999px;background:#1a1a1a;border:1px solid #2a2a2a;font-size:0.8rem;">
+          <div class="dot dot-warn dot-pulse" id="proxy-pill-dot"></div>
+          <span id="proxy-pill-label" style="color:#6b7280;">checking…</span>
+        </div>
+        <button class="btn-server power-off mob-hide" id="btn-server-power" onclick="handleServerPower()" style="opacity:0;transition:opacity 0.3s;">
+          <iconify-icon icon="solar:power-bold-duotone" id="server-power-icon" style="font-size:0.875rem;"></iconify-icon>
+          <span id="server-power-label">Stop server</span>
+        </button>
+        <button class="btn-primary mob-hide" style="height:2.5rem;padding:0 1rem;font-size:0.82rem;" onclick="openAddModal()"><iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon><span id="btn-add-acc">Add account</span></button>
+        <button class="btn-icon mob-hide" id="btn-refresh" onclick="manualRefresh()" title="Refresh"><iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon></button>
+        <button class="btn-icon mob-hide" id="btn-autopoll" onclick="toggleAutoPoll()" title="Auto-refresh" style="position:relative;">
+          <iconify-icon icon="solar:clock-circle-bold-duotone"></iconify-icon>
+          <span id="autopoll-dot" style="display:none;position:absolute;top:3px;right:3px;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 4px rgba(34,197,94,0.7);"></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Overview -->
+    <div id="tab-overview">
+      <div class="kpi-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.25rem;">
+        <div class="kpi-card"><div style="display:flex;align-items:center;justify-content:space-between;"><p id="kpi-lbl-accounts" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Accounts</p><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="color:#0AB9DC;font-size:1.25rem;opacity:0.7;"></iconify-icon></div><p id="kpi-total" style="font-size:2rem;font-weight:800;line-height:1;">—</p><p id="kpi-total-sub" style="font-size:0.72rem;color:#6b7280;">total registered</p></div>
+        <div class="kpi-card"><div style="display:flex;align-items:center;justify-content:space-between;"><p id="kpi-lbl-active" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Active</p><iconify-icon icon="solar:shield-check-bold-duotone" style="color:#22c55e;font-size:1.25rem;opacity:0.7;"></iconify-icon></div><p id="kpi-active" style="font-size:2rem;font-weight:800;line-height:1;color:#22c55e;">—</p><p id="kpi-active-sub" style="font-size:0.72rem;color:#6b7280;">healthy &amp; rotating</p></div>
+        <div class="kpi-card"><div style="display:flex;align-items:center;justify-content:space-between;"><p id="kpi-lbl-reqs" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Requests</p><iconify-icon icon="solar:send-bold-duotone" style="color:#0AB9DC;font-size:1.25rem;opacity:0.7;"></iconify-icon></div><p id="kpi-requests" style="font-size:2rem;font-weight:800;line-height:1;">—</p><p id="kpi-reqs-sub" style="font-size:0.72rem;color:#6b7280;">total proxied</p></div>
+        <div class="kpi-card"><div style="display:flex;align-items:center;justify-content:space-between;"><p id="kpi-lbl-tokens" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Tokens</p><iconify-icon icon="solar:bolt-circle-bold-duotone" style="color:#f59e0b;font-size:1.25rem;opacity:0.7;"></iconify-icon></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.375rem;margin-top:0.4rem;"><div><p style="font-size:0.62rem;color:#6b7280;font-weight:600;letter-spacing:0.04em;margin-bottom:0.1rem;">INPUT</p><p id="kpi-tokens-in" style="font-size:1.5rem;font-weight:800;line-height:1;color:#0AB9DC;">—</p></div><div><p style="font-size:0.62rem;color:#6b7280;font-weight:600;letter-spacing:0.04em;margin-bottom:0.1rem;">OUTPUT</p><p id="kpi-tokens-out" style="font-size:1.5rem;font-weight:800;line-height:1;color:#f59e0b;">—</p></div></div></div>
+      </div>
+      <!-- Connected Providers strip -->
+      <div id="overview-providers-row" class="hidden" style="margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+          <iconify-icon icon="solar:planet-bold-duotone" style="color:#6b7280;font-size:0.85rem;"></iconify-icon>
+          <span style="font-size:0.7rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;">Connected Providers</span>
+        </div>
+        <div id="overview-providers-strip" class="connected-providers-strip"></div>
+      </div>
+
+      <div class="overview-two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;"><iconify-icon icon="solar:server-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon><h3 id="proxy-card-title" style="font-weight:600;font-size:0.95rem;">Proxy server</h3></div>
+          <div style="display:flex;flex-direction:column;gap:0.625rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;"><span id="proxy-lbl-endpoint" style="color:#6b7280;">Endpoint</span><code style="color:#0AB9DC;font-size:0.72rem;">http://localhost:3099/v1</code></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;"><span id="proxy-lbl-strategy" style="color:#6b7280;">Strategy</span><span id="proxy-strategy" style="color:#e8e8e8;">—</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;"><span id="proxy-lbl-status" style="color:#6b7280;">Status</span><span id="proxy-status-text" style="color:#6b7280;">—</span></div>
+            <div style="padding-top:0.625rem;border-top:1px solid #222;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.625rem;">
+                <div style="display:flex;align-items:center;gap:0.375rem;">
+                  <iconify-icon icon="solar:wallet-money-bold-duotone" style="color:#22c55e;font-size:0.95rem;"></iconify-icon>
+                  <p style="font-size:0.7rem;color:#6b7280;font-weight:600;">Estimated value saved</p>
+                </div>
+                <p id="proxy-total-cost" style="font-size:1rem;font-weight:800;color:#22c55e;">$0.00</p>
+              </div>
+              <div id="proxy-cost-by-model" style="display:flex;flex-direction:column;gap:0.25rem;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;"><iconify-icon icon="solar:chart-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon><h3 id="model-card-title" style="font-weight:600;font-size:0.95rem;">Usage by model</h3></div>
+          <div id="usage-by-model"><p id="no-usage-msg" style="font-size:0.85rem;color:#6b7280;">No usage data yet.</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon><h3 id="acc-card-title" style="font-weight:600;font-size:0.95rem;">Connections</h3></div>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <button class="btn-sm btn-sm-ghost" onclick="openAddModal()"><iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon><span id="btn-add-acc-sm">Add</span></button>
+          </div>
+        </div>
+        <div id="accounts-list"></div>
+      </div>
+    </div>
+
+    <!-- Providers tab -->
+    <div id="tab-providers" class="hidden">
+      <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <!-- OAuth Providers -->
+        <div class="card">
+          <div class="section-divider"><h3 id="prov-oauth-title">OAuth Providers</h3></div>
+          <div id="prov-grid-oauth" class="provider-grid"></div>
+        </div>
+        <!-- Free Providers -->
+        <div class="card" id="prov-free-section">
+          <div class="section-divider"><h3 id="prov-free-title">Free Providers</h3></div>
+          <div id="prov-grid-free" class="provider-grid"></div>
+        </div>
+        <!-- API Key Providers -->
+        <div class="card">
+          <div class="section-divider"><h3 id="prov-apikey-title">API Key Providers</h3></div>
+          <div id="prov-grid-apikey" class="provider-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounts tab -->
+    <div id="tab-accounts" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon><h3 id="all-acc-title" style="font-weight:600;font-size:0.95rem;">All Accounts</h3></div>
+          <button class="btn-primary" style="height:2.25rem;padding:0 0.875rem;font-size:0.8rem;" onclick="openAddModal()"><iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon><span id="btn-add-acc-full">Add account</span></button>
+        </div>
+        <div id="accounts-list-full"></div>
+      </div>
+    </div>
+
+    <!-- Settings tab -->
+    <div id="tab-settings" class="hidden">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+
+        <!-- Rotation Strategy -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+            <iconify-icon icon="solar:arrows-right-down-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
+            <h3 id="cfg-strategy-title" style="font-weight:600;font-size:0.95rem;">Rotation Strategy</h3>
+          </div>
+          <p id="cfg-strategy-desc" style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">How grouter-auth selects the next account for each request.</p>
+          <div class="strategy-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.25rem;">
+            <button id="cfg-btn-fill" onclick="selectStrategy('fill-first')" style="text-align:left;padding:1rem;border-radius:14px;border:2px solid #2a2a2a;background:#1a1a1a;cursor:pointer;transition:border-color 0.2s,background 0.2s;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                <iconify-icon icon="solar:battery-charge-bold-duotone" style="color:#0AB9DC;font-size:1.2rem;"></iconify-icon>
+                <span style="font-weight:700;font-size:0.88rem;color:#e8e8e8;">fill-first</span>
+              </div>
+              <p id="cfg-fill-desc" style="font-size:0.75rem;color:#6b7280;line-height:1.4;">Always use the highest-priority account until it gets rate-limited, then fall back to the next.</p>
+            </button>
+            <button id="cfg-btn-rr" onclick="selectStrategy('round-robin')" style="text-align:left;padding:1rem;border-radius:14px;border:2px solid #2a2a2a;background:#1a1a1a;cursor:pointer;transition:border-color 0.2s,background 0.2s;">
+              <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+                <iconify-icon icon="solar:refresh-circle-bold-duotone" style="color:#0AB9DC;font-size:1.2rem;"></iconify-icon>
+                <span style="font-weight:700;font-size:0.88rem;color:#e8e8e8;">round-robin</span>
+              </div>
+              <p id="cfg-rr-desc" style="font-size:0.75rem;color:#6b7280;line-height:1.4;">Distribute requests evenly across all active accounts, cycling through them in order.</p>
+            </button>
+          </div>
+          <div id="cfg-sticky-row" style="display:none;align-items:center;justify-content:space-between;padding:0.875rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:1.25rem;">
+            <div>
+              <p id="cfg-sticky-label" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Sticky limit</p>
+              <p id="cfg-sticky-hint" style="font-size:0.75rem;color:#6b7280;">Consecutive requests before switching to the next account.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <button onclick="adjSticky(-1)" style="width:2rem;height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">−</button>
+              <span id="cfg-sticky-val" style="font-size:1.1rem;font-weight:700;color:#0AB9DC;min-width:2rem;text-align:center;">3</span>
+              <button onclick="adjSticky(1)" style="width:2rem;height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">+</button>
+            </div>
+          </div>
+          <button class="btn-primary" id="cfg-save-btn" style="height:2.5rem;padding:0 1.5rem;" onclick="saveConfig()">
+            <iconify-icon icon="solar:diskette-bold-duotone"></iconify-icon>
+            <span id="cfg-save-label">Save changes</span>
+          </button>
+        </div>
+
+        <!-- Proxy config -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <iconify-icon icon="solar:server-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
+            <h3 id="cfg-proxy-title" style="font-weight:600;font-size:0.95rem;">Proxy</h3>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p id="cfg-port-label" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Port</p>
+                <p id="cfg-port-hint" style="font-size:0.75rem;color:#6b7280;">Requires proxy restart to take effect.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <input id="cfg-port-input" type="number" min="1" max="65535" value="3099"
+                  style="width:6rem;height:2.25rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.9rem;text-align:center;outline:none;padding:0 0.5rem;"
+                  oninput="cfgDirty=true" />
+                <button class="btn-primary" style="height:2.25rem;padding:0 0.875rem;font-size:0.8rem;" onclick="savePort()">
+                  <iconify-icon icon="solar:diskette-bold-duotone"></iconify-icon>
+                  <span id="cfg-port-save">Save</span>
+                </button>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <p id="cfg-endpoint-label" style="font-size:0.85rem;color:#6b7280;">Endpoint</p>
+              <code id="cfg-endpoint-val" style="color:#0AB9DC;font-size:0.75rem;">http://localhost:3099/v1</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- Maintenance -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <iconify-icon icon="solar:shield-warning-bold-duotone" style="color:#f59e0b;font-size:1.1rem;"></iconify-icon>
+            <h3 id="cfg-maint-title" style="font-weight:600;font-size:0.95rem;">Maintenance</h3>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.875rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+            <div>
+              <p id="cfg-unlock-label" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Unlock all accounts</p>
+              <p id="cfg-unlock-hint" style="font-size:0.75rem;color:#6b7280;">Clear all rate-limit locks and reset backoff state.</p>
+            </div>
+            <button class="btn-sm" id="cfg-unlock-btn" onclick="unlockAll()"
+              style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#f59e0b;border-radius:10px;padding:0.4rem 0.875rem;font-size:0.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:0.375rem;transition:background 0.15s;">
+              <iconify-icon icon="solar:lock-unlocked-bold-duotone"></iconify-icon>
+              <span id="cfg-unlock-btn-label">Unlock</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Proxy Pools -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <iconify-icon icon="solar:routing-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
+              <h3 style="font-weight:600;font-size:0.95rem;">Proxy Pools</h3>
+            </div>
+            <button class="btn-sm btn-sm-ghost" onclick="openCreatePoolForm()" id="btn-add-pool">
+              <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+              <span>Add pool</span>
+            </button>
+          </div>
+          <p style="font-size:0.78rem;color:#6b7280;margin-bottom:1rem;line-height:1.5;">Assign HTTP proxy URLs to individual connections — useful for IP rotation or corporate proxies.</p>
+          <!-- Create form (hidden by default) -->
+          <div id="pool-create-form" class="hidden" style="margin-bottom:1rem;padding:1rem;border-radius:12px;background:#151515;border:1px solid #2a2a2a;">
+            <p style="font-size:0.78rem;font-weight:600;color:#9ca3af;margin-bottom:0.75rem;text-transform:uppercase;letter-spacing:0.06em;">New Proxy Pool</p>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:0.75rem;">
+              <input id="pool-name-input" type="text" placeholder="Pool name (e.g. Residential US)"
+                style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;width:100%;" />
+              <input id="pool-url-input" type="text" placeholder="http://user:pass@proxy.host:port"
+                style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;width:100%;font-family:monospace;" />
+              <input id="pool-noproxy-input" type="text" placeholder="No-proxy (optional): localhost,127.0.0.1"
+                style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:0.5rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;width:100%;" />
+            </div>
+            <p id="pool-create-error" style="font-size:0.78rem;color:#ef4444;margin-bottom:0.5rem;display:none;"></p>
+            <div style="display:flex;gap:0.5rem;">
+              <button class="btn-primary" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="submitCreatePool()"><iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon><span>Create</span></button>
+              <button class="btn-ghost" style="height:2.25rem;padding:0 1rem;font-size:0.8rem;" onclick="closeCreatePoolForm()">Cancel</button>
+            </div>
+          </div>
+          <!-- Pool list -->
+          <div id="pool-list" style="display:flex;flex-direction:column;gap:0.5rem;">
+            <p style="font-size:0.82rem;color:#6b7280;">Loading…</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- CONNECT PROVIDER MODAL -->
+<div id="connect-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:520px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeConnectModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <div id="connect-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <h2 id="connect-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
+          <span id="connect-port-tag" class="provider-port-tag"></span>
+        </div>
+        <p id="connect-modal-sub" style="color:#6b7280;font-size:0.8rem;"></p>
+      </div>
+    </div>
+    <div id="connect-modal-body">
+      <div style="margin-bottom:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+          <label id="connect-existing-header" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;">Existing keys</label>
+        </div>
+        <div id="connect-existing-list" style="max-height:180px;overflow-y:auto;"></div>
+      </div>
+
+      <div style="border-top:1px solid #1f1f1f;padding-top:1rem;margin-bottom:0.75rem;">
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem;">Add a new key</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+          <input id="connect-keyname-input" type="text" placeholder="Label (optional)" autocomplete="off"
+            style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;" />
+          <input id="connect-apikey-input" type="password" placeholder="sk-..." autocomplete="off"
+            style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;font-family:monospace;" />
+        </div>
+        <a id="connect-apikey-url" href="#" target="_blank" style="display:inline-flex;align-items:center;gap:0.375rem;font-size:0.75rem;color:#6b7280;margin-bottom:0.75rem;text-decoration:none;">
+          <iconify-icon icon="solar:key-bold-duotone" style="color:#0AB9DC;"></iconify-icon>
+          <span id="connect-apikey-url-text">Get API key</span>
+        </a>
+        <p id="connect-modal-error" style="font-size:0.8rem;color:#ef4444;margin-bottom:0.5rem;display:none;"></p>
+        <button class="btn-primary" id="connect-submit-btn" style="width:100%;justify-content:center;" onclick="submitApiKeyConnection()">
+          <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+          <span>Add key</span>
+        </button>
+      </div>
+
+      <p style="font-size:0.7rem;color:#4b5563;text-align:center;padding-top:0.5rem;border-top:1px solid #1a1a1a;">Each key is rotated automatically. Add as many as you like.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ADD MODAL -->
+<div id="add-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeAddModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <div style="width:2.5rem;height:2.5rem;border-radius:12px;background:rgba(10,185,220,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><iconify-icon icon="solar:user-plus-bold-duotone" style="color:#0AB9DC;font-size:1.25rem;"></iconify-icon></div>
+      <div><h2 id="modal-title" style="font-weight:700;font-size:1.1rem;">Add Account</h2><p id="modal-sub" style="color:#6b7280;font-size:0.82rem;">Qwen OAuth device flow</p></div>
+    </div>
+    <div id="modal-idle">
+      <div id="modal-deprecation-banner" class="hidden" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:0.875rem 1rem;margin-bottom:1rem;display:flex;gap:0.625rem;align-items:flex-start;">
+        <iconify-icon icon="solar:danger-triangle-bold-duotone" style="color:#ef4444;font-size:1.15rem;flex-shrink:0;margin-top:0.1rem;"></iconify-icon>
+        <div>
+          <p id="modal-deprecation-title" style="font-size:0.82rem;font-weight:700;color:#ef4444;margin-bottom:0.15rem;">Qwen Code Free discontinued</p>
+          <p id="modal-deprecation-reason" style="font-size:0.75rem;color:#9ca3af;line-height:1.5;"></p>
+        </div>
+      </div>
+      <p id="modal-desc" style="font-size:0.85rem;color:#6b7280;line-height:1.6;margin-bottom:1.25rem;">Click Start to request an authorization code. Open the link, enter the code, and the account will be added automatically.</p>
+      <button class="btn-primary" id="modal-start-auth-btn" style="width:100%;justify-content:center;" onclick="startModalAuth()"><iconify-icon icon="solar:login-3-bold-duotone"></iconify-icon><span id="modal-start-btn">Start authorization</span></button>
+    </div>
+    <div id="modal-started" class="hidden">
+      <div style="background:rgba(10,185,220,0.07);border:1px solid rgba(10,185,220,0.2);border-radius:14px;padding:1rem;margin-bottom:1rem;">
+        <p id="modal-codelabel" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:0.25rem;">Your code</p>
+        <p id="modal-usercode" style="font-size:2rem;font-weight:800;letter-spacing:0.25em;color:#0AB9DC;font-family:monospace;"></p>
+      </div>
+      <a id="modal-urllink" href="#" target="_blank" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:#0AB9DC;margin-bottom:1rem;word-break:break-all;"><iconify-icon icon="solar:link-bold-duotone" style="flex-shrink:0;"></iconify-icon><span id="modal-urltext"></span></a>
+      <div style="display:flex;align-items:center;gap:0.75rem;padding-top:0.75rem;border-top:1px solid #2a2a2a;"><div class="spinner"></div><p id="modal-pollstatus" style="font-size:0.85rem;color:#6b7280;"></p></div>
+    </div>
+    <div id="modal-error" class="hidden" style="text-align:center;padding:0.5rem 0;">
+      <div style="width:3.5rem;height:3.5rem;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;"><iconify-icon icon="solar:close-circle-bold-duotone" style="color:#ef4444;font-size:2rem;"></iconify-icon></div>
+      <p id="modal-errormsg" style="font-weight:700;margin-bottom:0.25rem;color:#ef4444;"></p>
+      <p id="modal-errorsub" style="font-size:0.82rem;color:#6b7280;margin-bottom:1.25rem;"></p>
+      <button class="btn-primary" style="margin:0 auto;" onclick="openAddModal()"><iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon><span id="modal-tryagain-btn">Try again</span></button>
+    </div>
+    <div id="modal-success" class="hidden" style="text-align:center;padding:0.5rem 0;">
+      <div style="width:3.5rem;height:3.5rem;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;"><iconify-icon icon="solar:check-circle-bold-duotone" style="color:#22c55e;font-size:2rem;"></iconify-icon></div>
+      <p id="modal-successmsg" style="font-weight:700;margin-bottom:0.25rem;">Account added!</p>
+      <p id="modal-successemail" style="font-size:0.85rem;color:#6b7280;margin-bottom:1.25rem;"></p>
+      <button class="btn-primary" style="margin:0 auto;" onclick="closeAddModal();loadStatus();openAddModal()"><iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon><span id="modal-addanother-btn">Add another</span></button>
+      <button class="btn-ghost" style="margin:0.5rem auto 0;display:flex;" onclick="closeAddModal();loadStatus();"><iconify-icon icon="solar:check-circle-bold-duotone"></iconify-icon><span id="modal-done-btn">Done</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MOBILE NAVBAR ───────────────────────────────────────────────────── -->
+<header class="mob-navbar">
+  <button class="btn-icon" id="mob-hamburger-btn" onclick="toggleDrawer()" style="border-color:transparent;">
+    <iconify-icon icon="solar:hamburger-menu-bold-duotone" style="font-size:1.2rem;"></iconify-icon>
+  </button>
+  <span class="mob-logo">GROUTER</span>
+  <div style="display:flex;align-items:center;gap:0.5rem;">
+    <div id="mob-proxy-dot" class="dot dot-warn dot-pulse" title="checking…"></div>
+    <button class="btn-icon" onclick="manualRefresh()" title="Refresh" style="border-color:transparent;">
+      <iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1rem;"></iconify-icon>
+    </button>
+    <button class="btn-primary" style="height:2.25rem;padding:0 0.75rem;font-size:0.8rem;" onclick="openAddModal()">
+      <iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon>
+    </button>
+  </div>
+</header>
+
+<!-- ── MOBILE DRAWER OVERLAY ───────────────────────────────────────────── -->
+<div id="mob-overlay" class="mob-overlay" onclick="toggleDrawer()"></div>
+
+<!-- ── MOBILE DRAWER ───────────────────────────────────────────────────── -->
+<div id="mob-drawer" class="mob-drawer">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1rem 0.875rem;border-bottom:1px solid #1e1e1e;">
+    <div class="ascii-logo" style="font-size:5.5px;line-height:1.2;"> ██████╗  ██████╗ ██╗    ██╗███████╗███╗   ██╗
+██╔════╝ ██╔═══██╗██║    ██║██╔════╝████╗  ██║
+██║  ███╗██║   ██║██║ █╗ ██║█████╗  ██╔██╗ ██║
+██║   ██║██║▄▄ ██║██║███╗██║██╔══╝  ██║╚██╗██║
+╚██████╔╝╚██████╔╝╚███╔███╔╝███████╗██║ ╚████║
+ ╚═════╝  ╚══▀▀═╝  ╚══╝╚══╝ ╚══════╝╚═╝  ╚═══╝</div>
+    <button class="btn-icon" onclick="toggleDrawer()" style="border-color:transparent;flex-shrink:0;">
+      <iconify-icon icon="solar:close-circle-bold-duotone" style="font-size:1.1rem;"></iconify-icon>
+    </button>
+  </div>
+  <!-- Proxy status -->
+  <div style="margin:0.75rem 1rem;padding:0.625rem 0.875rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;display:flex;align-items:center;gap:0.5rem;">
+    <div id="mob-drawer-dot" class="dot dot-warn dot-pulse"></div>
+    <span id="mob-drawer-status" style="font-size:0.8rem;color:#6b7280;">checking…</span>
+  </div>
+  <!-- Nav section -->
+  <nav style="flex:1;padding:0.5rem 0.75rem;display:flex;flex-direction:column;gap:0.25rem;">
+    <button class="nav-item active" id="mob-nav-overview" onclick="showTab('overview');toggleDrawer()"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Overview</span></button>
+    <button class="nav-item" id="mob-nav-providers" onclick="showTab('providers');toggleDrawer()"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Providers</span></button>
+    <button class="nav-item" id="mob-nav-accounts" onclick="showTab('accounts');toggleDrawer()"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Accounts</span></button>
+    <button class="nav-item" id="mob-nav-settings" onclick="showTab('settings');toggleDrawer()"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Settings</span></button>
+  </nav>
+  <!-- Divider -->
+  <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
+  <!-- Quick actions -->
+  <div style="padding:0.75rem;">
+    <p style="font-size:0.65rem;color:#4b5563;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;padding-left:0.25rem;">Quick actions</p>
+    <button class="nav-item" onclick="manualRefresh();toggleDrawer()"><iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Refresh</span></button>
+    <button class="nav-item" id="mob-autopoll-btn" onclick="toggleAutoPoll()" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:0.625rem;"><iconify-icon icon="solar:clock-circle-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span>Auto-refresh</span></div>
+      <span id="mob-autopoll-badge" style="font-size:0.6rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:9999px;background:#1e1e1e;color:#4b5563;">OFF</span>
+    </button>
+  </div>
+  <!-- Divider -->
+  <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
+  <!-- Language + links -->
+  <div style="padding:0.875rem;">
+    <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
+      <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:13px;flex-shrink:0;"></iconify-icon>
+      <select class="lang-select" style="width:100%;" onchange="setLang(this.value);document.getElementById('lang-select-dash').value=this.value;">
+        <option value="en">English</option>
+        <option value="pt">PT-BR</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+    <p style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;">made by</p>
+    <div style="display:flex;flex-direction:column;gap:0.375rem;">
+      <a href="https://github.com/gxdevs" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:github" style="font-size:1rem;flex-shrink:0;"></iconify-icon>github.com/gxdevs</a>
+      <a href="https://youtube.com/@gxdevv" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:youtube" style="font-size:1rem;flex-shrink:0;color:#ef4444;"></iconify-icon>youtube @gxdevv</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── MOBILE BOTTOM NAV ────────────────────────────────────────────────── -->
+<nav class="mob-bottomnav">
+  <div class="mob-bottomnav-inner">
+    <button class="mob-tab active" id="mob-tab-overview" onclick="showTab('overview')">
+      <iconify-icon icon="solar:chart-2-bold-duotone"></iconify-icon>
+      <span>Overview</span>
+    </button>
+    <button class="mob-tab" id="mob-tab-providers" onclick="showTab('providers')">
+      <iconify-icon icon="solar:planet-bold-duotone"></iconify-icon>
+      <span>Providers</span>
+    </button>
+    <button class="mob-tab" id="mob-tab-accounts" onclick="showTab('accounts')">
+      <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
+      <span>Accounts</span>
+    </button>
+    <button class="mob-tab" id="mob-tab-settings" onclick="showTab('settings')">
+      <iconify-icon icon="solar:settings-bold-duotone"></iconify-icon>
+      <span>Settings</span>
+    </button>
+  </div>
+</nav>
+
+<script>
+// ── i18n ──────────────────────────────────────────────────────────────
+const I18N = {
+  en: {
+    nav_overview:'Overview',nav_accounts:'Accounts',nav_settings:'Settings',
+    page_overview:'Overview',page_overview_sub:'Real-time proxy status and usage',
+    page_accounts:'Accounts',page_accounts_sub:'Manage your Qwen accounts',
+    page_settings:'Settings',page_settings_sub:'Proxy configuration and maintenance',
+    btn_add_acc:'Add account',
+    kpi_accounts:'Connections',kpi_active:'Active',kpi_reqs:'Requests',kpi_tokens:'Tokens',
+    kpi_active_sub:'healthy & rotating',kpi_reqs_sub:'total proxied',kpi_tokens_sub:'total consumed',
+    proxy_title:'Proxy server',proxy_endpoint:'Endpoint',proxy_strategy:'Strategy',proxy_status:'Status',
+    model_title:'Usage by model',no_usage:'No usage data yet.',
+    acc_title:'Connections',all_acc_title:'All Connections',
+    modal_title:'Add Account',modal_sub:'Qwen OAuth device flow',
+    modal_desc:'Click Start to request an authorization code. Open the link, enter the code, and the account will be added automatically.',
+    modal_start:'Start authorization',modal_codelabel:'Your code',modal_pollwait:'Open the URL above and enter the code…',
+    modal_successmsg:'Account added!',modal_done:'Done',
+    status_running:'Running',status_stopped:'Stopped',
+    no_accounts:'No accounts yet',add_first:'Add first account',
+    toggle_disable:'Disable',toggle_enable:'Enable',remove:'Remove',confirm_remove:'Remove account',
+    never:'Never',last_used:'last used',sb_tagline:'auth proxy',sb_made_by:'made by',
+    cfg_strategy_title:'Rotation Strategy',cfg_strategy_desc:'How grouter-auth selects the next account for each request.',
+    cfg_fill_desc:'Always use the highest-priority account until it hits a rate limit, then fall back.',
+    cfg_rr_desc:'Distribute requests evenly across all active accounts, cycling through them.',
+    cfg_sticky_label:'Sticky limit',cfg_sticky_hint:'Consecutive requests before switching to the next account.',
+    cfg_save:'Save changes',cfg_saved:'Saved!',
+    cfg_proxy_title:'Proxy',cfg_port_label:'Port',cfg_port_hint:'Requires proxy restart to take effect.',
+    cfg_endpoint_label:'Endpoint',cfg_port_save:'Save',
+    cfg_maint_title:'Maintenance',
+    cfg_unlock_label:'Unlock all accounts',cfg_unlock_hint:'Clear all rate-limit locks and reset backoff state.',
+    cfg_unlock_btn:'Unlock',cfg_unlocked:'Unlocked!',
+    // Providers section
+    providers_oauth_title:'OAuth Providers',providers_free_title:'Free Providers',providers_apikey_title:'API Key Providers',
+    provider_badge_free:'Free',provider_badge_deprecated:'Deprecated',
+    provider_meta_none:'None configured yet.',
+    provider_status_connected:'{n} connected',provider_status_none:'No connections',provider_status_discontinued:'Discontinued',
+    // OAuth flows
+    flow_device_code:'Device code flow',flow_auth_code:'Authorization code flow',flow_import_token:'Paste token',
+    // OAuth picker
+    picker_title:'Choose a provider',picker_sub:'Pick which OAuth provider to connect',
+    // Connect / device-code / auth-code
+    modal_connect_title:'Connect',
+    modal_desc_default:'Click Start to begin the authorization flow.',
+    modal_desc_import:'Paste the access token from {name}.',
+    modal_desc_meta:'Provide your {name} OAuth app credentials. They stay on this machine.',
+    modal_import_placeholder:'Paste token here…',
+    modal_auth_url_cta:'Click to open authorization page',
+    modal_auth_wait:'Waiting for you to authorize in the browser…',
+    // Existing keys list
+    connect_existing_header:'Existing keys',connect_existing_header_empty:'No keys yet — add your first below',
+    connect_remove_key:'Remove this key?',
+    // Errors
+    err_start_fail:'Failed to start authorization.',
+    err_start_sub:'Check that the proxy server is running.',
+    err_access_denied:'Access denied.',err_access_denied_sub:'Authorization was cancelled in the browser.',
+    err_code_expired:'Code expired.',err_code_expired_sub:'The code timed out before being used.',
+    err_auth_failed:'Authorization failed.',
+    err_network:'Network error.',
+    err_empty_token:'Paste a token first.',err_import_fail:'Import failed.',
+    err_meta_required:'{label} is required.',
+    // Deprecation / qwen
+    qwen_deprecated_title:'Qwen Code Free discontinued',
+    qwen_deprecated_msg:'Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.',
+    btn_add_another:'Add another',btn_try_again:'Try again',
+    no_oauth_available:'No OAuth providers available. Add an API key provider instead.',
+  },
+  pt: {
+    nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
+    page_overview:'Visão Geral',page_overview_sub:'Status do proxy e uso em tempo real',
+    page_accounts:'Contas',page_accounts_sub:'Gerencie suas contas Qwen',
+    page_settings:'Configurações',page_settings_sub:'Configurações do proxy e manutenção',
+    btn_add_acc:'Adicionar conta',
+    kpi_accounts:'Conexões',kpi_active:'Ativas',kpi_reqs:'Requisições',kpi_tokens:'Tokens',
+    kpi_active_sub:'saudáveis e em rotação',kpi_reqs_sub:'total enviadas',kpi_tokens_sub:'total consumidos',
+    proxy_title:'Servidor proxy',proxy_endpoint:'Endpoint',proxy_strategy:'Estratégia',proxy_status:'Status',
+    model_title:'Uso por modelo',no_usage:'Sem dados de uso ainda.',
+    acc_title:'Conexões',all_acc_title:'Todas as Conexões',
+    modal_title:'Adicionar Conta',modal_sub:'OAuth device flow da Qwen',
+    modal_desc:'Clique em Iniciar para solicitar um código de autorização. Abra o link, insira o código e a conta será adicionada automaticamente.',
+    modal_start:'Iniciar autorização',modal_codelabel:'Seu código',modal_pollwait:'Abra o link acima e insira o código…',
+    modal_successmsg:'Conta adicionada!',modal_done:'Concluído',
+    status_running:'Rodando',status_stopped:'Parado',
+    no_accounts:'Nenhuma conta ainda',add_first:'Adicionar primeira conta',
+    toggle_disable:'Desativar',toggle_enable:'Ativar',remove:'Remover',confirm_remove:'Remover conta',
+    never:'Nunca',last_used:'usado em',sb_tagline:'proxy de auth',sb_made_by:'feito por',
+    cfg_strategy_title:'Estratégia de Rotação',cfg_strategy_desc:'Como o grouter-auth seleciona a próxima conta para cada requisição.',
+    cfg_fill_desc:'Sempre usa a conta de maior prioridade até atingir o limite, depois cai para a próxima.',
+    cfg_rr_desc:'Distribui as requisições entre todas as contas ativas, alternando em ordem.',
+    cfg_sticky_label:'Limite sticky',cfg_sticky_hint:'Requisições consecutivas antes de trocar para a próxima conta.',
+    cfg_save:'Salvar alterações',cfg_saved:'Salvo!',
+    cfg_proxy_title:'Proxy',cfg_port_label:'Porta',cfg_port_hint:'Requer reinicialização do proxy para ter efeito.',
+    cfg_endpoint_label:'Endpoint',cfg_port_save:'Salvar',
+    cfg_maint_title:'Manutenção',
+    cfg_unlock_label:'Desbloquear todas as contas',cfg_unlock_hint:'Limpa todos os bloqueios e reseta o estado de backoff.',
+    cfg_unlock_btn:'Desbloquear',cfg_unlocked:'Desbloqueado!',
+    providers_oauth_title:'Provedores OAuth',providers_free_title:'Provedores Gratuitos',providers_apikey_title:'Provedores com API Key',
+    provider_badge_free:'Grátis',provider_badge_deprecated:'Descontinuado',
+    provider_meta_none:'Nenhum configurado ainda.',
+    provider_status_connected:'{n} conectado(s)',provider_status_none:'Sem conexões',provider_status_discontinued:'Descontinuado',
+    flow_device_code:'Fluxo de código do dispositivo',flow_auth_code:'Fluxo de código de autorização',flow_import_token:'Colar token',
+    picker_title:'Escolha um provedor',picker_sub:'Selecione qual provedor OAuth conectar',
+    modal_connect_title:'Conectar',
+    modal_desc_default:'Clique em Iniciar para começar o fluxo de autorização.',
+    modal_desc_import:'Cole o token de acesso do {name}.',
+    modal_desc_meta:'Informe as credenciais do seu app OAuth do {name}. Elas ficam nesta máquina.',
+    modal_import_placeholder:'Cole o token aqui…',
+    modal_auth_url_cta:'Clique para abrir a página de autorização',
+    modal_auth_wait:'Aguardando você autorizar no navegador…',
+    connect_existing_header:'Chaves existentes',connect_existing_header_empty:'Nenhuma chave ainda — adicione a primeira abaixo',
+    connect_remove_key:'Remover esta chave?',
+    err_start_fail:'Falha ao iniciar autorização.',
+    err_start_sub:'Verifique se o servidor proxy está rodando.',
+    err_access_denied:'Acesso negado.',err_access_denied_sub:'A autorização foi cancelada no navegador.',
+    err_code_expired:'Código expirado.',err_code_expired_sub:'O código expirou antes de ser usado.',
+    err_auth_failed:'Autorização falhou.',
+    err_network:'Erro de rede.',
+    err_empty_token:'Cole um token primeiro.',err_import_fail:'Falha ao importar.',
+    err_meta_required:'{label} é obrigatório.',
+    qwen_deprecated_title:'Qwen Code Free descontinuado',
+    qwen_deprecated_msg:'O Qwen Code Free foi descontinuado. Contas existentes continuam funcionando, mas novos cadastros OAuth não são mais aceitos.',
+    btn_add_another:'Adicionar outro',btn_try_again:'Tentar novamente',
+    no_oauth_available:'Nenhum provedor OAuth disponível. Adicione um provedor com API Key.',
+  },
+  zh: {
+    nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
+    page_overview:'概览',page_overview_sub:'实时代理状态和使用情况',
+    page_accounts:'账户',page_accounts_sub:'管理您的 Qwen 账户',
+    page_settings:'设置',page_settings_sub:'代理配置和维护',
+    btn_add_acc:'添加账户',
+    kpi_accounts:'连接数',kpi_active:'活跃',kpi_reqs:'请求',kpi_tokens:'Tokens',
+    kpi_active_sub:'健康并轮换中',kpi_reqs_sub:'总代理数',kpi_tokens_sub:'总消耗',
+    proxy_title:'代理服务器',proxy_endpoint:'端点',proxy_strategy:'策略',proxy_status:'状态',
+    model_title:'按模型使用量',no_usage:'暂无使用数据。',
+    acc_title:'连接数',all_acc_title:'所有连接',
+    modal_title:'添加账户',modal_sub:'Qwen OAuth 设备流程',
+    modal_desc:'点击开始请求授权码。打开链接，输入代码，账户将自动添加。',
+    modal_start:'开始授权',modal_codelabel:'您的代码',modal_pollwait:'打开上方链接并输入代码…',
+    modal_successmsg:'账户已添加！',modal_done:'完成',
+    status_running:'运行中',status_stopped:'已停止',
+    no_accounts:'暂无账户',add_first:'添加第一个账户',
+    toggle_disable:'禁用',toggle_enable:'启用',remove:'移除',confirm_remove:'移除账户',
+    never:'从未',last_used:'最后使用',sb_tagline:'认证代理',sb_made_by:'作者',
+    cfg_strategy_title:'轮换策略',cfg_strategy_desc:'grouter-auth 为每个请求选择下一个账户的方式。',
+    cfg_fill_desc:'始终使用最高优先级的账户，直到触发限速，然后切换。',
+    cfg_rr_desc:'在所有活跃账户之间均匀分配请求，按顺序轮换。',
+    cfg_sticky_label:'粘性限制',cfg_sticky_hint:'切换到下一个账户之前的连续请求数。',
+    cfg_save:'保存更改',cfg_saved:'已保存！',
+    cfg_proxy_title:'代理',cfg_port_label:'端口',cfg_port_hint:'需要重启代理才能生效。',
+    cfg_endpoint_label:'端点',cfg_port_save:'保存',
+    cfg_maint_title:'维护',
+    cfg_unlock_label:'解锁所有账户',cfg_unlock_hint:'清除所有限速锁定并重置退避状态。',
+    cfg_unlock_btn:'解锁',cfg_unlocked:'已解锁！',
+    providers_oauth_title:'OAuth 提供商',providers_free_title:'免费提供商',providers_apikey_title:'API 密钥提供商',
+    provider_badge_free:'免费',provider_badge_deprecated:'已弃用',
+    provider_meta_none:'尚未配置。',
+    provider_status_connected:'已连接 {n} 个',provider_status_none:'无连接',provider_status_discontinued:'已停用',
+    flow_device_code:'设备代码流程',flow_auth_code:'授权码流程',flow_import_token:'粘贴令牌',
+    picker_title:'选择提供商',picker_sub:'选择要连接的 OAuth 提供商',
+    modal_connect_title:'连接',
+    modal_desc_default:'点击开始以启动授权流程。',
+    modal_desc_import:'从 {name} 粘贴访问令牌。',
+    modal_desc_meta:'输入您的 {name} OAuth 应用凭据。它们只保存在本机。',
+    modal_import_placeholder:'在此粘贴令牌…',
+    modal_auth_url_cta:'点击打开授权页面',
+    modal_auth_wait:'等待您在浏览器中授权…',
+    connect_existing_header:'现有密钥',connect_existing_header_empty:'尚无密钥 — 请在下方添加第一个',
+    connect_remove_key:'删除此密钥？',
+    err_start_fail:'启动授权失败。',
+    err_start_sub:'请检查代理服务器是否在运行。',
+    err_access_denied:'访问被拒绝。',err_access_denied_sub:'授权在浏览器中被取消。',
+    err_code_expired:'代码已过期。',err_code_expired_sub:'代码在使用前已超时。',
+    err_auth_failed:'授权失败。',
+    err_network:'网络错误。',
+    err_empty_token:'请先粘贴令牌。',err_import_fail:'导入失败。',
+    err_meta_required:'{label} 为必填项。',
+    qwen_deprecated_title:'Qwen Code Free 已停用',
+    qwen_deprecated_msg:'Qwen Code Free 已停用。现有账户继续可用，但不再接受新的 OAuth 注册。',
+    btn_add_another:'再添加一个',btn_try_again:'重试',
+    no_oauth_available:'暂无可用的 OAuth 提供商。请改用 API Key 提供商。',
+  }
+};
+
+// ── Version update banner in dashboard ───────────────────────────────────────
+async function checkDashboardVersion() {
+  try {
+    const res = await fetch('/api/version');
+    if (!res.ok) return;
+    const { current, latest } = await res.json();
+    if (!latest || latest === current) return;
+    const banner = document.getElementById('dash-update-banner');
+    const msg    = document.getElementById('dash-update-msg');
+    if (banner && msg) {
+      msg.textContent = `Nova versão disponível: v${latest} (atual: v${current}) — rode grouter update`;
+      banner.classList.remove('hidden');
+    }
+  } catch {}
+}
+
+let lang = 'en', T = I18N.en, statusData = null;
+let modalPollTimer = null, refreshTimer = null;
+
+function setLang(l) {
+  lang = l; T = I18N[l] || I18N.en;
+  const ls = document.getElementById('lang-select-dash');
+  if (ls) ls.value = l;
+  applyI18n();
+}
+
+// Minimal {placeholder} interpolation
+function tr(key, vars) {
+  let s = (T[key] ?? I18N.en[key] ?? key);
+  if (vars) for (const k in vars) s = s.replaceAll('{' + k + '}', String(vars[k]));
+  return s;
+}
+
+function applyI18n() {
+  const s = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  s('nav-overview-label',T.nav_overview);s('nav-accounts-label',T.nav_accounts);s('nav-settings-label',T.nav_settings);
+  s('btn-add-acc',T.btn_add_acc);s('btn-add-acc-sm',T.btn_add_acc);s('btn-add-acc-full',T.btn_add_acc);
+  s('kpi-lbl-accounts',T.kpi_accounts);s('kpi-lbl-active',T.kpi_active);
+  s('kpi-lbl-reqs',T.kpi_reqs);s('kpi-lbl-tokens',T.kpi_tokens);
+  s('kpi-active-sub',T.kpi_active_sub);s('kpi-reqs-sub',T.kpi_reqs_sub);s('kpi-tokens-sub',T.kpi_tokens_sub);
+  s('proxy-card-title',T.proxy_title);s('proxy-lbl-endpoint',T.proxy_endpoint);
+  s('proxy-lbl-strategy',T.proxy_strategy);s('proxy-lbl-status',T.proxy_status);
+  s('model-card-title',T.model_title);s('no-usage-msg',T.no_usage);
+  s('acc-card-title',T.acc_title);s('all-acc-title',T.all_acc_title);
+  s('modal-title',T.modal_title);s('modal-sub',T.modal_sub);s('modal-desc',T.modal_desc);
+  s('modal-start-btn',T.modal_start);s('modal-codelabel',T.modal_codelabel);
+  s('modal-successmsg',T.modal_successmsg);s('modal-done-btn',T.modal_done);
+  s('sb-tagline',T.sb_tagline);s('sb-made-by',T.sb_made_by);
+  s('cfg-strategy-title',T.cfg_strategy_title);s('cfg-strategy-desc',T.cfg_strategy_desc);
+  s('cfg-fill-desc',T.cfg_fill_desc);s('cfg-rr-desc',T.cfg_rr_desc);
+  s('cfg-sticky-label',T.cfg_sticky_label);s('cfg-sticky-hint',T.cfg_sticky_hint);
+  s('cfg-save-label',T.cfg_save);
+  s('cfg-proxy-title',T.cfg_proxy_title);s('cfg-port-label',T.cfg_port_label);s('cfg-port-hint',T.cfg_port_hint);
+  s('cfg-endpoint-label',T.cfg_endpoint_label);s('cfg-port-save',T.cfg_port_save);
+  s('cfg-maint-title',T.cfg_maint_title);
+  s('cfg-unlock-label',T.cfg_unlock_label);s('cfg-unlock-hint',T.cfg_unlock_hint);s('cfg-unlock-btn-label',T.cfg_unlock_btn);
+  s('prov-oauth-title',T.providers_oauth_title);s('prov-free-title',T.providers_free_title);s('prov-apikey-title',T.providers_apikey_title);
+  s('connect-existing-header',T.connect_existing_header);
+  s('modal-deprecation-title',T.qwen_deprecated_title);
+  s('modal-tryagain-btn',T.btn_try_again);s('modal-addanother-btn',T.btn_add_another);
+}
+
+// ── Dashboard nav ─────────────────────────────────────────────────────
+function showTab(tab) {
+  ['overview','providers','accounts','settings'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
+    const navEl = document.getElementById('nav-'+t);
+    if (navEl) navEl.classList.toggle('active', t===tab);
+    // sync mobile bottom nav
+    const mobTab = document.getElementById('mob-tab-'+t);
+    if (mobTab) mobTab.classList.toggle('active', t===tab);
+    // sync mobile drawer nav
+    const mobNav = document.getElementById('mob-nav-'+t);
+    if (mobNav) mobNav.classList.toggle('active', t===tab);
+  });
+  if (tab==='overview') {
+    document.getElementById('page-title').textContent = T.page_overview;
+    document.getElementById('page-sub').textContent   = T.page_overview_sub;
+  } else if (tab==='providers') {
+    document.getElementById('page-title').textContent = 'Providers';
+    document.getElementById('page-sub').textContent   = 'Manage your AI provider connections';
+    loadProviders();
+  } else if (tab==='accounts') {
+    document.getElementById('page-title').textContent = T.page_accounts;
+    document.getElementById('page-sub').textContent   = T.page_accounts_sub;
+    if (statusData) renderAccountsList('accounts-list-full', statusData.accounts.list, true);
+  } else {
+    document.getElementById('page-title').textContent = T.page_settings;
+    document.getElementById('page-sub').textContent   = T.page_settings_sub;
+    loadConfig();
+    loadProxyPools();
+  }
+}
+
+// ── Mobile drawer ──────────────────────────────────────────────────────
+function toggleDrawer() {
+  const drawer  = document.getElementById('mob-drawer');
+  const overlay = document.getElementById('mob-overlay');
+  const isOpen  = drawer.classList.contains('open');
+  drawer.classList.toggle('open', !isOpen);
+  overlay.classList.toggle('open', !isOpen);
+  document.body.style.overflow = isOpen ? '' : 'hidden';
+}
+
+// ── Status ────────────────────────────────────────────────────────────
+async function loadStatus() {
+  try { const r = await fetch('/api/status'); statusData = await r.json(); renderStatus(statusData); } catch {}
+}
+
+const MODEL_PRICING = {
+  'qwen3-coder-plus':  { input: 3.5,  output: 7.0  },
+  'qwen3-coder-flash': { input: 0.5,  output: 1.5  },
+  'vision-model':      { input: 2.0,  output: 6.0  },
+  'coder-model':       { input: 1.0,  output: 3.0  },
+};
+function estimateCost(model, promptTok, completionTok) {
+  const p = MODEL_PRICING[model] ?? { input: 1.0, output: 3.0 };
+  return (promptTok / 1e6) * p.input + (completionTok / 1e6) * p.output;
+}
+function fmtCost(v) {
+  if (v >= 1) return '$' + v.toFixed(2);
+  if (v >= 0.01) return '$' + v.toFixed(4);
+  return '$' + v.toFixed(6);
+}
+
+function fmtNum(n) {
+  if (n>=1e6) return (n/1e6).toFixed(1)+'M';
+  if (n>=1e3) return (n/1e3).toFixed(1)+'k';
+  return String(n);
+}
+
+function statusTag(acc) {
+  if (!acc.is_active) return '<span class="tag tag-disabled">'+T.toggle_enable+'</span>';
+  // Use effective_status (server normalises unavailable→active when lock expired)
+  const st = acc.effective_status || acc.test_status;
+  if (st==='active')      return '<span class="tag tag-active">&#x2713; Active</span>';
+  if (st==='unavailable') return '<span class="tag tag-unavail">&#x2717; Rate limited</span>';
+  return '<span class="tag tag-unknown">&#x25CC; Ready</span>';
+}
+
+function renderStatus(d) {
+  const {proxy,accounts,usage} = d;
+
+  // ── Connected Providers strip ─────────────────────────────────────────
+  const providers = d.providers || [];
+  const provRow   = document.getElementById('overview-providers-row');
+  const provStrip = document.getElementById('overview-providers-strip');
+  if (provRow && provStrip && providers.length > 0) {
+    provRow.classList.remove('hidden');
+    provStrip.innerHTML = providers.map(p => {
+      const iconInner = renderLogoInner(p, '0.9rem', '#fff');
+      const iconBg    = isLogoUrl(p.logo) ? '#fff' : p.color;
+      const portTag   = p.port ? `<span style="color:#0AB9DC;font-weight:600;font-family:monospace;font-size:0.7rem;">:${p.port}</span>` : '';
+      return `<div class="cp-pill">
+        <div class="cp-icon" style="background:${iconBg};padding:${isLogoUrl(p.logo)?'0.15rem':'0'};">${iconInner}</div>
+        <span>${p.name}</span>
+        <span style="color:#6b7280;font-weight:500;">${p.connections}</span>
+        ${portTag}
+      </div>`;
+    }).join('');
+  } else if (provRow) {
+    provRow.classList.add('hidden');
+  }
+  const dot = document.getElementById('proxy-pill-dot');
+  const lbl = document.getElementById('proxy-pill-label');
+  dot.className = 'dot '+(proxy.running?'dot-on':'dot-off');
+  lbl.textContent = proxy.running ? T.status_running+' · :'+proxy.port : T.status_stopped;
+  lbl.style.color = proxy.running?'#22c55e':'#6b7280';
+  // sync mobile dots
+  const mobDot = document.getElementById('mob-proxy-dot');
+  if (mobDot) { mobDot.className = 'dot '+(proxy.running?'dot-on':'dot-off'); mobDot.title = lbl.textContent; }
+  const mobDrDot = document.getElementById('mob-drawer-dot');
+  const mobDrSt  = document.getElementById('mob-drawer-status');
+  if (mobDrDot) mobDrDot.className = 'dot '+(proxy.running?'dot-on':'dot-off');
+  if (mobDrSt)  { mobDrSt.textContent = lbl.textContent; mobDrSt.style.color = proxy.running?'#22c55e':'#6b7280'; }
+  // Sync power button state (only if not mid-stop animation)
+  const pwrBtn = document.getElementById('btn-server-power');
+  if (pwrBtn && !pwrBtn.dataset.stopping) {
+    pwrBtn.style.opacity = '1';
+    pwrBtn.classList.remove('power-on','power-off','power-confirming');
+    if (proxy.running) {
+      pwrBtn.classList.add('power-on');
+      pwrBtn.disabled = false;
+      document.getElementById('server-power-label').textContent = 'Stop server';
+      document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+    } else {
+      pwrBtn.classList.add('power-off');
+      pwrBtn.disabled = true;
+      document.getElementById('server-power-label').textContent = 'Stopped';
+      document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+    }
+  }
+  document.getElementById('proxy-strategy').textContent = proxy.strategy+(proxy.strategy==='round-robin'?' (x'+proxy.stickyLimit+')':'');
+  // ── Estimated cost ────────────────────────────────────────────────────
+  const totalCost = usage.byModel.reduce((s, m) => s + estimateCost(m.model, m.prompt_tokens, m.completion_tokens), 0);
+  document.getElementById('proxy-total-cost').textContent = fmtCost(totalCost);
+  const cb = document.getElementById('proxy-cost-by-model');
+  if (cb) {
+    if (!usage.byModel.length) { cb.innerHTML = ''; }
+    else {
+      cb.innerHTML = usage.byModel.map(m => {
+        const c = estimateCost(m.model, m.prompt_tokens, m.completion_tokens);
+        const pct = totalCost > 0 ? Math.round(c / totalCost * 100) : 0;
+        return '<div style="display:flex;align-items:center;justify-content:space-between;font-size:0.75rem;">' +
+          '<span style="color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:0.5rem;">'+m.model+'</span>' +
+          '<span style="color:#9ca3af;margin-right:0.625rem;flex-shrink:0;">'+pct+'%</span>' +
+          '<span style="color:#22c55e;font-weight:600;flex-shrink:0;">'+fmtCost(c)+'</span>' +
+        '</div>';
+      }).join('');
+    }
+  }
+  const st = document.getElementById('proxy-status-text');
+  st.textContent = proxy.running ? T.status_running+' (PID '+proxy.pid+')' : T.status_stopped;
+  st.style.color = proxy.running?'#22c55e':'#ef4444';
+  animN('kpi-total', accounts.total);
+  animN('kpi-active', accounts.active);
+  animN('kpi-requests', usage.totals.requests);
+  document.getElementById('kpi-tokens-in').textContent  = fmtNum(usage.totals.prompt_tokens);
+  document.getElementById('kpi-tokens-out').textContent = fmtNum(usage.totals.completion_tokens);
+  const subParts = [];
+  if (accounts.unavailable > 0) subParts.push(accounts.unavailable+' rate limited');
+  if (accounts.unknown > 0) subParts.push(accounts.unknown+' not tested yet');
+  document.getElementById('kpi-total-sub').textContent = subParts.length ? subParts.join(' · ') : 'all healthy';
+  const me = document.getElementById('usage-by-model');
+  if (!usage.byModel.length) { me.innerHTML='<p style="font-size:0.85rem;color:#6b7280;">'+T.no_usage+'</p>'; }
+  else {
+    me.innerHTML = usage.byModel.map((m, i) => {
+      const border = i < usage.byModel.length - 1 ? 'border-bottom:1px solid #1e1e1e;' : '';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.625rem 0;'+border+'">' +
+        '<span style="font-size:0.82rem;font-weight:600;color:#e8e8e8;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:0.5rem;">'+m.model+'</span>' +
+        '<div style="display:flex;align-items:center;gap:1rem;flex-shrink:0;">' +
+          '<div style="text-align:right;">' +
+            '<p style="font-size:0.62rem;color:#6b7280;font-weight:600;letter-spacing:0.04em;">IN</p>' +
+            '<p style="font-size:0.82rem;font-weight:700;color:#0AB9DC;">'+fmtNum(m.prompt_tokens)+'</p>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<p style="font-size:0.62rem;color:#6b7280;font-weight:600;letter-spacing:0.04em;">OUT</p>' +
+            '<p style="font-size:0.82rem;font-weight:700;color:#f59e0b;">'+fmtNum(m.completion_tokens)+'</p>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<p style="font-size:0.62rem;color:#6b7280;font-weight:600;letter-spacing:0.04em;">REQ</p>' +
+            '<p style="font-size:0.82rem;font-weight:700;color:#6b7280;">'+m.requests+'</p>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+  renderAccountsList('accounts-list', accounts.list.slice(0,6), false);
+  const afl = document.getElementById('accounts-list-full');
+  if (afl && !document.getElementById('tab-accounts').classList.contains('hidden'))
+    renderAccountsList('accounts-list-full', accounts.list, true);
+}
+
+function renderAccountsList(id, list, showPoolAssign) {
+  const el = document.getElementById(id); if (!el) return;
+  if (!list||!list.length) {
+    el.innerHTML='<div style="text-align:center;padding:2rem 0;"><iconify-icon icon="solar:user-cross-bold-duotone" style="color:#6b7280;font-size:2rem;display:block;margin-bottom:0.5rem;"></iconify-icon><p style="font-size:0.85rem;color:#6b7280;margin-bottom:0.875rem;">'+T.no_accounts+'</p><button class="btn-primary" style="margin:0 auto;height:2.5rem;padding:0 1rem;font-size:0.82rem;" onclick="openAddModal()"><iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon> '+T.add_first+'</button></div>';
+    return;
+  }
+  el.innerHTML = list.map((acc,i) => {
+    const label = acc.email||(acc.id.slice(0,14)+'…');
+    const tok   = acc.usage ? fmtNum(acc.usage.total_tokens)+'t' : '—';
+    const lu    = acc.last_used_at ? new Date(acc.last_used_at).toLocaleDateString() : T.never;
+    const border = i<list.length-1 ? 'border-bottom:1px solid #1e1e1e;' : '';
+    const provMeta = (_providersMap && _providersMap[acc.provider]) || null;
+    const provBadge = acc.provider && acc.provider !== 'qwen'
+      ? `<span style="font-size:0.62rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:9999px;background:#1e2a2a;color:#0AB9DC;margin-right:0.25rem;border:1px solid rgba(10,185,220,0.2);">${provMeta?.name || acc.provider}</span>` : '';
+    const authIcon = provMeta?.logo
+      ? renderLogoInner(provMeta, '1rem', '#fff')
+      : (acc.auth_type === 'apikey'
+        ? '<iconify-icon icon="solar:key-bold-duotone" style="color:#f59e0b;font-size:0.9rem;"></iconify-icon>'
+        : '<iconify-icon icon="solar:user-bold-duotone" style="color:#0AB9DC;font-size:0.9rem;"></iconify-icon>');
+    const iconBg = isLogoUrl(provMeta?.logo) ? '#fff' : (provMeta?.color || 'rgba(10,185,220,0.1)');
+    // Pool assignment selector (only in full list if pools exist)
+    let poolSelect = '';
+    if (showPoolAssign && _pools.length > 0) {
+      const opts = '<option value="">No proxy</option>' + _pools.map(p =>
+        `<option value="${p.id}"${acc.proxy_pool_id===p.id?' selected':''}>${p.name}</option>`
+      ).join('');
+      poolSelect = `<select class="lang-select" style="height:1.8rem;font-size:0.7rem;padding:0.2rem 0.5rem;" onchange="assignPool('${acc.id}',this.value)">${opts}</select>`;
+    }
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;'+border+'gap:0.5rem;flex-wrap:wrap;"><div style="display:flex;align-items:center;gap:0.625rem;min-width:0;flex:1;"><div style="width:2rem;height:2rem;border-radius:50%;background:'+iconBg+';display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">'+authIcon+'</div><div style="min-width:0;"><p style="font-size:0.85rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+provBadge+label+'</p><p style="font-size:0.72rem;color:#6b7280;">'+tok+' · '+T.last_used+' '+lu+'</p></div></div><div class="acc-row-actions" style="display:flex;align-items:center;gap:0.375rem;flex-shrink:0;">'+poolSelect+statusTag(acc)+'<button class="btn-icon" onclick="toggleAcc(\''+acc.id+'\')" title="'+(acc.is_active?T.toggle_disable:T.toggle_enable)+'"><iconify-icon icon="'+(acc.is_active?'solar:pause-bold-duotone':'solar:play-bold-duotone')+'" style="font-size:0.85rem;"></iconify-icon></button><button class="btn-sm btn-sm-danger" onclick="removeAcc(\''+acc.id+'\',\''+label.replace(/'/g,"\\'").replace(/"/g,'')+'\')" ><iconify-icon icon="solar:trash-bin-trash-bold-duotone"></iconify-icon><span class="btn-remove-lbl">'+T.remove+'</span></button></div></div>';
+  }).join('');
+}
+
+// ── Server power button ───────────────────────────────────────────────────────
+let _powerConfirmTimer = null;
+
+function handleServerPower() {
+  const btn = document.getElementById('btn-server-power');
+  if (!btn || btn.disabled || btn.dataset.stopping) return;
+
+  if (btn.classList.contains('power-confirming')) {
+    // Second click — confirmed, do the stop
+    clearTimeout(_powerConfirmTimer);
+    _powerConfirmTimer = null;
+    _doStopServer(btn);
+    return;
+  }
+
+  // First click — enter confirm state
+  btn.classList.remove('power-on');
+  btn.classList.add('power-confirming');
+  document.getElementById('server-power-icon').setAttribute('icon','solar:shield-warning-bold-duotone');
+  document.getElementById('server-power-label').textContent = 'Confirm stop?';
+
+  _powerConfirmTimer = setTimeout(() => {
+    _powerConfirmTimer = null;
+    btn.classList.remove('power-confirming');
+    btn.classList.add('power-on');
+    document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+    document.getElementById('server-power-label').textContent = 'Stop server';
+  }, 2500);
+}
+
+async function _doStopServer(btn) {
+  btn.dataset.stopping = '1';
+  btn.disabled = true;
+  btn.classList.remove('power-confirming','power-on');
+  document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+
+  // Kill auto-poll so we don't spam dead server
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+  const apBtn = document.getElementById('btn-autopoll');
+  if (apBtn) { apBtn.classList.remove('autopoll-on'); document.getElementById('autopoll-dot').style.display='none'; }
+
+  document.getElementById('server-power-label').textContent = 'Stopping…';
+  document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+
+  try { await fetch('/api/proxy/stop', {method:'POST'}); } catch {}
+
+  // Animate the pill to "stopping"
+  const dot = document.getElementById('proxy-pill-dot');
+  const lbl = document.getElementById('proxy-pill-label');
+  dot.className = 'dot dot-warn dot-pulse';
+  lbl.textContent = 'stopping…';
+  lbl.style.color = '#6b7280';
+
+  setTimeout(() => {
+    dot.className = 'dot dot-off';
+    lbl.textContent = T.status_stopped;
+    btn.classList.add('power-off');
+    btn.disabled = true;
+    document.getElementById('server-power-label').textContent = 'Stopped';
+    delete btn.dataset.stopping;
+  }, 1000);
+}
+
+async function toggleAcc(id) { try { await fetch('/api/accounts/'+id+'/toggle',{method:'POST'}); await loadStatus(); } catch {} }
+async function removeAcc(id,label) {
+  if (!confirm(T.confirm_remove+' "'+label+'"?')) return;
+  try { await fetch('/api/accounts/'+id,{method:'DELETE'}); await loadStatus(); } catch {}
+}
+
+function animN(id, target) {
+  const el = document.getElementById(id); if (!el) return;
+  const obj = { v: parseInt(el.textContent)||0 };
+  gsap.to(obj,{v:target,duration:0.7,ease:'power2.out',onUpdate:()=>{ el.textContent=Math.round(obj.v); }});
+}
+
+// ── Config ────────────────────────────────────────────────────────────
+let cfgStrategy = 'fill-first', cfgStickyLimit = 3;
+
+async function loadConfig() {
+  try {
+    const r = await fetch('/api/config');
+    const d = await r.json();
+    cfgStrategy    = d.strategy;
+    cfgStickyLimit = d.stickyLimit;
+    renderConfig(d);
+  } catch {}
+}
+
+function renderConfig(d) {
+  cfgStrategy    = d.strategy;
+  cfgStickyLimit = d.stickyLimit;
+  selectStrategy(d.strategy, true);
+  document.getElementById('cfg-sticky-val').textContent = d.stickyLimit;
+  const port = d.port;
+  document.getElementById('cfg-port-input').value = port;
+  document.getElementById('cfg-endpoint-val').textContent = 'http://localhost:'+port+'/v1';
+}
+
+function selectStrategy(s, silent) {
+  cfgStrategy = s;
+  const fillBtn = document.getElementById('cfg-btn-fill');
+  const rrBtn   = document.getElementById('cfg-btn-rr');
+  const stickyRow = document.getElementById('cfg-sticky-row');
+  const isRR = s === 'round-robin';
+  fillBtn.style.borderColor = isRR ? '#2a2a2a' : '#0AB9DC';
+  fillBtn.style.background  = isRR ? '#1a1a1a' : 'rgba(10,185,220,0.08)';
+  rrBtn.style.borderColor   = isRR ? '#0AB9DC' : '#2a2a2a';
+  rrBtn.style.background    = isRR ? 'rgba(10,185,220,0.08)' : '#1a1a1a';
+  stickyRow.style.display   = isRR ? 'flex' : 'none';
+}
+
+function adjSticky(delta) {
+  cfgStickyLimit = Math.max(1, Math.min(100, cfgStickyLimit + delta));
+  document.getElementById('cfg-sticky-val').textContent = cfgStickyLimit;
+}
+
+async function saveConfig() {
+  const btn = document.getElementById('cfg-save-btn');
+  const lbl = document.getElementById('cfg-save-label');
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ strategy: cfgStrategy, stickyLimit: cfgStickyLimit })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      lbl.textContent = T.cfg_saved || 'Saved!';
+      setTimeout(() => { lbl.textContent = T.cfg_save || 'Save changes'; btn.disabled = false; }, 1800);
+      renderConfig(d);
+      // Refresh overview strategy display
+      if (statusData) { statusData.proxy.strategy = d.strategy; statusData.proxy.stickyLimit = d.stickyLimit; renderStatus(statusData); }
+    } else { btn.disabled = false; }
+  } catch { btn.disabled = false; }
+}
+
+async function savePort() {
+  const portInput = document.getElementById('cfg-port-input');
+  const saveBtn   = document.getElementById('cfg-port-save');
+  const port = parseInt(portInput.value, 10);
+  if (!port || port < 1 || port > 65535) return;
+  saveBtn.textContent = '…';
+  try {
+    const r = await fetch('/api/config', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ port })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      document.getElementById('cfg-endpoint-val').textContent = 'http://localhost:'+d.port+'/v1';
+      saveBtn.textContent = T.cfg_saved || 'Saved!';
+      setTimeout(() => { saveBtn.textContent = T.cfg_port_save || 'Save'; }, 1800);
+    } else { saveBtn.textContent = T.cfg_port_save || 'Save'; }
+  } catch { saveBtn.textContent = T.cfg_port_save || 'Save'; }
+}
+
+async function unlockAll() {
+  const btn = document.getElementById('cfg-unlock-btn');
+  const lbl = document.getElementById('cfg-unlock-btn-label');
+  btn.disabled = true;
+  try {
+    await fetch('/api/unlock', { method:'POST' });
+    lbl.textContent = T.cfg_unlocked || 'Unlocked!';
+    setTimeout(() => { lbl.textContent = T.cfg_unlock_btn || 'Unlock'; btn.disabled = false; }, 2000);
+    loadStatus();
+  } catch { btn.disabled = false; }
+}
+
+// ── Providers ─────────────────────────────────────────────────────────
+let _connectingProvider = null;
+let _providersMap = {};
+
+async function loadProviders() {
+  try {
+    const res = await fetch('/api/providers');
+    if (!res.ok) return;
+    const { providers } = await res.json();
+    _providersMap = Object.fromEntries(providers.map(p => [p.id, p]));
+    renderProviderGrid('prov-grid-oauth',  providers.filter(p => p.category === 'oauth'));
+    renderProviderGrid('prov-grid-free',   providers.filter(p => p.category === 'free'));
+    renderProviderGrid('prov-grid-apikey', providers.filter(p => p.category === 'apikey'));
+    // Hide free section if empty
+    const freeProviders = providers.filter(p => p.category === 'free');
+    const freeSection = document.getElementById('prov-free-section');
+    if (freeSection) freeSection.style.display = freeProviders.length ? '' : 'none';
+  } catch {}
+}
+
+function isLogoUrl(logo) { return !!logo && (logo.startsWith('/') || logo.startsWith('http')); }
+
+/** Render the inner bit of a logo (img OR iconify OR initials). fontSize/color only apply to iconify. */
+function renderLogoInner(p, fontSize, color) {
+  const initials = p.name.split(' ').map(w => w[0]).join('').slice(0,3).toUpperCase();
+  if (!p.logo) return initials;
+  if (isLogoUrl(p.logo)) {
+    return `<img src="${p.logo}" alt="${p.name}" style="width:100%;height:100%;object-fit:contain;"/>`;
+  }
+  const f = fontSize || '1.5rem';
+  const c = color || '#fff';
+  return `<iconify-icon icon="${p.logo}" style="font-size:${f};color:${c};"></iconify-icon>`;
+}
+
+function providerIconHtml(p) {
+  if (p.logo && isLogoUrl(p.logo)) {
+    return `<div class="provider-icon" style="background:#fff;padding:0.2rem;">${renderLogoInner(p)}</div>`;
+  }
+  return `<div class="provider-icon" style="background:${p.color};">${renderLogoInner(p)}</div>`;
+}
+
+function renderProviderGrid(gridId, providers) {
+  const el = document.getElementById(gridId);
+  if (!el) return;
+  if (!providers.length) { el.innerHTML = `<p style="font-size:0.82rem;color:#6b7280;">${tr('provider_meta_none')}</p>`; return; }
+  el.innerHTML = providers.map(p => {
+    const connected  = p.connections > 0;
+    const deprecated = !!p.deprecated;
+    const meta       = deprecated ? tr('provider_status_discontinued')
+                       : connected ? (tr('provider_status_connected',{n:p.connections}) + (p.port ? ' · :' + p.port : ''))
+                       : tr('provider_status_none');
+    const badge      = deprecated ? `<span class="provider-badge-deprecated">${tr('provider_badge_deprecated')}</span>`
+                       : connected ? `<span class="provider-badge">${p.connections}</span>` : '';
+    const freeBadge  = p.freeTier ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
+    const click      = deprecated ? '' : `onclick="openProviderCard('${p.id}')"`;
+    return `<div class="provider-card${connected?' connected':''}${deprecated?' deprecated':''}" ${click}>
+      ${providerIconHtml(p)}
+      <div style="min-width:0;flex:1;">
+        <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
+        <p style="font-size:0.68rem;color:${deprecated?'#ef4444':'#6b7280'};margin-top:0.1rem;">${meta}</p>
+      </div>
+      ${freeBadge}
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+function openProviderCard(providerId) {
+  fetch('/api/providers').then(r=>r.json()).then(({providers})=>{
+    const p = providers.find(x=>x.id===providerId);
+    if (!p) return;
+    if (p.deprecated) { alert(p.name + ': ' + (p.deprecationReason || 'This provider is no longer accepting new connections.')); return; }
+    if (p.authType === 'oauth') { openOAuthModal(p); return; }
+    openConnectModal(p);
+  }).catch(()=>{});
+}
+
+async function openConnectModal(p) {
+  _connectingProvider = p;
+  const icon = document.getElementById('connect-modal-icon');
+  icon.style.background = p.color;
+  if (isLogoUrl(p.logo)) { icon.style.background = '#fff'; icon.style.padding = '0.2rem'; }
+  icon.innerHTML = renderLogoInner(p);
+  document.getElementById('connect-modal-title').textContent = p.name;
+  document.getElementById('connect-modal-sub').textContent = p.description;
+  const urlEl = document.getElementById('connect-apikey-url');
+  const urlTxt = document.getElementById('connect-apikey-url-text');
+  if (p.apiKeyUrl) { urlEl.href = p.apiKeyUrl; urlTxt.textContent = 'Get API key →'; urlEl.style.display = ''; }
+  else { urlEl.style.display = 'none'; }
+  document.getElementById('connect-apikey-input').value = '';
+  document.getElementById('connect-keyname-input').value = '';
+  document.getElementById('connect-modal-error').style.display = 'none';
+  document.getElementById('connect-submit-btn').disabled = false;
+  document.getElementById('connect-modal-body').classList.remove('hidden');
+  document.getElementById('connect-modal').classList.remove('hidden');
+  await refreshProviderConnections(p.id);
+}
+
+async function refreshProviderConnections(providerId) {
+  const listEl = document.getElementById('connect-existing-list');
+  const portEl = document.getElementById('connect-port-tag');
+  if (!listEl) return;
+  try {
+    const res = await fetch(`/api/providers/${providerId}/connections`);
+    if (!res.ok) { listEl.innerHTML = ''; return; }
+    const { provider, connections } = await res.json();
+    if (portEl) portEl.innerHTML = provider.port ? `<iconify-icon icon="solar:plug-circle-bold-duotone"></iconify-icon>:${provider.port}` : '';
+    const headerEl = document.getElementById('connect-existing-header');
+    if (headerEl) headerEl.textContent = connections.length ? `${tr('connect_existing_header')} (${connections.length})` : tr('connect_existing_header_empty');
+    if (!connections.length) { listEl.innerHTML = ''; return; }
+    listEl.innerHTML = connections.map(c => {
+      const dot = c.test_status === 'active' ? '#22c55e' : c.test_status === 'unavailable' ? '#ef4444' : '#f59e0b';
+      const name = c.display_name || ('#' + c.priority);
+      return `<div class="apikey-row">
+        <div class="apikey-status-dot" style="background:${dot};box-shadow:0 0 5px ${dot}55;"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span style="font-size:0.8rem;font-weight:600;color:#e8e8e8;">${name}</span>
+            <span class="apikey-mask">${c.api_key_mask || '—'}</span>
+          </div>
+        </div>
+        <button class="btn-sm btn-sm-danger" onclick="deleteProviderConnection('${c.id}','${providerId}')" title="Remove"><iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.8rem;"></iconify-icon></button>
+      </div>`;
+    }).join('');
+  } catch { listEl.innerHTML = ''; }
+}
+
+async function deleteProviderConnection(id, providerId) {
+  if (!confirm(tr('connect_remove_key'))) return;
+  try {
+    const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
+    if (res.ok) { await refreshProviderConnections(providerId); loadStatus(); loadProviders(); }
+  } catch {}
+}
+
+function closeConnectModal() {
+  document.getElementById('connect-modal').classList.add('hidden');
+  _connectingProvider = null;
+  loadProviders();
+  loadStatus();
+}
+
+async function submitApiKeyConnection() {
+  if (!_connectingProvider) return;
+  const key  = document.getElementById('connect-apikey-input').value.trim();
+  const name = document.getElementById('connect-keyname-input').value.trim();
+  const errEl = document.getElementById('connect-modal-error');
+  if (!key) { errEl.textContent = 'API key is required.'; errEl.style.display = ''; return; }
+  const btn = document.getElementById('connect-submit-btn');
+  btn.disabled = true;
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch('/api/connections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: _connectingProvider.id, api_key: key, display_name: name || null }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Failed to connect.'; errEl.style.display = ''; btn.disabled = false; return; }
+    document.getElementById('connect-apikey-input').value = '';
+    document.getElementById('connect-keyname-input').value = '';
+    btn.disabled = false;
+    await refreshProviderConnections(_connectingProvider.id);
+    loadStatus();
+  } catch(e) { errEl.textContent = tr('err_network'); errEl.style.display = ''; btn.disabled = false; }
+}
+
+// ── OAuth Provider Picker + Modal ─────────────────────────────────────
+let _activeOAuthProvider = null;
+let _activeOAuthMeta = null;
+
+// Legacy entry point — opens a picker over all non-deprecated OAuth providers
+async function openAddModal() {
+  try {
+    const res = await fetch('/api/providers');
+    const { providers } = await res.json();
+    const list = (providers || []).filter(p => p.authType === 'oauth' && !p.deprecated);
+    if (list.length === 1) { openOAuthModal(list[0]); return; }
+    if (list.length === 0) { alert(tr('no_oauth_available')); return; }
+    // Simple picker: render as buttons in the idle panel
+    openOAuthPicker(list, providers);
+  } catch { alert(tr('err_start_fail')); }
+}
+
+function openOAuthPicker(oauthList, allProviders) {
+  const modal = document.getElementById('add-modal');
+  if (!modal) return;
+  if (modalPollTimer) { clearInterval(modalPollTimer); modalPollTimer = null; }
+  document.getElementById('modal-idle').classList.remove('hidden');
+  document.getElementById('modal-started').classList.add('hidden');
+  document.getElementById('modal-success').classList.add('hidden');
+  document.getElementById('modal-error').classList.add('hidden');
+  document.getElementById('modal-title').textContent = tr('picker_title');
+  document.getElementById('modal-sub').textContent = tr('picker_sub');
+  document.getElementById('modal-desc').innerHTML = '';
+  const idle = document.getElementById('modal-idle');
+  // Replace the start-btn with a grid of provider buttons
+  const startBtn = document.getElementById('modal-start-auth-btn');
+  if (startBtn) startBtn.style.display = 'none';
+  const banner = document.getElementById('modal-deprecation-banner');
+  if (banner) banner.classList.add('hidden');
+  let picker = document.getElementById('oauth-picker-grid');
+  if (!picker) {
+    picker = document.createElement('div');
+    picker.id = 'oauth-picker-grid';
+    picker.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-top:0.5rem;';
+    idle.appendChild(picker);
+  }
+  picker.style.display = '';
+  picker.innerHTML = oauthList.map(p => {
+    const iconHtml = renderLogoInner(p, '1.2rem', p.color);
+    const bg = isLogoUrl(p.logo) ? '#fff' : (p.color + '22');
+    const pad = isLogoUrl(p.logo) ? '0.15rem' : '0';
+    return `<button class="btn-ghost" style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem;text-align:left;justify-content:flex-start;" onclick='__pickOAuth(${JSON.stringify(p.id)})'><span style="width:1.75rem;height:1.75rem;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;color:${p.color};flex-shrink:0;padding:${pad};overflow:hidden;">${iconHtml}</span><span style="font-weight:600;font-size:0.85rem;">${p.name}</span></button>`;
+  }).join('');
+  modal.classList.remove('hidden');
+  // stash all providers for __pickOAuth
+  window.__oauthProviderMap = Object.fromEntries((allProviders || []).map(p => [p.id, p]));
+}
+
+function __pickOAuth(id) {
+  const p = (window.__oauthProviderMap || {})[id];
+  if (!p) return;
+  // hide picker grid, proceed to provider modal
+  const picker = document.getElementById('oauth-picker-grid');
+  if (picker) picker.style.display = 'none';
+  openOAuthModal(p);
+}
+
+// Open modal pre-configured for a specific OAuth provider, branching by flowType
+function openOAuthModal(p) {
+  _activeOAuthProvider = p;
+  _activeOAuthMeta = null;
+  const modal = document.getElementById('add-modal');
+  if (!modal) return;
+  if (modalPollTimer) { clearInterval(modalPollTimer); modalPollTimer = null; }
+  document.getElementById('modal-idle').classList.remove('hidden');
+  document.getElementById('modal-started').classList.add('hidden');
+  document.getElementById('modal-success').classList.add('hidden');
+  document.getElementById('modal-error').classList.add('hidden');
+  const picker = document.getElementById('oauth-picker-grid');
+  if (picker) picker.style.display = 'none';
+
+  document.getElementById('modal-title').textContent = p.name;
+  const flowLabel = p.oauthFlow === 'device_code' ? tr('flow_device_code')
+                   : p.oauthFlow === 'authorization_code' || p.oauthFlow === 'authorization_code_pkce' ? tr('flow_auth_code')
+                   : p.oauthFlow === 'import_token' ? tr('flow_import_token')
+                   : 'OAuth';
+  document.getElementById('modal-sub').textContent = flowLabel;
+
+  const banner = document.getElementById('modal-deprecation-banner');
+  const reasonEl = document.getElementById('modal-deprecation-reason');
+  const titleEl = document.getElementById('modal-deprecation-title');
+  const startBtn = document.getElementById('modal-start-auth-btn');
+  if (startBtn) { startBtn.style.display = ''; startBtn.disabled = false; startBtn.style.opacity = ''; }
+  if (p.deprecated) {
+    banner.classList.remove('hidden');
+    if (titleEl) titleEl.textContent = tr('qwen_deprecated_title');
+    reasonEl.textContent = p.deprecationReason || tr('qwen_deprecated_msg');
+    if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
+  } else {
+    banner.classList.add('hidden');
+  }
+
+  const desc = document.getElementById('modal-desc');
+  if (p.oauthFlow === 'import_token') {
+    desc.innerHTML = `
+      <p style="font-size:0.85rem;color:#6b7280;line-height:1.6;margin-bottom:0.75rem;">${tr('modal_desc_import',{name:p.name})}</p>
+      <textarea id="oauth-import-input" placeholder="${tr('modal_import_placeholder')}" style="width:100%;min-height:5rem;padding:0.625rem;border:1px solid #2a2a2a;background:#111;color:#e8e8e8;border-radius:10px;font-family:monospace;font-size:0.78rem;resize:vertical;"></textarea>
+    `;
+  } else if (p.requiresMeta && p.requiresMeta.length) {
+    desc.innerHTML = `
+      <p style="font-size:0.82rem;color:#6b7280;line-height:1.6;margin-bottom:0.75rem;">${tr('modal_desc_meta',{name:p.name})}</p>
+      ${p.requiresMeta.map(m => `
+        <label style="display:block;margin-bottom:0.5rem;">
+          <span style="font-size:0.72rem;color:#9ca3af;display:block;margin-bottom:0.2rem;">${m.label}${m.required ? ' *' : ''}</span>
+          <input id="oauth-meta-${m.key}" type="text" placeholder="${m.placeholder || ''}" ${m.required ? 'required' : ''} style="width:100%;padding:0.5rem 0.625rem;border:1px solid #2a2a2a;background:#111;color:#e8e8e8;border-radius:10px;font-size:0.82rem;"/>
+        </label>
+      `).join('')}
+    `;
+  } else {
+    desc.innerHTML = `<p style="font-size:0.85rem;color:#6b7280;line-height:1.6;">${tr('modal_desc_default')}</p>`;
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeAddModal() {
+  const modal = document.getElementById('add-modal');
+  if (!modal) return;
+  if (modalPollTimer) { clearInterval(modalPollTimer); modalPollTimer = null; }
+  modal.classList.add('hidden');
+}
+
+async function startModalAuth() {
+  const p = _activeOAuthProvider;
+  const providerId = p?.id ?? 'qwen';
+  const flow = p?.oauthFlow ?? 'device_code';
+  const startBtn = document.getElementById('modal-start-auth-btn');
+  if (startBtn) startBtn.disabled = true;
+
+  try {
+    // Collect meta fields if required
+    let meta = null;
+    if (p?.requiresMeta?.length) {
+      meta = {};
+      for (const m of p.requiresMeta) {
+        const el = document.getElementById('oauth-meta-' + m.key);
+        const v = el?.value.trim();
+        if (m.required && !v) throw new Error(tr('err_meta_required',{label:m.label}));
+        if (v) meta[m.key] = v;
+      }
+    }
+    _activeOAuthMeta = meta;
+
+    if (flow === 'device_code') {
+      await runDeviceFlow(providerId);
+    } else if (flow === 'authorization_code' || flow === 'authorization_code_pkce') {
+      await runAuthCodeFlow(providerId, meta);
+    } else if (flow === 'import_token') {
+      await runImportFlow(providerId, meta);
+    } else {
+      throw new Error(`Unknown flow: ${flow}`);
+    }
+  } catch (err) {
+    if (startBtn) startBtn.disabled = false;
+    document.getElementById('modal-idle').classList.add('hidden');
+    document.getElementById('modal-started').classList.add('hidden');
+    document.getElementById('modal-errormsg').textContent = tr('err_start_fail');
+    document.getElementById('modal-errorsub').textContent = err.message || tr('err_start_sub');
+    document.getElementById('modal-error').classList.remove('hidden');
+  }
+}
+
+async function runDeviceFlow(providerId) {
+  const res = await fetch('/api/auth/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: providerId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to start auth');
+
+  document.getElementById('modal-usercode').textContent = data.user_code || '—';
+  const urlEl = document.getElementById('modal-urllink');
+  const url = data.verification_uri_complete || data.verification_uri;
+  urlEl.href = url;
+  document.getElementById('modal-urltext').textContent = url;
+  document.getElementById('modal-pollstatus').textContent = T.modal_pollwait || 'Open the URL above and enter the code…';
+
+  document.getElementById('modal-idle').classList.add('hidden');
+  document.getElementById('modal-started').classList.remove('hidden');
+
+  const interval = (data.interval || 5) * 1000;
+  const sessionId = data.session_id || data.device_code;
+  modalPollTimer = setInterval(async () => {
+    try {
+      const pr = await fetch('/api/auth/poll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      const pd = await pr.json();
+      if (pd.status === 'complete') {
+        clearInterval(modalPollTimer); modalPollTimer = null;
+        onAuthSuccess(pd.account);
+      } else if (pd.status === 'expired' || pd.status === 'denied') {
+        clearInterval(modalPollTimer); modalPollTimer = null;
+        onAuthError(pd.status === 'denied' ? tr('err_access_denied') : tr('err_code_expired'), pd.status === 'denied' ? tr('err_access_denied_sub') : tr('err_code_expired_sub'));
+      }
+    } catch { /* keep polling */ }
+  }, interval);
+}
+
+async function runAuthCodeFlow(providerId, meta) {
+  const res = await fetch('/api/auth/authorize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: providerId, meta: meta || undefined }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to authorize');
+
+  // Reuse the "started" panel with a different visual — show the URL as a button
+  document.getElementById('modal-usercode').textContent = '→';
+  const urlEl = document.getElementById('modal-urllink');
+  urlEl.href = data.auth_url;
+  document.getElementById('modal-urltext').textContent = tr('modal_auth_url_cta');
+  document.getElementById('modal-pollstatus').textContent = tr('modal_auth_wait');
+  document.getElementById('modal-idle').classList.add('hidden');
+  document.getElementById('modal-started').classList.remove('hidden');
+
+  // Auto-open in a new tab
+  try { window.open(data.auth_url, '_blank', 'noopener'); } catch {}
+
+  // Long-poll /api/auth/callback — the server blocks until the redirect lands
+  try {
+    const cb = await fetch(`/api/auth/callback?session_id=${encodeURIComponent(data.session_id)}`);
+    const cd = await cb.json();
+    if (cd.status === 'complete') onAuthSuccess(cd.account);
+    else onAuthError(cd.status === 'denied' ? tr('err_access_denied') : tr('err_auth_failed'), cd.message || '');
+  } catch (e) {
+    onAuthError(tr('err_network'), String(e));
+  }
+}
+
+async function runImportFlow(providerId, meta) {
+  const input = document.getElementById('oauth-import-input')?.value.trim();
+  if (!input) throw new Error(tr('err_empty_token'));
+  const res = await fetch('/api/auth/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider: providerId, input, meta: meta || undefined }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.status !== 'complete') throw new Error(data.message || data.error || tr('err_import_fail'));
+  onAuthSuccess(data.account);
+}
+
+function onAuthSuccess(account) {
+  document.getElementById('modal-successemail').textContent = account?.email || account?.display_name || account?.id?.slice(0, 8) || '';
+  document.getElementById('modal-idle').classList.add('hidden');
+  document.getElementById('modal-started').classList.add('hidden');
+  document.getElementById('modal-success').classList.remove('hidden');
+  loadStatus();
+  loadProviders();
+}
+
+function onAuthError(msg, sub) {
+  document.getElementById('modal-idle').classList.add('hidden');
+  document.getElementById('modal-started').classList.add('hidden');
+  document.getElementById('modal-errormsg').textContent = msg;
+  document.getElementById('modal-errorsub').textContent = sub || '';
+  document.getElementById('modal-error').classList.remove('hidden');
+}
+
+// ── Proxy Pools ───────────────────────────────────────────────────────
+let _pools = [];
+
+async function loadProxyPools() {
+  try {
+    const res = await fetch('/api/proxy-pools');
+    if (!res.ok) return;
+    const { pools } = await res.json();
+    _pools = pools || [];
+    renderProxyPools();
+  } catch {}
+}
+
+function renderProxyPools() {
+  const el = document.getElementById('pool-list');
+  if (!el) return;
+  if (!_pools.length) {
+    el.innerHTML = '<p style="font-size:0.82rem;color:#6b7280;padding:0.25rem 0;">No proxy pools yet. Add one to route connections through an HTTP proxy.</p>';
+    return;
+  }
+  el.innerHTML = _pools.map(pool => {
+    const dotColor = pool.test_status === 'active' ? '#22c55e' : pool.test_status === 'error' ? '#ef4444' : '#f59e0b';
+    const statusLabel = pool.test_status === 'active' ? 'ok' : pool.test_status === 'error' ? 'error' : 'untested';
+    const connLabel = pool.connections === 1 ? '1 connection' : pool.connections + ' connections';
+    return `<div class="pool-row">
+      <div class="pool-status-dot" style="background:${dotColor};box-shadow:0 0 5px ${dotColor}55;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+          <span style="font-size:0.85rem;font-weight:600;color:#e8e8e8;">${pool.name}</span>
+          <span style="font-size:0.65rem;padding:0.1rem 0.45rem;border-radius:9999px;background:#1e1e1e;color:#6b7280;border:1px solid #2a2a2a;">${connLabel}</span>
+        </div>
+        <p style="font-size:0.72rem;color:#4b5563;font-family:monospace;margin-top:0.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${pool.proxy_url}</p>
+        ${pool.last_error ? `<p style="font-size:0.68rem;color:#ef4444;margin-top:0.1rem;">${pool.last_error}</p>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:0.375rem;flex-shrink:0;">
+        <button class="btn-sm btn-sm-ghost" id="pool-test-btn-${pool.id}" onclick="testPool('${pool.id}')" style="font-size:0.72rem;padding:0 0.625rem;">
+          <iconify-icon icon="solar:bolt-bold-duotone" style="font-size:0.8rem;"></iconify-icon>Test
+        </button>
+        <button class="btn-sm btn-sm-danger" onclick="deletePool('${pool.id}','${pool.name.replace(/'/g,"\\'")}')">
+          <iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.8rem;"></iconify-icon>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openCreatePoolForm() {
+  document.getElementById('pool-create-form').classList.remove('hidden');
+  document.getElementById('btn-add-pool').classList.add('hidden');
+  document.getElementById('pool-name-input').focus();
+}
+
+function closeCreatePoolForm() {
+  document.getElementById('pool-create-form').classList.add('hidden');
+  document.getElementById('btn-add-pool').classList.remove('hidden');
+  document.getElementById('pool-name-input').value = '';
+  document.getElementById('pool-url-input').value = '';
+  document.getElementById('pool-noproxy-input').value = '';
+  document.getElementById('pool-create-error').style.display = 'none';
+}
+
+async function submitCreatePool() {
+  const name    = document.getElementById('pool-name-input').value.trim();
+  const url     = document.getElementById('pool-url-input').value.trim();
+  const noProxy = document.getElementById('pool-noproxy-input').value.trim() || null;
+  const errEl   = document.getElementById('pool-create-error');
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = ''; return; }
+  if (!url)  { errEl.textContent = 'Proxy URL is required.'; errEl.style.display = ''; return; }
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch('/api/proxy-pools', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, proxy_url: url, no_proxy: noProxy }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Failed to create pool.'; errEl.style.display = ''; return; }
+    closeCreatePoolForm();
+    loadProxyPools();
+  } catch(e) { errEl.textContent = 'Network error.'; errEl.style.display = ''; }
+}
+
+async function testPool(id) {
+  const btn = document.getElementById(`pool-test-btn-${id}`);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<iconify-icon icon="solar:refresh-bold-duotone" style="font-size:0.8rem;animation:spin 0.7s linear infinite;"></iconify-icon>Testing…'; }
+  try {
+    const res = await fetch(`/api/proxy-pools/${id}/test`, { method: 'POST' });
+    const data = await res.json();
+    await loadProxyPools();
+    if (btn) btn.disabled = false;
+  } catch { if (btn) btn.disabled = false; }
+}
+
+async function deletePool(id, name) {
+  if (!confirm(`Delete proxy pool "${name}"?`)) return;
+  try {
+    const res = await fetch(`/api/proxy-pools/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error || 'Cannot delete pool.'); return; }
+    loadProxyPools();
+  } catch {}
+}
+
+async function assignPool(connectionId, poolId) {
+  try {
+    await fetch(`/api/connections/${connectionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proxy_pool_id: poolId || null }),
+    });
+    await loadStatus();
+  } catch {}
+}
+
+// ── Auto-poll ─────────────────────────────────────────────────────────
+let autoPollTimer = null;
+const AUTO_POLL_MS = 5000;
+
+function toggleAutoPoll() {
+  const btn   = document.getElementById('btn-autopoll');
+  const dot   = document.getElementById('autopoll-dot');
+  const badge = document.getElementById('mob-autopoll-badge');
+  if (autoPollTimer) {
+    clearInterval(autoPollTimer);
+    autoPollTimer = null;
+    btn.classList.remove('autopoll-on');
+    dot.style.display = 'none';
+    if (badge) { badge.textContent='OFF'; badge.style.background='#1e1e1e'; badge.style.color='#4b5563'; }
+  } else {
+    autoPollTimer = setInterval(() => loadStatus(), AUTO_POLL_MS);
+    btn.classList.add('autopoll-on');
+    dot.style.display = 'block';
+    if (badge) { badge.textContent='ON'; badge.style.background='rgba(34,197,94,0.12)'; badge.style.color='#22c55e'; }
+  }
+}
+
+function manualRefresh() {
+  const btn = document.getElementById('btn-refresh');
+  btn.classList.add('spin-once');
+  btn.addEventListener('animationend', () => btn.classList.remove('spin-once'), { once: true });
+  loadStatus();
+}
+
+// ── Loading overlay animation ─────────────────────────────────────────
+let loadingInterval = null;
+
+function startLoadingAnim() {
+  const art = document.getElementById('dash-loading-art');
+  const asciiFrames = window.asciiFrames;
+  if (!art || !Array.isArray(asciiFrames) || !asciiFrames.length) return;
+  let idx = 0;
+  art.textContent = asciiFrames[0];
+  loadingInterval = setInterval(() => {
+    idx = (idx + 1) % asciiFrames.length;
+    art.textContent = asciiFrames[idx];
+  }, 1000 / 15);
+}
+
+function stopLoadingAnim() {
+  clearInterval(loadingInterval);
+  loadingInterval = null;
+  const overlay = document.getElementById('dash-loading');
+  if (!overlay) return;
+  gsap.to(overlay, {
+    opacity: 0, duration: 0.45, ease: 'power2.inOut',
+    onComplete: () => { overlay.style.display = 'none'; }
+  });
+  gsap.fromTo('#dashboard', { opacity: 0 }, { opacity: 1, duration: 0.4, delay: 0.2, ease: 'power2.out' });
+}
+
+window.addEventListener('load', () => {
+  applyI18n();
+  document.getElementById('dashboard').style.opacity = '0';
+  startLoadingAnim();
+  Promise.all([loadStatus(), loadProxyPools()]).finally(() => stopLoadingAnim());
+  toggleAutoPoll();
+  checkDashboardVersion();
+});
+</script>
+<script src="/public/animation.js"></script>
+</body>
+</html>

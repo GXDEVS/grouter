@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Animation</title>
+  <style>
+     html, body {
+       margin: 0;
+       padding: 0;
+       height: 100%;
+     }
+     body {
+       background: #000;
+       color: #fff;
+       font-family: monospace;
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       justify-content: center;
+       padding: 20px;
+       box-sizing: border-box;
+     }
+     #ascii-container {
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+       justify-content: center;
+       gap: 20px;
+       width: 100%;
+       max-width: 1200px;
+     }
+     
+     @media (max-width: 768px) {
+       #ascii-art {
+         font-size: 50%;
+         padding: 10px;
+       }
+       .controls {
+         gap: 10px;
+       }
+       button {
+         padding: 6px 12px;
+         font-size: 12px;
+       }
+     }
+     
+     @media (min-width: 1200px) {
+       #ascii-art {
+         font-size: 60%;
+       }
+     }
+     #ascii-art {
+       font-family: "Courier New", monospace;
+       font-size: 50%;
+       white-space: pre;
+       line-height: 1;
+       background-color: #000;
+       color: #fff;
+       padding: 20px;
+       border: 1px solid #333;
+       margin: 0 auto;
+       text-align: center;
+       max-width: 100%;
+       overflow-x: auto;
+     }
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .controls {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      justify-content: center;
+      margin: 20px 0;
+      width: 100%;
+    }
+    button {
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #555;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-family: monospace;
+      text-transform: uppercase;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #444;
+    }
+    #playBtn {
+      min-width: 80px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ascii-container">
+    <pre id="ascii-art"></pre>
+    <div class="controls">
+      <button id="playBtn">Play</button>
+    </div>
+    <div class="footer" style="margin-top: 20px; font-size: 12px;">
+      <a href="https://gx2-studio.com" target="_blank" style="color: #aaa; text-decoration: none;">Made with ASCIImotion by Gx2 Studio</a>
+    </div>
+  </div>
+  <script src="animation.js"></script>
+  <script>
+    let isPlaying = false;
+    let currentFrame = 0;
+    let animationInterval;
+    let fps = 24;
+
+    const asciiArt = document.getElementById('ascii-art');
+    const playBtn = document.getElementById('playBtn');
+
+    function displayFrame(index) {
+      asciiArt.textContent = frames[index];
+    }
+
+    function togglePlayback() {
+      if (isPlaying) {
+        clearInterval(animationInterval);
+        playBtn.textContent = 'Play';
+      } else {
+        animationInterval = setInterval(() => {
+          currentFrame = (currentFrame + 1) % frames.length;
+          displayFrame(currentFrame);
+        }, 1000 / fps);
+        playBtn.textContent = 'Pause';
+      }
+      isPlaying = !isPlaying;
+    }
+
+    playBtn.addEventListener('click', togglePlayback);
+
+    if (frames.length > 0) {
+      displayFrame(0);
+    }
+  </script>
+</body>
+</html>

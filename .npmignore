@@ -1,0 +1,16 @@
+# Source (bundled into # dist/ is included (files field in package.json))
+src/
+index.ts
+tsconfig.json
+bun.lock
+
+# Dev / install scripts
+setup.sh
+uninstall.sh
+CLAUDE.md
+
+# Runtime data
+.grouter/
+
+# Node
+node_modules/
