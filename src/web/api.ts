@@ -13,10 +13,11 @@ import { getStrategy, getStickyLimit, getProxyPort, getSetting, setSetting, db }
 import { isRunning, readPid, removePid } from "../daemon/index.ts";
 import { estimateCostUSD } from "../constants.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
-import { PROVIDERS, OAUTH_PROVIDERS, FREE_PROVIDERS, APIKEY_PROVIDERS } from "../providers/registry.ts";
+import { PROVIDERS, OAUTH_PROVIDERS, FREE_PROVIDERS, APIKEY_PROVIDERS, saveCustomProvider, type Provider } from "../providers/registry.ts";
 import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 import { listConnectionsByProvider } from "../db/accounts.ts";
+import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
@@ -346,6 +347,33 @@ function maskApiKey(key: string): string {
   return key.slice(0, 4) + "…" + key.slice(-4);
 }
 
+// ── POST /api/providers/custom ────────────────────────────────────────────────
+export async function handleCreateCustomProvider(req: Request): Promise<Response> {
+  try {
+    const body = (await req.json()) as { name?: string; url?: string };
+    if (!body.name) return json({ error: "name is required" }, 400);
+    if (!body.url)  return json({ error: "url is required" }, 400);
+
+    const safeId = "custom_" + crypto.randomUUID().slice(0, 8) + "_" + body.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    const p: Provider = {
+      id: safeId,
+      name: body.name,
+      description: "Custom provider",
+      category: "apikey",
+      authType: "apikey",
+      color: "#94a3b8",
+      baseUrl: body.url,
+      models: [{ id: "default", name: "Default" }]
+    };
+    
+    saveCustomProvider(p);
+    return json(p);
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
 // ── POST /api/connections ─────────────────────────────────────────────────────
 export async function handleAddConnection(req: Request): Promise<Response> {
   try {
@@ -364,7 +392,51 @@ export async function handleAddConnection(req: Request): Promise<Response> {
       display_name: body.display_name ?? null,
     });
     const port = getProviderPort(body.provider);
+
+    // Background: fetch models from provider API using the new key
+    fetchAndSaveProviderModels(body.provider, body.api_key.trim()).catch(() => {});
+
     return json({ ok: true, connection, port });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// ── GET /api/providers/:id/models ────────────────────────────────────────────
+export function handleGetProviderModels(id: string): Response {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  const models = getModelsForProvider(id);
+  const free_only = getSetting(`provider_free_only_${id}`) === "true";
+  return json({ provider: id, models, free_only });
+}
+
+// ── POST /api/providers/:id/config ───────────────────────────────────────────
+export async function handleProviderConfig(id: string, req: Request): Promise<Response> {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  try {
+    const body = (await req.json()) as { free_only?: boolean };
+    if (typeof body.free_only === "boolean") {
+      setSetting(`provider_free_only_${id}`, body.free_only ? "true" : "false");
+      // Give server instances a hint to discard cache by touching models DB (already implemented implicitly next refresh)
+      // They use modelsCache with TTL, so we can export a way or just let it expire in 10 mins.
+      // Easiest is to do nothing complicated, but let's expose a global flag if needed.
+      (globalThis as any).__grouterClearModelsCache = true;
+    }
+    return json({ ok: true, free_only: body.free_only });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// ── POST /api/providers/:id/refresh-models ───────────────────────────────────
+export async function handleRefreshProviderModels(id: string): Promise<Response> {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  try {
+    const result = await fetchAndSaveProviderModels(id);
+    return json({ provider: id, models: result.models, source: result.source });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }

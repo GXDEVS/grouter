@@ -1,6 +1,7 @@
 // Per-provider upstream URL + headers + body transformer.
 // Centralises everything that used to be Qwen-specific in server.ts so each
 // provider can have its own dispatch rules (mirrors 9router's executors).
+// Also supports dynamic fallback for custom providers via registry baseUrl.
 //
 // Coverage:
 //   ✅ openai-compat  — qwen, iflow, qoder, github (Copilot), kilocode, opencode,
@@ -15,6 +16,7 @@
 import { platform, arch } from "node:os";
 import type { Connection } from "../types.ts";
 import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG } from "../constants.ts";
+import { getProvider } from "../providers/registry.ts";
 import {
   openaiToClaude,
   buildClaudeHeaders,
@@ -146,6 +148,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       nvidia:     "https://integrate.api.nvidia.com/v1/chat/completions",
       ollama:     "https://ollama.com/v1/chat/completions",
       gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+      modal:      "https://api.us-west-2.modal.direct/v1/chat/completions",
     };
     const url = urls[provider];
     if (url) {
@@ -163,6 +166,13 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
         },
         format: "claude",
       };
+    }
+    // Dynamic fallback: use baseUrl from registry (for custom providers etc.)
+    const def = getProvider(provider);
+    if (def?.baseUrl) {
+      const base = def.baseUrl.replace(/\/$/, "");
+      const dynamicUrl = base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
+      return { kind: "ok", req: openaiCompat(dynamicUrl, apiKey, ctx.body, ctx.stream) };
     }
     return { kind: "unsupported", reason: `No upstream mapping for provider ${provider}` };
   }

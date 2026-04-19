@@ -46,6 +46,7 @@
     .dot-warn { background: #f59e0b; }
     .dot-pulse { animation: dpulse 2s ease-in-out infinite; }
     @keyframes dpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
     .kpi-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
     .modal-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 2rem; width: 100%; max-width: 480px; position: relative; }
@@ -494,6 +495,65 @@
   </div>
 </div>
 
+<!-- MODELS MODAL -->
+<div id="models-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:560px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeModelsModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <div id="models-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;"></div>
+      <div style="flex:1;min-width:0;">
+        <h2 id="models-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
+        <p id="models-modal-sub" style="color:#6b7280;font-size:0.75rem;"></p>
+      </div>
+    </div>
+    <div id="models-modal-filter" style="display:none;margin-bottom:0.75rem;">
+      <div style="display:flex;gap:0.5rem;">
+        <button id="models-filter-all" class="btn-sm btn-sm-ghost" onclick="setModelsFilter('all')" style="font-size:0.72rem;"></button>
+        <button id="models-filter-free" class="btn-sm btn-sm-ghost" onclick="setModelsFilter('free')" style="font-size:0.72rem;"></button>
+      </div>
+    </div>
+    <div id="models-modal-list" style="max-height:360px;overflow-y:auto;margin-bottom:1rem;"></div>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="btn-primary" style="flex:1;justify-content:center;" id="models-refresh-btn" onclick="refreshModelsModal()">
+        <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+        <span id="models-refresh-label"></span>
+      </button>
+    </div>
+    <p id="models-modal-source" style="font-size:0.65rem;color:#4b5563;text-align:center;margin-top:0.5rem;"></p>
+  </div>
+</div>
+
+<!-- CUSTOM PROVIDER MODAL -->
+<div id="custom-provider-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCustomProviderModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <div class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:#94a3b8;"><iconify-icon icon="solar:add-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
+      <div>
+        <h2 id="custom-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
+        <p id="custom-modal-sub" style="color:#6b7280;font-size:0.8rem;"></p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.625rem;">
+      <div>
+        <label id="custom-label-name" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;"></label>
+        <input id="custom-prov-name" type="text" placeholder="e.g. My Remote API" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;" />
+      </div>
+      <div>
+        <label id="custom-label-url" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;"></label>
+        <input id="custom-prov-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;font-family:monospace;" />
+      </div>
+      <p id="custom-prov-error" style="font-size:0.8rem;color:#ef4444;display:none;"></p>
+      <button class="btn-primary" id="custom-prov-submit" style="width:100%;justify-content:center;margin-top:0.25rem;" onclick="submitCustomProvider()">
+        <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+        <span id="custom-btn-label"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD MODAL -->
 <div id="add-modal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -702,6 +762,21 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.',
     btn_add_another:'Add another',btn_try_again:'Try again',
     no_oauth_available:'No OAuth providers available. Add an API key provider instead.',
+    models_title_suffix:'Models',models_loading:'Loading...',models_refresh:'Refresh Models',
+    models_fetching:'Fetching...',models_done:'Done!',models_error:'Error',
+    models_no_found:'No models found',models_no_free:'No models found (try All Models)',
+    models_total:'{n} model(s) total',models_total_src:'{n} model(s) - {src}',
+    models_src_api:'Fetched from API',models_src_cache:'Using cached data',
+    models_failed:'Failed to load models',
+    models_filter_all:'All Models',models_filter_free:'Free Only',
+    models_view_title:'View models',
+    custom_title:'Custom Provider',custom_sub:'Add any OpenAI-compatible API',
+    custom_label_name:'Provider Name',custom_label_url:'API Base URL',
+    custom_placeholder_name:'e.g. My Remote API',custom_placeholder_url:'https://api.example.com/v1',
+    custom_btn_create:'Create Provider',
+    custom_err_name:'Provider name is required.',custom_err_url:'API URL is required.',
+    custom_err_url_format:'URL must start with http:// or https://',
+    connect_apikey_required:'API key is required.',connect_failed:'Failed to connect.',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -759,6 +834,21 @@ const I18N = {
     qwen_deprecated_msg:'O Qwen Code Free foi descontinuado. Contas existentes continuam funcionando, mas novos cadastros OAuth não são mais aceitos.',
     btn_add_another:'Adicionar outro',btn_try_again:'Tentar novamente',
     no_oauth_available:'Nenhum provedor OAuth disponível. Adicione um provedor com API Key.',
+    models_title_suffix:'Modelos',models_loading:'Carregando...',models_refresh:'Atualizar Modelos',
+    models_fetching:'Buscando...',models_done:'Pronto!',models_error:'Erro',
+    models_no_found:'Nenhum modelo encontrado',models_no_free:'Nenhum modelo encontrado (tente Todos os Modelos)',
+    models_total:'{n} modelo(s) total',models_total_src:'{n} modelo(s) - {src}',
+    models_src_api:'Buscado da API',models_src_cache:'Usando dados em cache',
+    models_failed:'Falha ao carregar modelos',
+    models_filter_all:'Todos os Modelos',models_filter_free:'Somente Gratis',
+    models_view_title:'Ver modelos',
+    custom_title:'Provedor Customizado',custom_sub:'Adicione qualquer API compativel com OpenAI',
+    custom_label_name:'Nome do Provedor',custom_label_url:'URL Base da API',
+    custom_placeholder_name:'ex. Minha API Remota',custom_placeholder_url:'https://api.exemplo.com/v1',
+    custom_btn_create:'Criar Provedor',
+    custom_err_name:'Nome do provedor e obrigatorio.',custom_err_url:'URL da API e obrigatoria.',
+    custom_err_url_format:'URL deve comecar com http:// ou https://',
+    connect_apikey_required:'API key e obrigatoria.',connect_failed:'Falha ao conectar.',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -816,6 +906,21 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free 已停用。现有账户继续可用，但不再接受新的 OAuth 注册。',
     btn_add_another:'再添加一个',btn_try_again:'重试',
     no_oauth_available:'暂无可用的 OAuth 提供商。请改用 API Key 提供商。',
+    models_title_suffix:'模型',models_loading:'加载中...',models_refresh:'刷新模型',
+    models_fetching:'获取中...',models_done:'完成!',models_error:'错误',
+    models_no_found:'未找到模型',models_no_free:'未找到模型(请尝试所有模型)',
+    models_total:'{n} 个模型',models_total_src:'{n} 个模型 - {src}',
+    models_src_api:'从 API 获取',models_src_cache:'使用缓存数据',
+    models_failed:'加载模型失败',
+    models_filter_all:'所有模型',models_filter_free:'仅免费',
+    models_view_title:'查看模型',
+    custom_title:'自定义提供商',custom_sub:'添加任何 OpenAI 兼容 API',
+    custom_label_name:'提供商名称',custom_label_url:'API 基础 URL',
+    custom_placeholder_name:'例如 我的远程 API',custom_placeholder_url:'https://api.example.com/v1',
+    custom_btn_create:'创建提供商',
+    custom_err_name:'提供商名称为必填项。',custom_err_url:'API URL 为必填项。',
+    custom_err_url_format:'URL 必须以 http:// 或 https:// 开头',
+    connect_apikey_required:'API 密钥为必填项。',connect_failed:'连接失败。',
   }
 };
 
@@ -1327,12 +1432,16 @@ function renderProviderGrid(gridId, providers) {
                        : connected ? `<span class="provider-badge">${p.connections}</span>` : '';
     const freeBadge  = p.freeTier ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
     const click      = deprecated ? '' : `onclick="openProviderCard('${p.id}')"`;
+    const modelsBtn  = (p.id !== 'custom' && !deprecated)
+      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:list-bold-duotone" style="font-size:0.8rem;"></iconify-icon></button>`
+      : '';
     return `<div class="provider-card${connected?' connected':''}${deprecated?' deprecated':''}" ${click}>
       ${providerIconHtml(p)}
       <div style="min-width:0;flex:1;">
         <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
         <p style="font-size:0.68rem;color:${deprecated?'#ef4444':'#6b7280'};margin-top:0.1rem;">${meta}</p>
       </div>
+      ${modelsBtn}
       ${freeBadge}
       ${badge}
     </div>`;
@@ -1350,6 +1459,11 @@ function openProviderCard(providerId) {
 }
 
 async function openConnectModal(p) {
+  if (p.id === 'custom') {
+    openCustomProviderModal();
+    return;
+  }
+
   _connectingProvider = p;
   const icon = document.getElementById('connect-modal-icon');
   icon.style.background = p.color;
@@ -1419,7 +1533,7 @@ async function submitApiKeyConnection() {
   const key  = document.getElementById('connect-apikey-input').value.trim();
   const name = document.getElementById('connect-keyname-input').value.trim();
   const errEl = document.getElementById('connect-modal-error');
-  if (!key) { errEl.textContent = 'API key is required.'; errEl.style.display = ''; return; }
+  if (!key) { errEl.textContent = tr('connect_apikey_required'); errEl.style.display = ''; return; }
   const btn = document.getElementById('connect-submit-btn');
   btn.disabled = true;
   errEl.style.display = 'none';
@@ -1430,13 +1544,195 @@ async function submitApiKeyConnection() {
       body: JSON.stringify({ provider: _connectingProvider.id, api_key: key, display_name: name || null }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Failed to connect.'; errEl.style.display = ''; btn.disabled = false; return; }
+    if (!res.ok) { errEl.textContent = data.error || tr('connect_failed'); errEl.style.display = ''; btn.disabled = false; return; }
     document.getElementById('connect-apikey-input').value = '';
     document.getElementById('connect-keyname-input').value = '';
     btn.disabled = false;
     await refreshProviderConnections(_connectingProvider.id);
     loadStatus();
   } catch(e) { errEl.textContent = tr('err_network'); errEl.style.display = ''; btn.disabled = false; }
+}
+
+// ── Models Modal ──────────────────────────────────────────────────────
+let _modelsProviderId = null;
+let _modelsFilter = 'all'; // 'all' or 'free'
+let _modelsData = [];
+
+async function openModelsModal(providerId) {
+  _modelsProviderId = providerId;
+  _modelsFilter = 'all';
+  const p = (_providersMap && _providersMap[providerId]) || null;
+  const modal = document.getElementById('models-modal');
+
+  // Set header
+  const icon = document.getElementById('models-modal-icon');
+  if (p) {
+    icon.style.background = isLogoUrl(p.logo) ? '#fff' : (p.color || '#1a1a1a');
+    icon.style.padding = isLogoUrl(p.logo) ? '0.2rem' : '0';
+    icon.innerHTML = p ? renderLogoInner(p) : '';
+    document.getElementById('models-modal-title').textContent = p.name + ' \u2014 ' + tr('models_title_suffix');
+    document.getElementById('models-modal-sub').textContent = p.description || '';
+  }
+
+  // Show free/all filter only for OpenRouter
+  const filterEl = document.getElementById('models-modal-filter');
+  filterEl.style.display = (providerId === 'openrouter') ? '' : 'none';
+  updateFilterButtons();
+
+  // Load models
+  document.getElementById('models-modal-list').innerHTML = '<p style="text-align:center;color:#6b7280;padding:1rem;"><iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1.2rem;animation:spin 1s linear infinite;"></iconify-icon> ' + tr('models_loading') + '</p>';
+  document.getElementById('models-modal-source').textContent = '';
+  document.getElementById('models-refresh-label').textContent = tr('models_refresh');
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/providers/${providerId}/models`);
+    if (res.ok) {
+      const data = await res.json();
+      _modelsData = data.models || [];
+      if (document.getElementById('models-modal-filter').style.display !== 'none') {
+        _modelsFilter = data.free_only ? 'free' : 'all';
+        updateFilterButtons();
+      }
+      renderModelsList();
+    }
+  } catch {
+    document.getElementById('models-modal-list').innerHTML = '<p style="text-align:center;color:#ef4444;padding:1rem;">' + tr('models_failed') + '</p>';
+  }
+}
+
+function renderModelsList() {
+  const el = document.getElementById('models-modal-list');
+  let models = _modelsData;
+  if (_modelsFilter === 'free') models = models.filter(m => m.is_free);
+  if (!models.length) {
+    el.innerHTML = '<p style="text-align:center;color:#6b7280;padding:1.5rem;font-size:0.82rem;">' + (_modelsFilter === 'free' ? tr('models_no_free') : tr('models_no_found')) + '</p>';
+    return;
+  }
+  el.innerHTML = models.map((m, i) => {
+    const border = i < models.length - 1 ? 'border-bottom:1px solid #1e1e1e;' : '';
+    const freeTag = m.is_free ? '<span style="font-size:0.6rem;font-weight:700;padding:0.05rem 0.4rem;border-radius:9999px;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);margin-left:0.375rem;">FREE</span>' : '';
+    return `<div style="display:flex;align-items:center;padding:0.5rem 0.25rem;${border}gap:0.5rem;">
+      <iconify-icon icon="solar:cpu-bolt-bold-duotone" style="color:#0AB9DC;font-size:0.85rem;flex-shrink:0;"></iconify-icon>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:0.8rem;font-weight:600;color:#e8e8e8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.name}${freeTag}</p>
+        <p style="font-size:0.65rem;color:#4b5563;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.id}</p>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('models-modal-source').textContent = tr('models_total', {n: _modelsData.length});
+}
+
+function setModelsFilter(filter) {
+  _modelsFilter = filter;
+  updateFilterButtons();
+  renderModelsList();
+  if (_modelsProviderId) {
+    fetch(`/api/providers/${_modelsProviderId}/config`, {
+      method: "POST",
+      body: JSON.stringify({ free_only: filter === 'free' })
+    }).catch(console.error);
+  }
+}
+
+function updateFilterButtons() {
+  const allBtn = document.getElementById('models-filter-all');
+  const freeBtn = document.getElementById('models-filter-free');
+  allBtn.textContent = tr('models_filter_all');
+  freeBtn.textContent = tr('models_filter_free');
+  allBtn.style.borderColor = _modelsFilter === 'all' ? '#0AB9DC' : '#2a2a2a';
+  allBtn.style.color = _modelsFilter === 'all' ? '#0AB9DC' : '#6b7280';
+  freeBtn.style.borderColor = _modelsFilter === 'free' ? '#22c55e' : '#2a2a2a';
+  freeBtn.style.color = _modelsFilter === 'free' ? '#22c55e' : '#6b7280';
+}
+
+async function refreshModelsModal() {
+  if (!_modelsProviderId) return;
+  const btn = document.getElementById('models-refresh-btn');
+  const lbl = document.getElementById('models-refresh-label');
+  btn.disabled = true;
+  lbl.textContent = tr('models_fetching');
+  try {
+    const res = await fetch(`/api/providers/${_modelsProviderId}/refresh-models`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      _modelsData = data.models || [];
+      renderModelsList();
+      const src = data.source === 'api' ? tr('models_src_api') : tr('models_src_cache');
+      document.getElementById('models-modal-source').textContent = tr('models_total_src', {n: _modelsData.length, src: src});
+      lbl.textContent = tr('models_done');
+    } else {
+      lbl.textContent = tr('models_error');
+    }
+  } catch {
+    lbl.textContent = tr('models_error');
+  }
+  setTimeout(() => { lbl.textContent = tr('models_refresh'); btn.disabled = false; }, 2000);
+}
+
+function closeModelsModal() {
+  document.getElementById('models-modal').classList.add('hidden');
+  _modelsProviderId = null;
+  _modelsData = [];
+}
+
+// ── Custom Provider Modal ─────────────────────────────────────────────
+function openCustomProviderModal() {
+  document.getElementById('custom-prov-name').value = '';
+  document.getElementById('custom-prov-url').value = '';
+  document.getElementById('custom-prov-error').style.display = 'none';
+  document.getElementById('custom-prov-submit').disabled = false;
+  // Populate i18n strings
+  document.getElementById('custom-modal-title').textContent = tr('custom_title');
+  document.getElementById('custom-modal-sub').textContent = tr('custom_sub');
+  document.getElementById('custom-label-name').textContent = tr('custom_label_name');
+  document.getElementById('custom-label-url').textContent = tr('custom_label_url');
+  document.getElementById('custom-btn-label').textContent = tr('custom_btn_create');
+  document.getElementById('custom-prov-name').placeholder = tr('custom_placeholder_name');
+  document.getElementById('custom-prov-url').placeholder = tr('custom_placeholder_url');
+  document.getElementById('custom-provider-modal').classList.remove('hidden');
+}
+
+function closeCustomProviderModal() {
+  document.getElementById('custom-provider-modal').classList.add('hidden');
+}
+
+async function submitCustomProvider() {
+  const name = document.getElementById('custom-prov-name').value.trim();
+  const url = document.getElementById('custom-prov-url').value.trim();
+  const errEl = document.getElementById('custom-prov-error');
+  const btn = document.getElementById('custom-prov-submit');
+
+  if (!name) { errEl.textContent = tr('custom_err_name'); errEl.style.display = ''; return; }
+  if (!url) { errEl.textContent = tr('custom_err_url'); errEl.style.display = ''; return; }
+  if (!url.startsWith('http')) { errEl.textContent = tr('custom_err_url_format'); errEl.style.display = ''; return; }
+
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/providers/custom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      errEl.textContent = tr('custom_err_failed', {err: errData.error || res.status});
+      errEl.style.display = '';
+      btn.disabled = false;
+      return;
+    }
+    const p = await res.json();
+    closeCustomProviderModal();
+    loadProviders();
+    // Auto-open the connect modal for the new provider
+    setTimeout(() => openConnectModal(p), 300);
+  } catch (err) {
+    errEl.textContent = tr('custom_err_network', {err: err});
+    errEl.style.display = '';
+    btn.disabled = false;
+  }
 }
 
 // ── OAuth Provider Picker + Modal ─────────────────────────────────────

@@ -10,7 +10,9 @@ import { checkAndRefreshAccount } from "../token/refresh.ts";
 import { isRateLimitedResult } from "../types.ts";
 import { listAccounts } from "../db/accounts.ts";
 import { recordUsage } from "../db/usage.ts";
-import { getProvider } from "../providers/registry.ts";
+import { getProvider, PROVIDERS } from "../providers/registry.ts";
+import { getModelsForProvider } from "../providers/model-fetcher.ts";
+import { getConnectionCountByProvider } from "../db/accounts.ts";
 import {
   handleStatus,
   handleAuthStart,
@@ -35,6 +37,10 @@ import {
   handleDeleteProxyPool,
   handleTestProxyPool,
   handleUpdateConnection,
+  handleCreateCustomProvider,
+  handleGetProviderModels,
+  handleRefreshProviderModels,
+  handleProviderConfig,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
 import { listProviderPorts } from "../db/ports.ts";
@@ -63,34 +69,51 @@ const MAX_RETRIES = 3;
 let modelsCache: { data: unknown[]; at: number } | null = null;
 const MODELS_TTL = 10 * 60 * 1000;
 
+/**
+ * Aggregate models from ALL providers that have active connections.
+ * Each model is prefixed: "provider/model-id".
+ * Uses DB-stored models when available, otherwise falls back to registry.
+ */
 async function fetchModels() {
+  if ((globalThis as any).__grouterClearModelsCache) {
+    modelsCache = null;
+    (globalThis as any).__grouterClearModelsCache = false;
+  }
   if (modelsCache && Date.now() - modelsCache.at < MODELS_TTL) return modelsCache.data;
 
-  const accounts = listAccounts();
-  const account = accounts.find((a) => a.is_active && a.test_status !== "unavailable");
-  if (!account) return fallbackModels();
+  const counts = getConnectionCountByProvider();
+  const data: unknown[] = [];
 
-  try {
-    const refreshed = await checkAndRefreshAccount(account);
-    const resp = await fetch(buildQwenModelsUrl(refreshed.resource_url), {
-      headers: buildQwenHeaders(refreshed.access_token, false),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (resp.ok) {
-      const json = (await resp.json()) as { data?: { id: string }[] };
-      const raw = json.data;
-      if (raw && raw.length > 0) {
-        const data = raw.map((m) => ({ id: m.id, object: "model", created: 1720000000, owned_by: "qwen" }));
-        modelsCache = { data, at: Date.now() };
-        return data;
-      }
+  for (const [providerId, provider] of Object.entries(PROVIDERS)) {
+    // Include providers with connections, or all providers with models defined
+    const hasConnections = (counts[providerId] ?? 0) > 0;
+    if (!hasConnections && provider.category !== "free") continue;
+
+    const models = getModelsForProvider(providerId);
+    const freeOnly = getSetting(`provider_free_only_${providerId}`) === "true";
+    for (const m of models) {
+      if (freeOnly && !m.is_free) continue;
+      data.push({
+        id: `${providerId}/${m.id}`,
+        object: "model",
+        created: 1720000000,
+        owned_by: providerId,
+      });
     }
-  } catch { /* fall through */ }
-  return fallbackModels();
-}
+  }
 
-function fallbackModels() {
-  const data = QWEN_MODELS_OAUTH.map((id) => ({ id, object: "model", created: 1720000000, owned_by: "qwen" }));
+  if (data.length === 0) {
+    // Ultimate fallback: Qwen hardcoded models
+    const fallback = QWEN_MODELS_OAUTH.map((id) => ({
+      id: `qwen/${id}`,
+      object: "model",
+      created: 1720000000,
+      owned_by: "qwen",
+    }));
+    modelsCache = { data: fallback, at: Date.now() };
+    return fallback;
+  }
+
   modelsCache = { data, at: Date.now() };
   return data;
 }
@@ -241,8 +264,24 @@ export function startServer(port: number) {
         GET:     () => handleGetProviders(),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
+      "/api/providers/custom": {
+        POST:    (req: Request) => handleCreateCustomProvider(req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
       "/api/providers/:id/connections": {
         GET:     (req: BunRequest) => handleGetProviderConnections(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/models": {
+        GET:     (req: BunRequest) => handleGetProviderModels(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/refresh-models": {
+        POST:    (req: BunRequest) => handleRefreshProviderModels(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/config": {
+        POST:    (req: BunRequest) => handleProviderConfig(req.params.id!, req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/connections": {
