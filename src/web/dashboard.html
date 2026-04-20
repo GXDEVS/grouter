@@ -201,7 +201,9 @@
           <option value="zh">中文</option>
         </select>
       </div>
-      <p id="sb-made-by" style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;">made by</p>
+      <p id="sb-made-by" style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">made by
+        <span id="grouter-version" style="font-size:0.65rem;color:#0AB9DC;font-weight:700;"></span>
+      </p>
       <div style="display:flex;flex-direction:column;gap:0.375rem;">
         <a href="https://github.com/gxdevs" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:github" style="font-size:1rem;flex-shrink:0;"></iconify-icon>github.com/gxdevs</a>
         <a href="https://youtube.com/@gxdevv" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:youtube" style="font-size:1rem;flex-shrink:0;color:#ef4444;"></iconify-icon>youtube @gxdevv</a>
@@ -998,6 +1000,16 @@ async function checkDashboardVersion() {
     const res = await fetch('/api/version');
     if (!res.ok) return;
     const { current, latest } = await res.json();
+
+    // Update the visible version in the sidebar (preserve leading 'v')
+    try {
+      const verEl = document.getElementById('grouter-version');
+      if (verEl && current) {
+        const s = String(current);
+        verEl.textContent = s.startsWith('v') ? s : `v${s}`;
+      }
+    } catch {}
+
     if (!latest || latest === current) return;
     const banner = document.getElementById('dash-update-banner');
     const msg    = document.getElementById('dash-update-msg');
@@ -1051,7 +1063,14 @@ function applyI18n() {
   s('modal-title',T.modal_title);s('modal-sub',T.modal_sub);s('modal-desc',T.modal_desc);
   s('modal-start-btn',T.modal_start);s('modal-codelabel',T.modal_codelabel);
   s('modal-successmsg',T.modal_successmsg);s('modal-done-btn',T.modal_done);
-  s('sb-tagline',T.sb_tagline);s('sb-made-by',T.sb_made_by);
+  s('sb-tagline',T.sb_tagline);
+  // Preserve the version span inside #sb-made-by when applying i18n
+  const _sb = document.getElementById('sb-made-by');
+  if (_sb) {
+    const verEl = document.getElementById('grouter-version');
+    _sb.textContent = T.sb_made_by + ' ';
+    if (verEl) _sb.appendChild(verEl);
+  }
   s('cfg-strategy-title',T.cfg_strategy_title);s('cfg-strategy-desc',T.cfg_strategy_desc);
   s('cfg-fill-desc',T.cfg_fill_desc);s('cfg-rr-desc',T.cfg_rr_desc);
   s('cfg-sticky-label',T.cfg_sticky_label);s('cfg-sticky-hint',T.cfg_sticky_hint);

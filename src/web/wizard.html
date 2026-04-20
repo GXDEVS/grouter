@@ -534,7 +534,14 @@ function applyI18n() {
   s('s1-successmsg',T.s1_successmsg);s('s1-continue',T.s1_continue);
   s('s2-title',T.s2_title);s('s2-sub',T.s2_sub);s('s2-back',T.s2_back);s('s2-done',T.s2_done);
   s('s3-title',T.s3_title);s('s3-sub',T.s3_sub);s('s3-btn',T.s3_btn);
-  s('sb-tagline',T.sb_tagline);s('sb-made-by',T.sb_made_by);
+  s('sb-tagline',T.sb_tagline);
+  // Preserve the version span inside #sb-made-by when applying i18n
+  const _wiz_sb = document.getElementById('sb-made-by');
+  if (_wiz_sb) {
+    const verEl = document.getElementById('grouter-version');
+    _wiz_sb.textContent = T.sb_made_by + ' ';
+    if (verEl) _wiz_sb.appendChild(verEl);
+  }
   s('footer-lang-label', T.footer_lang || 'Language');
   const fmb = document.getElementById('footer-made-by');
   if (fmb) fmb.innerHTML = (T.footer_made||'made with ♥ by')+' <span style="color:#0AB9DC;font-weight:600;">gxdev</span>';
