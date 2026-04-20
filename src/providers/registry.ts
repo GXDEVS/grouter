@@ -640,6 +640,7 @@ export const PROVIDERS: Record<string, Provider> = {
       { id: "meta-llama/Llama-3.3-70B-Instruct",         name: "Llama 3.3 70B",      isFree: true },
       { id: "Qwen/Qwen2.5-72B-Instruct",                 name: "Qwen2.5 72B",        isFree: true },
       { id: "Qwen/Qwen3.5-27B",                          name: "Qwen3.5 27B",        isFree: true },
+      { id: "Qwen/Qwen3.6-35B-A3B",                      name: "Qwen3.6 35B A3B"                  },
       { id: "mistralai/Mistral-Nemo-Instruct-2407",       name: "Mistral Nemo",       isFree: true },
       { id: "google/gemma-2-27b-it",                     name: "Gemma 2 27B",        isFree: true },
       { id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",  name: "DeepSeek R1 32B",    isFree: true },
