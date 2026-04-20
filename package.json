@@ -35,7 +35,7 @@
     "dev": "bun --hot index.ts serve fg",
     "start": "bun index.ts serve fg",
     "prebuild": "bun run scripts/embed-logos.ts",
-    "build": "bun build index.ts --target bun --outfile dist/grouter && chmod +x dist/grouter",
+    "build": "bun build index.ts --target bun --outfile dist/grouter && (chmod +x dist/grouter || true)",
     "deploy": "bun run build && bun link && echo '\\n✓ Global binary updated — run: grouter serve'",
     "prepare": "test -f dist/grouter || bun run build",
     "prepublishOnly": "bun run build",
