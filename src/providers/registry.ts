@@ -547,7 +547,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#ef4444",
     baseUrl: "https://api.cerebras.ai/v1",
     apiKeyUrl: "https://cloud.cerebras.ai/",
-    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='12' fill='%23ef4444'/%3e%3ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='32' fill='white' text-anchor='middle'%3eC%3c/text%3e%3c/svg%3e",
+    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%23111827'/%3e%3ccircle cx='32' cy='32' r='16' fill='none' stroke='%23ef4444' stroke-width='4'/%3e%3ccircle cx='32' cy='32' r='7' fill='%23ef4444'/%3e%3ccircle cx='32' cy='10' r='4' fill='%23ef4444'/%3e%3ccircle cx='32' cy='54' r='4' fill='%23ef4444'/%3e%3ccircle cx='10' cy='32' r='4' fill='%23ef4444'/%3e%3ccircle cx='54' cy='32' r='4' fill='%23ef4444'/%3e%3c/svg%3e",
     freeTier: { notice: "Free tier with generous daily limits — no credit card required.", url: "https://cloud.cerebras.ai/" },
     models: [
       { id: "llama-3.3-70b",          name: "Llama 3.3 70B"        },
@@ -566,7 +566,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#ff7000",
     baseUrl: "https://api.mistral.ai/v1",
     apiKeyUrl: "https://console.mistral.ai/api-keys/",
-    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='12' fill='%23ff7000'/%3e%3ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='32' fill='white' text-anchor='middle'%3eM%3c/text%3e%3c/svg%3e",
+    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%23ff7000'/%3e%3crect x='10' y='14' width='12' height='12' fill='white'/%3e%3crect x='26' y='14' width='12' height='12' fill='white'/%3e%3crect x='42' y='14' width='12' height='12' fill='white'/%3e%3crect x='10' y='30' width='12' height='12' fill='white' opacity='0.6'/%3e%3crect x='26' y='30' width='12' height='12' fill='white'/%3e%3crect x='42' y='30' width='12' height='12' fill='white' opacity='0.6'/%3e%3crect x='10' y='46' width='12' height='12' fill='white' opacity='0.3'/%3e%3crect x='26' y='46' width='12' height='12' fill='white' opacity='0.6'/%3e%3crect x='42' y='46' width='12' height='12' fill='white' opacity='0.3'/%3e%3c/svg%3e",
     freeTier: { notice: "Free tier available on La Plateforme — rate-limited but no billing required.", url: "https://console.mistral.ai/" },
     models: [
       { id: "mistral-small-latest",   name: "Mistral Small"  },
@@ -586,7 +586,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#8b5cf6",
     baseUrl: "https://api.together.xyz/v1",
     apiKeyUrl: "https://api.together.ai/settings/api-keys",
-    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='12' fill='%238b5cf6'/%3e%3ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='32' fill='white' text-anchor='middle'%3eT%3c/text%3e%3c/svg%3e",
+    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%238b5cf6'/%3e%3ccircle cx='32' cy='32' r='20' fill='none' stroke='white' stroke-width='3' opacity='0.4'/%3e%3ccircle cx='32' cy='32' r='13' fill='none' stroke='white' stroke-width='3' opacity='0.7'/%3e%3ccircle cx='32' cy='32' r='6' fill='white'/%3e%3ccircle cx='32' cy='12' r='4' fill='white'/%3e%3ccircle cx='47' cy='42' r='4' fill='white'/%3e%3ccircle cx='17' cy='42' r='4' fill='white'/%3e%3c/svg%3e",
     freeTier: { notice: "$5 free credit on sign-up — no credit card required.", url: "https://api.together.ai/" },
     models: [
       { id: "meta-llama/Llama-3.3-70B-Instruct-Turbo",           name: "Llama 3.3 70B Turbo"  },
@@ -608,7 +608,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#06b6d4",
     baseUrl: "https://llm.chutes.ai/v1",
     apiKeyUrl: "https://chutes.ai/app/token",
-    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='12' fill='%2306b6d4'/%3e%3ctext x='32' y='44' font-family='Arial Black,Arial' font-weight='900' font-size='32' fill='white' text-anchor='middle'%3e%CE%A8%3c/text%3e%3c/svg%3e",
+    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%2306b6d4'/%3e%3cpath d='M20 48 Q20 20 32 16 Q44 20 44 48' fill='none' stroke='white' stroke-width='4' stroke-linecap='round'/%3e%3cpath d='M14 40 Q14 22 32 18 Q50 22 50 40' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' opacity='0.5'/%3e%3ccircle cx='32' cy='44' r='5' fill='white'/%3e%3c/svg%3e",
     freeTier: { notice: "Completely free — open-source decentralized inference platform.", url: "https://chutes.ai/" },
     models: [
       { id: "deepseek-ai/DeepSeek-V3-0324",                   name: "DeepSeek V3"          },
@@ -631,7 +631,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#ffd21e",
     baseUrl: "https://api-inference.huggingface.co/v1",
     apiKeyUrl: "https://huggingface.co/settings/tokens",
-    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='12' fill='%23ffd21e'/%3e%3ctext x='32' y='46' font-size='36' text-anchor='middle'%3e%F0%9F%A4%97%3c/text%3e%3c/svg%3e",
+    logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%23ffd21e'/%3e%3cellipse cx='32' cy='34' rx='18' ry='16' fill='%23ff9d00'/%3e%3cellipse cx='32' cy='33' rx='16' ry='14' fill='%23ffcc00'/%3e%3ccircle cx='24' cy='30' r='3' fill='%23333'/%3e%3ccircle cx='40' cy='30' r='3' fill='%23333'/%3e%3cpath d='M24 39 Q32 45 40 39' fill='none' stroke='%23333' stroke-width='2.5' stroke-linecap='round'/%3e%3cellipse cx='18' cy='22' rx='6' ry='8' fill='%23ff9d00' transform='rotate(-20 18 22)'/%3e%3cellipse cx='46' cy='22' rx='6' ry='8' fill='%23ff9d00' transform='rotate(20 46 22)'/%3e%3c/svg%3e",
     freeTier: { notice: "Free Inference API tier — rate-limited, no billing required.", url: "https://huggingface.co/inference-api" },
     models: [
       { id: "meta-llama/Llama-3.3-70B-Instruct",        name: "Llama 3.3 70B"         },
