@@ -20,6 +20,7 @@ import { enableCommand, disableCommand } from "./src/commands/toggle.ts";
 import { setupCommand } from "./src/commands/setup.ts";
 import { modelsCommand } from "./src/commands/models.ts";
 import { updateCommand } from "./src/commands/update.ts";
+import { keysCommand } from "./src/commands/keys.ts";
 import { upOpenclaudeCommand, upOpenclaudeRemoveCommand } from "./src/commands/openclaude.ts";
 import { printUpdateBannerSync, scheduleUpdateCheck, CURRENT_VERSION } from "./src/update/checker.ts";
 
@@ -88,6 +89,10 @@ program.command("test [id]")
 program.command("unlock [id]")
   .description("Clear all model locks for one account or all accounts")
   .action(unlockCommand);
+
+program.command("keys [action] [arg...]")
+  .description("Manage local Client API Keys (ls, add <name>, rm <key>)")
+  .action(keysCommand);
 
 // ── serve ─────────────────────────────────────────────────────────────────────
 

@@ -46,6 +46,7 @@
     .dot-warn { background: #f59e0b; }
     .dot-pulse { animation: dpulse 2s ease-in-out infinite; }
     @keyframes dpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
     .kpi-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 1.25rem 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); backdrop-filter: blur(4px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 1rem; }
     .modal-box { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px; padding: 2rem; width: 100%; max-width: 480px; position: relative; }
@@ -188,6 +189,7 @@
       <button class="nav-item active" id="nav-overview" onclick="showTab('overview')"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-overview-label">Overview</span></button>
       <button class="nav-item" id="nav-providers" onclick="showTab('providers')"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-providers-label">Providers</span></button>
       <button class="nav-item" id="nav-accounts" onclick="showTab('accounts')"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-accounts-label">Accounts</span></button>
+      <button class="nav-item" id="nav-keys" onclick="showTab('keys')"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-keys-label">API Keys</span></button>
       <button class="nav-item" id="nav-settings" onclick="showTab('settings')"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-settings-label">Settings</span></button>
     </nav>
     <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
@@ -314,6 +316,17 @@
       </div>
     </div>
 
+    <!-- Client Keys tab -->
+    <div id="tab-keys" class="hidden">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon><h3 id="all-keys-title" style="font-weight:600;font-size:0.95rem;">Client API Keys</h3></div>
+          <button class="btn-primary" style="height:2.25rem;padding:0 0.875rem;font-size:0.8rem;" onclick="openCreateKeyModal()"><iconify-icon icon="solar:add-square-bold-duotone"></iconify-icon><span id="btn-create-key">Create Key</span></button>
+        </div>
+        <div id="keys-list-full"></div>
+      </div>
+    </div>
+
     <!-- Settings tab -->
     <div id="tab-settings" class="hidden">
       <div style="display:flex;flex-direction:column;gap:1rem;">
@@ -378,6 +391,18 @@
                   <iconify-icon icon="solar:diskette-bold-duotone"></iconify-icon>
                   <span id="cfg-port-save">Save</span>
                 </button>
+              </div>
+            </div>
+            
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p id="cfg-clientauth-label" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Require Client Auth</p>
+                <p id="cfg-clientauth-hint" style="font-size:0.75rem;color:#6b7280;">If enabled, all API requests without a valid explicitly added Client Key will be blocked.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleClientAuth(this)">
+                <div id="cfg-clientauth-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#2a2a2a;position:relative;transition:all 0.3s;pointer-events:none;">
+                  <div id="cfg-clientauth-knob" style="width:1rem;height:1rem;border-radius:50%;background:#e8e8e8;position:absolute;top:0.125rem;left:0.125rem;transition:all 0.3s;"></div>
+                </div>
               </div>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
@@ -494,7 +519,110 @@
   </div>
 </div>
 
-<!-- ADD MODAL -->
+<!-- MODELS MODAL -->
+<div id="models-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:560px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeModelsModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+      <div id="models-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;"></div>
+      <div style="flex:1;min-width:0;">
+        <h2 id="models-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
+        <p id="models-modal-sub" style="color:#6b7280;font-size:0.75rem;"></p>
+      </div>
+    </div>
+    <div id="models-modal-filter" style="display:none;margin-bottom:0.75rem;">
+      <div style="display:flex;gap:0.5rem;">
+        <button id="models-filter-all" class="btn-sm btn-sm-ghost" onclick="setModelsFilter('all')" style="font-size:0.72rem;"></button>
+        <button id="models-filter-free" class="btn-sm btn-sm-ghost" onclick="setModelsFilter('free')" style="font-size:0.72rem;"></button>
+      </div>
+    </div>
+    <div id="models-modal-list" style="max-height:360px;overflow-y:auto;margin-bottom:1rem;"></div>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="btn-primary" style="flex:1;justify-content:center;" id="models-refresh-btn" onclick="refreshModelsModal()">
+        <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+        <span id="models-refresh-label"></span>
+      </button>
+    </div>
+    <p id="models-modal-source" style="font-size:0.65rem;color:#4b5563;text-align:center;margin-top:0.5rem;"></p>
+  </div>
+</div>
+
+<!-- CUSTOM PROVIDER MODAL -->
+<div id="custom-provider-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCustomProviderModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <div class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:#94a3b8;"><iconify-icon icon="solar:add-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
+      <div>
+        <h2 id="custom-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
+        <p id="custom-modal-sub" style="color:#6b7280;font-size:0.8rem;"></p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.625rem;">
+      <div>
+        <label id="custom-label-name" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;"></label>
+        <input id="custom-prov-name" type="text" placeholder="e.g. My Remote API" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;" />
+      </div>
+      <div>
+        <label id="custom-label-url" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;"></label>
+        <input id="custom-prov-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;font-family:monospace;" />
+      </div>
+      <p id="custom-prov-error" style="font-size:0.8rem;color:#ef4444;display:none;"></p>
+      <button class="btn-primary" id="custom-prov-submit" style="width:100%;justify-content:center;margin-top:0.25rem;" onclick="submitCustomProvider()">
+        <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+        <span id="custom-btn-label"></span>
+      </button>
+    </div>
+  </div>
+</div>
+<!-- CREATE CLIENT KEY MODAL -->
+<div id="create-key-modal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:480px;">
+    <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCreateKeyModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
+      <div class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:rgba(10,185,220,0.1);"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1.5rem;color:#0AB9DC;"></iconify-icon></div>
+      <div>
+        <h2 id="create-key-title" style="font-weight:700;font-size:1.1rem;">Create Client Key</h2>
+        <p style="color:#6b7280;font-size:0.8rem;">Generate a key for API consumers.</p>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.625rem;">
+      <input type="hidden" id="edit-key-id" value="" />
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Name / Label *</label>
+        <input id="new-key-name" type="text" placeholder="e.g. Frontend App" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;" />
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Token Limit (0 for unlimited)</label>
+        <input id="new-key-limit" type="number" min="0" placeholder="0" value="0" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;" />
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Allowed Providers (check for specific, leave empty for ALL)</label>
+        <div id="new-key-providers-grid" style="display:flex;flex-wrap:wrap;gap:0.5rem;max-height:120px;overflow-y:auto;padding:0.25rem;"></div>
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Expiration Date (optional)</label>
+        <input id="new-key-expires" type="datetime-local"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;color-scheme:dark;" />
+      </div>
+      <div>
+        <label style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;">Custom API Key (optional)</label>
+        <input id="new-key-custom" type="text" placeholder="Leave empty to auto-generate" autocomplete="off"
+          style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;font-family:monospace;" />
+      </div>
+      <p id="new-key-error" style="font-size:0.8rem;color:#ef4444;display:none;"></p>
+      <button class="btn-primary" id="new-key-submit" style="width:100%;justify-content:center;margin-top:0.25rem;" onclick="submitCreateKey()">
+        <iconify-icon icon="solar:diskette-bold-duotone"></iconify-icon>
+        <span id="new-key-submit-label">Save Key</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="add-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeAddModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
@@ -702,29 +830,21 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.',
     btn_add_another:'Add another',btn_try_again:'Try again',
     no_oauth_available:'No OAuth providers available. Add an API key provider instead.',
-    tag_active:'✓ Active',tag_rate_limited:'✗ Rate limited',tag_ready:'◌ Ready',
-    sub_rate_limited:'rate limited',sub_not_tested:'not tested yet',sub_all_healthy:'all healthy',
-    status_stop_btn:'Stop server',status_confirm_stop:'Confirm stop?',status_stopped_btn:'Stopped',status_stopping:'Stopping…',
-    page_providers:'Providers',page_providers_sub:'Manage your AI provider connections',
-    no_proxy:'No proxy',api_key_required:'API key is required.',no_proxy_pools:'No proxy pools yet. Add one to route connections through an HTTP proxy.',
-    pool_status_ok:'ok',pool_status_error:'error',pool_status_untested:'untested',
-    testing:'Testing…',delete_pool_confirm:'Delete proxy pool "{name}"?',
-    update_available:'New version available: v{latest} (current: v{current}) — run grouter update',
-    nav_providers:'Providers',mob_overview:'Overview',mob_providers:'Providers',mob_accounts:'Accounts',mob_settings:'Settings',
-    mob_status_checking:'checking…',mob_refresh:'Refresh',mob_auto_refresh:'Auto-refresh',mob_quick_actions:'Quick actions',
-    pool_name_required:'Name is required.',pool_url_required:'Proxy URL is required.',pool_create_failed:'Failed to create pool.',pool_network_error:'Network error.',
-    pool_cannot_delete:'Cannot delete pool.',
-    pool_test:'Test',pool_connections_one:'1 connection',pool_connections_many:'{n} connections',
-    get_api_key:'Get API key →',existing_keys_empty:'No keys yet — add your first below',
-    add_new_key:'Add a new key',label_optional:'Label (optional)',paste_token:'Paste token here…',
-    failed_to_connect:'Failed to connect.',
-    connected_providers:'Connected Providers',est_value_saved:'Estimated value saved',
-    connections_label:'Connections',
-    pool_section_title:'Proxy Pools',add_pool_btn:'Add pool',new_proxy_pool:'New Proxy Pool',
-    pool_name_placeholder:'Pool name (e.g. Residential US)',pool_noproxy_placeholder:'No-proxy (optional): localhost,127.0.0.1',
-    create_btn:'Create',cancel_btn:'Cancel',
-    each_key_rotated:'Each key is rotated automatically. Add as many as you like.',
-    loading_pools:'Loading…',
+    models_title_suffix:'Models',models_loading:'Loading...',models_refresh:'Refresh Models',
+    models_fetching:'Fetching...',models_done:'Done!',models_error:'Error',
+    models_no_found:'No models found',models_no_free:'No models found (try All Models)',
+    models_total:'{n} model(s) total',models_total_src:'{n} model(s) - {src}',
+    models_src_api:'Fetched from API',models_src_cache:'Using cached data',
+    models_failed:'Failed to load models',
+    models_filter_all:'All Models',models_filter_free:'Free Only',
+    models_view_title:'View models',
+    custom_title:'Custom Provider',custom_sub:'Add any OpenAI-compatible API',
+    custom_label_name:'Provider Name',custom_label_url:'API Base URL',
+    custom_placeholder_name:'e.g. My Remote API',custom_placeholder_url:'https://api.example.com/v1',
+    custom_btn_create:'Create Provider',
+    custom_err_name:'Provider name is required.',custom_err_url:'API URL is required.',
+    custom_err_url_format:'URL must start with http:// or https://',
+    connect_apikey_required:'API key is required.',connect_failed:'Failed to connect.',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -782,29 +902,21 @@ const I18N = {
     qwen_deprecated_msg:'O Qwen Code Free foi descontinuado. Contas existentes continuam funcionando, mas novos cadastros OAuth não são mais aceitos.',
     btn_add_another:'Adicionar outro',btn_try_again:'Tentar novamente',
     no_oauth_available:'Nenhum provedor OAuth disponível. Adicione um provedor com API Key.',
-    tag_active:'✓ Ativo',tag_rate_limited:'✗ Limitado',tag_ready:'◌ Pronto',
-    sub_rate_limited:'limitado',sub_not_tested:'não testado ainda',sub_all_healthy:'todos saudáveis',
-    status_stop_btn:'Parar servidor',status_confirm_stop:'Confirmar parada?',status_stopped_btn:'Parado',status_stopping:'Parando…',
-    page_providers:'Provedores',page_providers_sub:'Gerencie suas conexões de provedores de IA',
-    no_proxy:'Sem proxy',api_key_required:'API key é obrigatória.',no_proxy_pools:'Sem pools de proxy ainda. Adicione um para rotear conexões através de um proxy HTTP.',
-    pool_status_ok:'ok',pool_status_error:'erro',pool_status_untested:'não testado',
-    testing:'Testando…',delete_pool_confirm:'Excluir pool de proxy "{name}"?',
-    update_available:'Nova versão disponível: v{latest} (atual: v{current}) — rode grouter update',
-    nav_providers:'Provedores',mob_overview:'Visão Geral',mob_providers:'Provedores',mob_accounts:'Contas',mob_settings:'Configurações',
-    mob_status_checking:'verificando…',mob_refresh:'Atualizar',mob_auto_refresh:'Auto-atualizar',mob_quick_actions:'Ações rápidas',
-    pool_name_required:'Nome é obrigatório.',pool_url_required:'URL do proxy é obrigatória.',pool_create_failed:'Falha ao criar pool.',pool_network_error:'Erro de rede.',
-    pool_cannot_delete:'Não é possível excluir pool.',
-    pool_test:'Testar',pool_connections_one:'1 conexão',pool_connections_many:'{n} conexões',
-    get_api_key:'Obter API key →',existing_keys_empty:'Nenhuma chave ainda — adicione a primeira abaixo',
-    add_new_key:'Adicionar nova chave',label_optional:'Rótulo (opcional)',paste_token:'Cole o token aqui…',
-    failed_to_connect:'Falha ao conectar.',
-    connected_providers:'Provedores Conectados',est_value_saved:'Valor estimado economizado',
-    connections_label:'Conexões',
-    pool_section_title:'Pools de Proxy',add_pool_btn:'Adicionar pool',new_proxy_pool:'Novo Pool de Proxy',
-    pool_name_placeholder:'Nome do pool (ex: Residencial BR)',pool_noproxy_placeholder:'Sem proxy (opcional): localhost,127.0.0.1',
-    create_btn:'Criar',cancel_btn:'Cancelar',
-    each_key_rotated:'Cada chave é rotacionada automaticamente. Adicione quantas quiser.',
-    loading_pools:'Carregando…',
+    models_title_suffix:'Modelos',models_loading:'Carregando...',models_refresh:'Atualizar Modelos',
+    models_fetching:'Buscando...',models_done:'Pronto!',models_error:'Erro',
+    models_no_found:'Nenhum modelo encontrado',models_no_free:'Nenhum modelo encontrado (tente Todos os Modelos)',
+    models_total:'{n} modelo(s) total',models_total_src:'{n} modelo(s) - {src}',
+    models_src_api:'Buscado da API',models_src_cache:'Usando dados em cache',
+    models_failed:'Falha ao carregar modelos',
+    models_filter_all:'Todos os Modelos',models_filter_free:'Somente Gratis',
+    models_view_title:'Ver modelos',
+    custom_title:'Provedor Customizado',custom_sub:'Adicione qualquer API compativel com OpenAI',
+    custom_label_name:'Nome do Provedor',custom_label_url:'URL Base da API',
+    custom_placeholder_name:'ex. Minha API Remota',custom_placeholder_url:'https://api.exemplo.com/v1',
+    custom_btn_create:'Criar Provedor',
+    custom_err_name:'Nome do provedor e obrigatorio.',custom_err_url:'URL da API e obrigatoria.',
+    custom_err_url_format:'URL deve comecar com http:// ou https://',
+    connect_apikey_required:'API key e obrigatoria.',connect_failed:'Falha ao conectar.',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -862,29 +974,21 @@ const I18N = {
     qwen_deprecated_msg:'Qwen Code Free 已停用。现有账户继续可用，但不再接受新的 OAuth 注册。',
     btn_add_another:'再添加一个',btn_try_again:'重试',
     no_oauth_available:'暂无可用的 OAuth 提供商。请改用 API Key 提供商。',
-    tag_active:'✓ 活跃',tag_rate_limited:'✗ 已限速',tag_ready:'◌ 就绪',
-    sub_rate_limited:'已限速',sub_not_tested:'尚未测试',sub_all_healthy:'全部健康',
-    status_stop_btn:'停止服务器',status_confirm_stop:'确认停止？',status_stopped_btn:'已停止',status_stopping:'停止中…',
-    page_providers:'提供商',page_providers_sub:'管理您的 AI 提供商连接',
-    no_proxy:'无代理',api_key_required:'需要 API 密钥。',no_proxy_pools:'暂无代理池。添加一个以通过 HTTP 代理路由连接。',
-    pool_status_ok:'正常',pool_status_error:'错误',pool_status_untested:'未测试',
-    testing:'测试中…',delete_pool_confirm:'删除代理池 "{name}"？',
-    update_available:'新版本可用：v{latest}（当前：v{current}）— 运行 grouter update',
-    nav_providers:'提供商',mob_overview:'概览',mob_providers:'提供商',mob_accounts:'账户',mob_settings:'设置',
-    mob_status_checking:'检查中…',mob_refresh:'刷新',mob_auto_refresh:'自动刷新',mob_quick_actions:'快捷操作',
-    pool_name_required:'名称为必填项。',pool_url_required:'代理 URL 为必填项。',pool_create_failed:'创建池失败。',pool_network_error:'网络错误。',
-    pool_cannot_delete:'无法删除池。',
-    pool_test:'测试',pool_connections_one:'1 个连接',pool_connections_many:'{n} 个连接',
-    get_api_key:'获取 API 密钥 →',existing_keys_empty:'尚无密钥 — 请在下方添加第一个',
-    add_new_key:'添加新密钥',label_optional:'标签（可选）',paste_token:'在此粘贴令牌…',
-    failed_to_connect:'连接失败。',
-    connected_providers:'已连接的提供商',est_value_saved:'估计节省价值',
-    connections_label:'连接数',
-    pool_section_title:'代理池',add_pool_btn:'添加代理池',new_proxy_pool:'新建代理池',
-    pool_name_placeholder:'代理池名称（例如：住宅代理）',pool_noproxy_placeholder:'不使用代理（可选）：localhost,127.0.0.1',
-    create_btn:'创建',cancel_btn:'取消',
-    each_key_rotated:'每个密钥都会自动轮换。可以添加任意数量。',
-    loading_pools:'加载中…',
+    models_title_suffix:'模型',models_loading:'加载中...',models_refresh:'刷新模型',
+    models_fetching:'获取中...',models_done:'完成!',models_error:'错误',
+    models_no_found:'未找到模型',models_no_free:'未找到模型(请尝试所有模型)',
+    models_total:'{n} 个模型',models_total_src:'{n} 个模型 - {src}',
+    models_src_api:'从 API 获取',models_src_cache:'使用缓存数据',
+    models_failed:'加载模型失败',
+    models_filter_all:'所有模型',models_filter_free:'仅免费',
+    models_view_title:'查看模型',
+    custom_title:'自定义提供商',custom_sub:'添加任何 OpenAI 兼容 API',
+    custom_label_name:'提供商名称',custom_label_url:'API 基础 URL',
+    custom_placeholder_name:'例如 我的远程 API',custom_placeholder_url:'https://api.example.com/v1',
+    custom_btn_create:'创建提供商',
+    custom_err_name:'提供商名称为必填项。',custom_err_url:'API URL 为必填项。',
+    custom_err_url_format:'URL 必须以 http:// 或 https:// 开头',
+    connect_apikey_required:'API 密钥为必填项。',connect_failed:'连接失败。',
   }
 };
 
@@ -1016,8 +1120,8 @@ function applyI18n() {
 
 // ── Dashboard nav ─────────────────────────────────────────────────────
 function showTab(tab) {
-  ['overview','providers','accounts','settings'].forEach(t => {
-    document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
+  ['overview','providers','accounts','keys','settings'].forEach(t => {
+    const hidden = document.getElementById('tab-'+t)?.classList.toggle('hidden', t!==tab);
     const navEl = document.getElementById('nav-'+t);
     if (navEl) navEl.classList.toggle('active', t===tab);
     // sync mobile bottom nav
@@ -1038,6 +1142,10 @@ function showTab(tab) {
     document.getElementById('page-title').textContent = T.page_accounts;
     document.getElementById('page-sub').textContent   = T.page_accounts_sub;
     if (statusData) renderAccountsList('accounts-list-full', statusData.accounts.list, true);
+  } else if (tab==='keys') {
+    document.getElementById('page-title').textContent = "Client API Keys";
+    document.getElementById('page-sub').textContent   = "Manage local API keys and token quotas";
+    loadClientKeys();
   } else {
     document.getElementById('page-title').textContent = T.page_settings;
     document.getElementById('page-sub').textContent   = T.page_settings_sub;
@@ -1315,6 +1423,7 @@ function animN(id, target) {
 
 // ── Config ────────────────────────────────────────────────────────────
 let cfgStrategy = 'fill-first', cfgStickyLimit = 3;
+let cfgRequireClientAuth = false;
 
 async function loadConfig() {
   const lv = _langVersion;
@@ -1333,6 +1442,31 @@ function renderConfig(d) {
   const port = d.port;
   document.getElementById('cfg-port-input').value = port;
   document.getElementById('cfg-endpoint-val').textContent = 'http://localhost:'+port+'/v1';
+  cfgRequireClientAuth = d.require_client_auth === "true";
+  renderClientAuthToggle();
+}
+
+function renderClientAuthToggle() {
+  const knob = document.getElementById('cfg-clientauth-knob');
+  const bg   = document.getElementById('cfg-clientauth-toggle');
+  if (!knob || !bg) return;
+  if (cfgRequireClientAuth) {
+    bg.style.background = '#22c55e';
+    knob.style.transform = 'translateX(1.25rem)';
+  } else {
+    bg.style.background = '#2a2a2a';
+    knob.style.transform = 'translateX(0)';
+  }
+}
+
+function toggleClientAuth() {
+  cfgRequireClientAuth = !cfgRequireClientAuth;
+  renderClientAuthToggle();
+  // We can auto-save this straight away like savePort or bundle it in config
+  fetch('/api/config', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ require_client_auth: cfgRequireClientAuth ? "true" : "false" })
+  }).catch(console.error);
 }
 
 function selectStrategy(s, silent) {
@@ -1462,12 +1596,16 @@ function renderProviderGrid(gridId, providers) {
                        : connected ? `<span class="provider-badge">${p.connections}</span>` : '';
     const freeBadge  = p.freeTier ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
     const click      = deprecated ? '' : `onclick="openProviderCard('${p.id}')"`;
+    const modelsBtn  = (p.id !== 'custom' && !deprecated)
+      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:list-bold-duotone" style="font-size:0.8rem;"></iconify-icon></button>`
+      : '';
     return `<div class="provider-card${connected?' connected':''}${deprecated?' deprecated':''}" ${click}>
       ${providerIconHtml(p)}
       <div style="min-width:0;flex:1;">
         <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
         <p style="font-size:0.68rem;color:${deprecated?'#ef4444':'#6b7280'};margin-top:0.1rem;">${meta}</p>
       </div>
+      ${modelsBtn}
       ${freeBadge}
       ${badge}
     </div>`;
@@ -1485,6 +1623,11 @@ function openProviderCard(providerId) {
 }
 
 async function openConnectModal(p) {
+  if (p.id === 'custom') {
+    openCustomProviderModal();
+    return;
+  }
+
   _connectingProvider = p;
   const icon = document.getElementById('connect-modal-icon');
   icon.style.background = p.color;
@@ -1554,7 +1697,7 @@ async function submitApiKeyConnection() {
   const key  = document.getElementById('connect-apikey-input').value.trim();
   const name = document.getElementById('connect-keyname-input').value.trim();
   const errEl = document.getElementById('connect-modal-error');
-  if (!key) { errEl.textContent = T.api_key_required || 'API key is required.'; errEl.style.display = ''; return; }
+  if (!key) { errEl.textContent = tr('connect_apikey_required'); errEl.style.display = ''; return; }
   const btn = document.getElementById('connect-submit-btn');
   btn.disabled = true;
   errEl.style.display = 'none';
@@ -1565,13 +1708,195 @@ async function submitApiKeyConnection() {
       body: JSON.stringify({ provider: _connectingProvider.id, api_key: key, display_name: name || null }),
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.error || 'Failed to connect.'; errEl.style.display = ''; btn.disabled = false; return; }
+    if (!res.ok) { errEl.textContent = data.error || tr('connect_failed'); errEl.style.display = ''; btn.disabled = false; return; }
     document.getElementById('connect-apikey-input').value = '';
     document.getElementById('connect-keyname-input').value = '';
     btn.disabled = false;
     await refreshProviderConnections(_connectingProvider.id);
     loadStatus();
   } catch(e) { errEl.textContent = tr('err_network'); errEl.style.display = ''; btn.disabled = false; }
+}
+
+// ── Models Modal ──────────────────────────────────────────────────────
+let _modelsProviderId = null;
+let _modelsFilter = 'all'; // 'all' or 'free'
+let _modelsData = [];
+
+async function openModelsModal(providerId) {
+  _modelsProviderId = providerId;
+  _modelsFilter = 'all';
+  const p = (_providersMap && _providersMap[providerId]) || null;
+  const modal = document.getElementById('models-modal');
+
+  // Set header
+  const icon = document.getElementById('models-modal-icon');
+  if (p) {
+    icon.style.background = isLogoUrl(p.logo) ? '#fff' : (p.color || '#1a1a1a');
+    icon.style.padding = isLogoUrl(p.logo) ? '0.2rem' : '0';
+    icon.innerHTML = p ? renderLogoInner(p) : '';
+    document.getElementById('models-modal-title').textContent = p.name + ' \u2014 ' + tr('models_title_suffix');
+    document.getElementById('models-modal-sub').textContent = p.description || '';
+  }
+
+  // Show free/all filter only for OpenRouter
+  const filterEl = document.getElementById('models-modal-filter');
+  filterEl.style.display = (providerId === 'openrouter') ? '' : 'none';
+  updateFilterButtons();
+
+  // Load models
+  document.getElementById('models-modal-list').innerHTML = '<p style="text-align:center;color:#6b7280;padding:1rem;"><iconify-icon icon="solar:refresh-bold-duotone" style="font-size:1.2rem;animation:spin 1s linear infinite;"></iconify-icon> ' + tr('models_loading') + '</p>';
+  document.getElementById('models-modal-source').textContent = '';
+  document.getElementById('models-refresh-label').textContent = tr('models_refresh');
+  modal.classList.remove('hidden');
+
+  try {
+    const res = await fetch(`/api/providers/${providerId}/models`);
+    if (res.ok) {
+      const data = await res.json();
+      _modelsData = data.models || [];
+      if (document.getElementById('models-modal-filter').style.display !== 'none') {
+        _modelsFilter = data.free_only ? 'free' : 'all';
+        updateFilterButtons();
+      }
+      renderModelsList();
+    }
+  } catch {
+    document.getElementById('models-modal-list').innerHTML = '<p style="text-align:center;color:#ef4444;padding:1rem;">' + tr('models_failed') + '</p>';
+  }
+}
+
+function renderModelsList() {
+  const el = document.getElementById('models-modal-list');
+  let models = _modelsData;
+  if (_modelsFilter === 'free') models = models.filter(m => m.is_free);
+  if (!models.length) {
+    el.innerHTML = '<p style="text-align:center;color:#6b7280;padding:1.5rem;font-size:0.82rem;">' + (_modelsFilter === 'free' ? tr('models_no_free') : tr('models_no_found')) + '</p>';
+    return;
+  }
+  el.innerHTML = models.map((m, i) => {
+    const border = i < models.length - 1 ? 'border-bottom:1px solid #1e1e1e;' : '';
+    const freeTag = m.is_free ? '<span style="font-size:0.6rem;font-weight:700;padding:0.05rem 0.4rem;border-radius:9999px;background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);margin-left:0.375rem;">FREE</span>' : '';
+    return `<div style="display:flex;align-items:center;padding:0.5rem 0.25rem;${border}gap:0.5rem;">
+      <iconify-icon icon="solar:cpu-bolt-bold-duotone" style="color:#0AB9DC;font-size:0.85rem;flex-shrink:0;"></iconify-icon>
+      <div style="flex:1;min-width:0;">
+        <p style="font-size:0.8rem;font-weight:600;color:#e8e8e8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.name}${freeTag}</p>
+        <p style="font-size:0.65rem;color:#4b5563;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${m.id}</p>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('models-modal-source').textContent = tr('models_total', {n: _modelsData.length});
+}
+
+function setModelsFilter(filter) {
+  _modelsFilter = filter;
+  updateFilterButtons();
+  renderModelsList();
+  if (_modelsProviderId) {
+    fetch(`/api/providers/${_modelsProviderId}/config`, {
+      method: "POST",
+      body: JSON.stringify({ free_only: filter === 'free' })
+    }).catch(console.error);
+  }
+}
+
+function updateFilterButtons() {
+  const allBtn = document.getElementById('models-filter-all');
+  const freeBtn = document.getElementById('models-filter-free');
+  allBtn.textContent = tr('models_filter_all');
+  freeBtn.textContent = tr('models_filter_free');
+  allBtn.style.borderColor = _modelsFilter === 'all' ? '#0AB9DC' : '#2a2a2a';
+  allBtn.style.color = _modelsFilter === 'all' ? '#0AB9DC' : '#6b7280';
+  freeBtn.style.borderColor = _modelsFilter === 'free' ? '#22c55e' : '#2a2a2a';
+  freeBtn.style.color = _modelsFilter === 'free' ? '#22c55e' : '#6b7280';
+}
+
+async function refreshModelsModal() {
+  if (!_modelsProviderId) return;
+  const btn = document.getElementById('models-refresh-btn');
+  const lbl = document.getElementById('models-refresh-label');
+  btn.disabled = true;
+  lbl.textContent = tr('models_fetching');
+  try {
+    const res = await fetch(`/api/providers/${_modelsProviderId}/refresh-models`, { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      _modelsData = data.models || [];
+      renderModelsList();
+      const src = data.source === 'api' ? tr('models_src_api') : tr('models_src_cache');
+      document.getElementById('models-modal-source').textContent = tr('models_total_src', {n: _modelsData.length, src: src});
+      lbl.textContent = tr('models_done');
+    } else {
+      lbl.textContent = tr('models_error');
+    }
+  } catch {
+    lbl.textContent = tr('models_error');
+  }
+  setTimeout(() => { lbl.textContent = tr('models_refresh'); btn.disabled = false; }, 2000);
+}
+
+function closeModelsModal() {
+  document.getElementById('models-modal').classList.add('hidden');
+  _modelsProviderId = null;
+  _modelsData = [];
+}
+
+// ── Custom Provider Modal ─────────────────────────────────────────────
+function openCustomProviderModal() {
+  document.getElementById('custom-prov-name').value = '';
+  document.getElementById('custom-prov-url').value = '';
+  document.getElementById('custom-prov-error').style.display = 'none';
+  document.getElementById('custom-prov-submit').disabled = false;
+  // Populate i18n strings
+  document.getElementById('custom-modal-title').textContent = tr('custom_title');
+  document.getElementById('custom-modal-sub').textContent = tr('custom_sub');
+  document.getElementById('custom-label-name').textContent = tr('custom_label_name');
+  document.getElementById('custom-label-url').textContent = tr('custom_label_url');
+  document.getElementById('custom-btn-label').textContent = tr('custom_btn_create');
+  document.getElementById('custom-prov-name').placeholder = tr('custom_placeholder_name');
+  document.getElementById('custom-prov-url').placeholder = tr('custom_placeholder_url');
+  document.getElementById('custom-provider-modal').classList.remove('hidden');
+}
+
+function closeCustomProviderModal() {
+  document.getElementById('custom-provider-modal').classList.add('hidden');
+}
+
+async function submitCustomProvider() {
+  const name = document.getElementById('custom-prov-name').value.trim();
+  const url = document.getElementById('custom-prov-url').value.trim();
+  const errEl = document.getElementById('custom-prov-error');
+  const btn = document.getElementById('custom-prov-submit');
+
+  if (!name) { errEl.textContent = tr('custom_err_name'); errEl.style.display = ''; return; }
+  if (!url) { errEl.textContent = tr('custom_err_url'); errEl.style.display = ''; return; }
+  if (!url.startsWith('http')) { errEl.textContent = tr('custom_err_url_format'); errEl.style.display = ''; return; }
+
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/providers/custom', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, url })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      errEl.textContent = tr('custom_err_failed', {err: errData.error || res.status});
+      errEl.style.display = '';
+      btn.disabled = false;
+      return;
+    }
+    const p = await res.json();
+    closeCustomProviderModal();
+    loadProviders();
+    // Auto-open the connect modal for the new provider
+    setTimeout(() => openConnectModal(p), 300);
+  } catch (err) {
+    errEl.textContent = tr('custom_err_network', {err: err});
+    errEl.style.display = '';
+    btn.disabled = false;
+  }
 }
 
 // ── OAuth Provider Picker + Modal ─────────────────────────────────────
@@ -1955,6 +2280,184 @@ async function assignPool(connectionId, poolId) {
       body: JSON.stringify({ proxy_pool_id: poolId || null }),
     });
     await loadStatus();
+  } catch {}
+}
+
+// ── Client API Keys ───────────────────────────────────────────────────
+async function loadClientKeys() {
+  if (Object.keys(_providersMap).length === 0) await loadProviders();
+  try {
+    const res = await fetch('/api/client-keys');
+    const { keys } = await res.json();
+    renderClientKeys(keys);
+  } catch {}
+}
+
+function renderClientKeys(keys) {
+  const container = document.getElementById('keys-list-full');
+  if (!container) return;
+  if (!keys || keys.length === 0) {
+    container.innerHTML = `<div style="text-align:center;padding:2rem 0;color:#6b7280;font-size:0.85rem;"><iconify-icon icon="solar:key-bold-duotone" style="font-size:2rem;opacity:0.5;margin-bottom:0.5rem;"></iconify-icon><br>No client keys created yet.</div>`;
+    return;
+  }
+
+  let html = `<div style="display:flex;flex-direction:column;gap:0.75rem;">`;
+  keys.forEach(k => {
+    html += `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem;background:#131313;border:1px solid #2a2a2a;border-radius:12px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+            <p style="font-weight:700;font-size:0.9rem;color:#e8e8e8;">${k.name}</p>
+          </div>
+          <code style="font-size:0.75rem;color:#0AB9DC;display:block;margin-bottom:0.5rem;">${k.api_key}</code>
+          <div style="display:flex;gap:0.5rem;font-size:0.7rem;">
+            <span class="tag ${k.token_limit > 0 ? (k.tokens_used >= k.token_limit ? 'tag-unavail' : 'tag-unknown') : 'tag-active'}">
+              Usage: ${k.tokens_used} ${k.token_limit > 0 ? '/ ' + k.token_limit : 'tokens'}
+            </span>
+            ${k.allowed_providers ? `<span class="tag tag-unknown">Providers: ${JSON.parse(k.allowed_providers).join(', ')}</span>` : `<span class="tag tag-disabled">All providers</span>`}
+            ${k.expires_at ? `<span class="tag ${(new Date() > new Date(k.expires_at)) ? 'tag-unavail' : 'tag-unknown'}">Exp: ${new Date(k.expires_at).toLocaleString()}</span>` : ''}
+          </div>
+        <div style="display:flex;">
+          <button class="btn-icon" style="flex-shrink:0;border-color:transparent;" onclick="openEditKeyModal('${k.api_key}', '${encodeURIComponent(k.name)}', ${k.token_limit}, '${encodeURIComponent(k.allowed_providers||'')}', '${k.expires_at||''}')" title="Edit Key">
+            <iconify-icon icon="solar:pen-bold-duotone" style="font-size:1.1rem;color:#0AB9DC;opacity:0.8;"></iconify-icon>
+          </button>
+          <button class="btn-icon" style="flex-shrink:0;border-color:transparent;" onclick="deleteClientKey('${k.api_key}', '${k.name}')" title="Delete Key">
+            <iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:1.1rem;color:#ef4444;opacity:0.8;"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function openCreateKeyModal() {
+  document.getElementById('new-key-name').value = '';
+  document.getElementById('new-key-limit').value = '0';
+  document.getElementById('new-key-expires').value = '';
+  document.getElementById('new-key-custom').value = '';
+  document.getElementById('new-key-error').style.display = 'none';
+
+  const grid = document.getElementById('new-key-providers-grid');
+  grid.innerHTML = '';
+  const provs = Object.values(_providersMap);
+  if (provs.length === 0) {
+    grid.innerHTML = '<span style="color:#6b7280;font-size:0.8rem;">No providers available.</span>';
+  } else {
+    provs.forEach(p => {
+      const id = `chk-prov-${p.id}`;
+      grid.innerHTML += `
+        <label style="display:flex;align-items:center;gap:0.35rem;font-size:0.8rem;color:#e8e8e8;cursor:pointer;background:#1a1a1a;padding:0.25rem 0.6rem;border-radius:6px;border:1px solid #2a2a2a;">
+          <input type="checkbox" id="${id}" value="${p.id}" /> ${p.name}
+        </label>
+      `;
+    });
+  }
+
+  document.getElementById('create-key-title').textContent = 'Create Client Key';
+  document.getElementById('new-key-submit-label').textContent = 'Save Key';
+  document.getElementById('edit-key-id').value = '';
+  document.getElementById('new-key-custom').parentElement.style.display = 'block';
+
+  document.getElementById('create-key-modal').classList.remove('hidden');
+}
+
+function openEditKeyModal(apiKey, encName, limit, encAllowed, expiresIso) {
+  openCreateKeyModal();
+  document.getElementById('create-key-title').textContent = 'Edit Client Key';
+  document.getElementById('new-key-submit-label').textContent = 'Save Changes';
+  
+  document.getElementById('edit-key-id').value = apiKey;
+  document.getElementById('new-key-name').value = decodeURIComponent(encName);
+  document.getElementById('new-key-limit').value = limit;
+
+  // Set date field
+  if (expiresIso && expiresIso !== 'null') {
+    const d = new Date(expiresIso);
+    // datetime-local format: YYYY-MM-DDThh:mm
+    const tzOffset = d.getTimezoneOffset() * 60000; // offset in ms
+    const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+    document.getElementById('new-key-expires').value = localISOTime;
+  }
+
+  // Pre-check allowed providers
+  const allowedStr = decodeURIComponent(encAllowed);
+  let allowedArr = [];
+  if (allowedStr && allowedStr !== 'null') {
+    try { allowedArr = JSON.parse(allowedStr); } catch {}
+  }
+  allowedArr.forEach(pid => {
+    const cb = document.getElementById(`chk-prov-${pid}`);
+    if (cb) cb.checked = true;
+  });
+
+  // Hide custom input for editing
+  document.getElementById('new-key-custom').parentElement.style.display = 'none';
+}
+
+function closeCreateKeyModal() { document.getElementById('create-key-modal').classList.add('hidden'); }
+
+async function submitCreateKey() {
+  const editId = document.getElementById('edit-key-id').value;
+  const name = document.getElementById('new-key-name').value.trim();
+  const limitValue = parseInt(document.getElementById('new-key-limit').value, 10);
+  const expiresInput = document.getElementById('new-key-expires').value;
+  const custom = document.getElementById('new-key-custom').value.trim();
+  const errEl = document.getElementById('new-key-error');
+
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+
+  // Gather allowed providers
+  const checkboxes = document.querySelectorAll('#new-key-providers-grid input[type="checkbox"]:checked');
+  const allowed = Array.from(checkboxes).map(cb => cb.value);
+
+  // Format expiry ISO date if entered, or null
+  let expiresObj = null;
+  if (expiresInput) {
+    const d = new Date(expiresInput);
+    if (!isNaN(d.getTime())) expiresObj = d.toISOString();
+  }
+
+  const payload = {
+    name,
+    token_limit: isNaN(limitValue) || limitValue < 0 ? 0 : limitValue,
+    allowed_providers: allowed.length > 0 ? allowed : null,
+    expires_at: expiresObj
+  };
+  if (custom) payload.api_key = custom;
+
+  const btn = document.getElementById('new-key-submit');
+  btn.disabled = true;
+
+  try {
+    const url = editId ? `/api/client-keys/${editId}` : '/api/client-keys';
+    const method = editId ? 'PATCH' : 'POST';
+    
+    const res = await fetch(url, {
+      method, headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.error || (editId ? 'Failed to update key' : 'Failed to create key');
+      errEl.style.display = 'block';
+    } else {
+      closeCreateKeyModal();
+      loadClientKeys();
+    }
+  } catch (e) {
+    errEl.textContent = 'Network error: ' + e;
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+}
+
+async function deleteClientKey(key, name) {
+  if (!confirm(`Are you sure you want to delete the Client API Key "${name}"? Consumers using this key will immediately receive 401 Unauthorized.`)) return;
+  try {
+    await fetch(`/api/client-keys/${key}`, { method: 'DELETE' });
+    loadClientKeys();
   } catch {}
 }
 

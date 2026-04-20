@@ -20,7 +20,7 @@
     "bun"
   ],
   "bin": {
-    "grouter": "dist/grouter"
+    "grouter": "index.ts"
   },
   "files": [
     "dist/grouter"

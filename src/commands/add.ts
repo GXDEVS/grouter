@@ -2,7 +2,7 @@ import chalk from "chalk";
 import ora from "ora";
 import open from "open";
 import { select, input, password, editor, Separator } from "@inquirer/prompts";
-import { PROVIDERS, getProvider, type Provider } from "../providers/registry.ts";
+import { PROVIDERS, getProvider, type Provider, saveCustomProvider } from "../providers/registry.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { startCallbackListener } from "../auth/server.ts";
 import {
@@ -222,12 +222,40 @@ async function runImportFlow(providerId: string, p: Provider): Promise<void> {
 
 async function runApiKeyFlow(p: Provider): Promise<void> {
   console.log("");
-  if (p.apiKeyUrl) console.log(chalk.gray(`  Get a key at: ${chalk.underline(p.apiKeyUrl)}`));
-  if (p.freeTier?.notice) console.log(chalk.green(`  ${p.freeTier.notice}`));
+  let providerToSave = p;
+  
+  if (p.id === "custom") {
+    const customName = await input({
+      message: "Provider Name (e.g. My Remote API)",
+      validate: (v) => !!v.trim() || "Name is required",
+    });
+    const customUrl = await input({
+      message: "API URL (e.g. https://api.example.com/v1)",
+      validate: (v) => !!v.trim() || "URL is required",
+    });
+    
+    const safeId = "custom_" + crypto.randomUUID().slice(0, 8) + "_" + customName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    providerToSave = {
+      id: safeId,
+      name: customName,
+      description: "Custom provider",
+      category: "apikey",
+      authType: "apikey",
+      color: "#94a3b8",
+      baseUrl: customUrl,
+      models: [{ id: "default", name: "Default" }]
+    };
+    
+    saveCustomProvider(providerToSave);
+  }
+
+  if (providerToSave.apiKeyUrl) console.log(chalk.gray(`  Get a key at: ${chalk.underline(providerToSave.apiKeyUrl)}`));
+  if (providerToSave.freeTier?.notice) console.log(chalk.green(`  ${providerToSave.freeTier.notice}`));
   console.log("");
 
   const apiKey = await password({
-    message: `${p.name} API key`,
+    message: `${providerToSave.name} API key`,
     mask: "•",
     validate: (v) => v.trim() ? true : "API key is required",
   });
@@ -240,12 +268,12 @@ async function runApiKeyFlow(p: Provider): Promise<void> {
   const spinner = ora("Saving connection…").start();
   try {
     const connection = addApiKeyConnection({
-      provider: p.id,
+      provider: providerToSave.id,
       api_key: apiKey.trim(),
       display_name: displayName.trim() || null,
     });
     spinner.succeed(chalk.green("API key saved"));
-    printSavedAccount(connection, p);
+    printSavedAccount(connection, providerToSave);
   } catch (err) {
     spinner.fail(err instanceof Error ? err.message : String(err));
   }

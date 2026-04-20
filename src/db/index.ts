@@ -132,10 +132,31 @@ export function db(): Database {
   if (!cols.includes("provider_data"))
     _db.exec(`ALTER TABLE accounts ADD COLUMN provider_data TEXT`);
 
+  _db.exec(`
+    CREATE TABLE IF NOT EXISTS client_keys (
+      api_key           TEXT PRIMARY KEY,
+      name              TEXT NOT NULL,
+      allowed_providers TEXT,
+      token_limit       INTEGER NOT NULL DEFAULT 0,
+      tokens_used       INTEGER NOT NULL DEFAULT 0,
+      is_active         INTEGER NOT NULL DEFAULT 1,
+      created_at        TEXT NOT NULL,
+      updated_at        TEXT NOT NULL
+    )
+  `);
+
+  const clientKeysCols = _db.query<{ name: string }, [string]>(
+    "SELECT name FROM pragma_table_info(?)"
+  ).all("client_keys").map(r => r.name);
+  if (!clientKeysCols.includes("expires_at")) {
+    _db.exec(`ALTER TABLE client_keys ADD COLUMN expires_at TEXT`);
+  }
+
   // Seed defaults
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('strategy', 'fill-first')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sticky_limit', '3')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('proxy_port', '3099')`);
+  _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('require_client_auth', 'false')`);
 
   return _db;
 }
