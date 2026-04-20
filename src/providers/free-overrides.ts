@@ -95,77 +95,11 @@ export const FREE_OVERRIDES: Record<string, ProviderFreeOverride> = {
     },
   },
   huggingface: {
-    models: {
-      "MiniMaxAI/MiniMax-M2.7": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "moonshotai/Kimi-K2.6": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "google/gemma-4-31B-it": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "Qwen/Qwen3.5-27B": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "Qwen/Qwen3-Coder-Next": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "meta-llama/Llama-3.1-8B-Instruct": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "openai/gpt-oss-120b": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "meta-llama/Llama-3.3-70B-Instruct": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "Qwen/Qwen3-235B-A22B": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "mistralai/Mistral-Small-3.2-24B-Instruct": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "deepseek-ai/DeepSeek-R1-0528": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "google/gemma-3-27b-it": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "microsoft/Phi-4-reasoning-plus": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
-      "nvidia/Llama-3.1-Nemotron-70B-Instruct-HF": {
-        isFree: true,
-        verifiedAt: "2026-04-20",
-        sourceUrl: "https://huggingface.co/inference-api/",
-      },
+    allModelsFree: {
+      isFree: true,
+      verifiedAt: "2026-04-20",
+      sourceUrl: "https://huggingface.co/inference-api/",
+      note: "All models on router.huggingface.co/v1 are free with rate limits.",
     },
   },
   together: {
