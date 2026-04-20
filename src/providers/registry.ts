@@ -550,10 +550,10 @@ export const PROVIDERS: Record<string, Provider> = {
     logo: "data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3e%3crect width='64' height='64' rx='14' fill='%23111827'/%3e%3ccircle cx='32' cy='32' r='16' fill='none' stroke='%23ef4444' stroke-width='4'/%3e%3ccircle cx='32' cy='32' r='7' fill='%23ef4444'/%3e%3ccircle cx='32' cy='10' r='4' fill='%23ef4444'/%3e%3ccircle cx='32' cy='54' r='4' fill='%23ef4444'/%3e%3ccircle cx='10' cy='32' r='4' fill='%23ef4444'/%3e%3ccircle cx='54' cy='32' r='4' fill='%23ef4444'/%3e%3c/svg%3e",
     freeTier: { notice: "Free tier with generous daily limits — no credit card required.", url: "https://cloud.cerebras.ai/" },
     models: [
-      { id: "llama-3.3-70b",          name: "Llama 3.3 70B"        },
-      { id: "llama-4-scout-17b-16e",   name: "Llama 4 Scout 17B"    },
-      { id: "llama-4-maverick-17b",    name: "Llama 4 Maverick 17B" },
-      { id: "qwen-3-32b",              name: "Qwen 3 32B"           },
+      { id: "llama3.3-70b",              name: "Llama 3.3 70B"        },
+      { id: "llama-4-scout-17b-16e",     name: "Llama 4 Scout 17B"    },
+      { id: "llama-4-maverick-17b-128e", name: "Llama 4 Maverick 17B" },
+      { id: "qwen-3-32b",                name: "Qwen 3 32B"           },
     ],
   },
 

@@ -14,7 +14,10 @@ export function checkFallbackError(status: number, errorText: string, backoffLev
 
   if (status === 401) return { shouldFallback: true, cooldownMs: COOLDOWN_UNAUTHORIZED_MS };
   if (status === 402 || status === 403) return { shouldFallback: true, cooldownMs: COOLDOWN_PAYMENT_MS };
-  if (status === 404) return { shouldFallback: false, cooldownMs: COOLDOWN_NOT_FOUND_MS };
+  // 404 model_not_found = wrong model ID, not a provider issue — no cooldown, just pass error through
+  if (status === 404) return { shouldFallback: false, cooldownMs: 0 };
+  // 422 Unprocessable Entity = bad request parameters sent by client, not a provider issue — no cooldown
+  if (status === 422) return { shouldFallback: false, cooldownMs: 0 };
 
   if (status === 429 || lower.includes("rate limit") || lower.includes("quota exceeded") || lower.includes("too many requests")) {
     const newLevel = Math.min(backoffLevel + 1, RATE_LIMIT_BACKOFF_MAX_LEVEL);
