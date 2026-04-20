@@ -12,6 +12,38 @@ export interface ClientKey {
   updated_at: string;
 }
 
+export function parseAllowedProviders(raw: string | null): string[] | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const normalized = parsed
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => v.trim().toLowerCase())
+      .filter(Boolean);
+    return normalized.length > 0 ? normalized : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isClientKeyExpired(key: ClientKey, nowMs = Date.now()): boolean {
+  if (!key.expires_at) return false;
+  const expiry = Date.parse(key.expires_at);
+  if (Number.isNaN(expiry)) return true;
+  return expiry <= nowMs;
+}
+
+export function isClientKeyTokenLimitReached(key: ClientKey): boolean {
+  return key.token_limit > 0 && key.tokens_used >= key.token_limit;
+}
+
+export function isProviderAllowedForClientKey(key: ClientKey, provider: string): boolean {
+  const allowed = parseAllowedProviders(key.allowed_providers);
+  if (!allowed || allowed.length === 0) return true;
+  return allowed.includes(provider.toLowerCase());
+}
+
 export function createClientKey(data: {
   api_key: string;
   name: string;

@@ -1,14 +1,14 @@
 import { db, getStrategy, getStickyLimit } from "../db/index.ts";
 import { updateAccount } from "../db/accounts.ts";
-import { isModelLockActive, setModelLock, clearModelLock, getEarliestLockUntil } from "./lock.ts";
+import { isModelLockActive, setModelLock, clearModelLock, getEarliestLockUntilForAccounts } from "./lock.ts";
 import { checkFallbackError, formatDuration } from "./fallback.ts";
-import type { Connection, QwenAccount, RateLimitedResult, FallbackDecision } from "../types.ts";
+import type { Connection, QwenAccount, RateLimitedResult, TemporarilyUnavailableResult, FallbackDecision } from "../types.ts";
 
 export function selectAccount(
   provider: string,
   model: string | null,
   excludeIds?: Set<string>,
-): Connection | RateLimitedResult | null {
+): Connection | RateLimitedResult | TemporarilyUnavailableResult | null {
   const strategy = getStrategy();
   const stickyLimit = getStickyLimit();
 
@@ -25,12 +25,30 @@ export function selectAccount(
   });
 
   if (candidates.length === 0) {
-    const anyLocked = all.some((a) => !excludeIds?.has(a.id) && isModelLockActive(a.id, model));
-    if (anyLocked) {
-      const earliest = getEarliestLockUntil(model);
+    const locked = all.filter((a) => !excludeIds?.has(a.id) && isModelLockActive(a.id, model));
+    if (locked.length > 0) {
+      const earliest = getEarliestLockUntilForAccounts(locked.map((a) => a.id), model);
       const retryAfter = earliest ?? new Date(Date.now() + 60_000).toISOString();
       const diff = earliest ? new Date(earliest).getTime() - Date.now() : 60_000;
-      return { allRateLimited: true, retryAfter, retryAfterHuman: `reset after ${formatDuration(diff)}` };
+      const allRateLimited = locked.every((a) => {
+        const errorCode = a.error_code ?? 0;
+        if (errorCode === 429) return true;
+        const lastError = (a.last_error ?? "").toLowerCase();
+        return (
+          lastError.includes("rate_limit") ||
+          lastError.includes("rate limit") ||
+          lastError.includes("too many requests")
+        );
+      });
+
+      if (allRateLimited) {
+        return { allRateLimited: true, retryAfter, retryAfterHuman: `reset after ${formatDuration(diff)}` };
+      }
+      return {
+        allTemporarilyUnavailable: true,
+        retryAfter,
+        retryAfterHuman: `retry after ${formatDuration(diff)}`,
+      };
     }
     return null;
   }

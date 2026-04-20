@@ -14,12 +14,12 @@ import { getStrategy, getStickyLimit, getProxyPort, getSetting, setSetting, db }
 import { isRunning, readPid, removePid } from "../daemon/index.ts";
 import { estimateCostUSD } from "../constants.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
-import { PROVIDERS, OAUTH_PROVIDERS, FREE_PROVIDERS, APIKEY_PROVIDERS, saveCustomProvider, type Provider } from "../providers/registry.ts";
+import { PROVIDERS, getTopFreeProviderRank, providerHasFreeModelsById, saveCustomProvider, type Provider } from "../providers/registry.ts";
 import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 import { listConnectionsByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
-import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey } from "../db/client_keys.ts";
+import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey, parseAllowedProviders } from "../db/client_keys.ts";
 
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
@@ -41,7 +41,7 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-// ── CORS headers ──────────────────────────────────────────────────────────────
+// â”€â”€ CORS headers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function cors(): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
@@ -54,7 +54,7 @@ function json(data: unknown, status = 200): Response {
   return Response.json(data, { status, headers: cors() });
 }
 
-// ── GET /api/status ───────────────────────────────────────────────────────────
+// â”€â”€ GET /api/status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleStatus(): Response {
   const accounts   = listAccounts();
   const totals     = getUsageTotals();
@@ -89,7 +89,7 @@ export function handleStatus(): Response {
   const effectiveUnavailable = accountsWithUsage.filter((a) => a.effective_status === "unavailable").length;
   const effectiveUnknown     = accountsWithUsage.filter((a) => a.effective_status === "unknown").length;
 
-  // Provider summary — group active connections by provider
+  // Provider summary â€” group active connections by provider
   const providerCounts = getConnectionCountByProvider();
   const portMap = Object.fromEntries(listProviderPorts().map(r => [r.provider, r.port]));
   const providerSummary = Object.entries(PROVIDERS).map(([id, p]) => ({
@@ -118,7 +118,7 @@ export function handleStatus(): Response {
   });
 }
 
-// ── POST /api/auth/start ──────────────────────────────────────────────────────
+// â”€â”€ POST /api/auth/start â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Body: { provider: string }
 export async function handleAuthStart(req: Request): Promise<Response> {
   try {
@@ -131,7 +131,7 @@ export async function handleAuthStart(req: Request): Promise<Response> {
     const adapter = getAdapter(providerId);
     if (!adapter) return json({ error: `No OAuth adapter for ${providerId}` }, 400);
     if (adapter.flow !== "device_code") {
-      return json({ error: `Provider ${providerId} uses ${adapter.flow} — use /api/auth/authorize` }, 400);
+      return json({ error: `Provider ${providerId} uses ${adapter.flow} â€” use /api/auth/authorize` }, 400);
     }
 
     const device = await startDeviceFlow(providerId);
@@ -141,8 +141,8 @@ export async function handleAuthStart(req: Request): Promise<Response> {
   }
 }
 
-// ── POST /api/auth/poll ───────────────────────────────────────────────────────
-// Body: { session_id?: string; device_code?: string } — device_code accepted for legacy clients.
+// â”€â”€ POST /api/auth/poll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Body: { session_id?: string; device_code?: string } â€” device_code accepted for legacy clients.
 export async function handleAuthPoll(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as { session_id?: string; device_code?: string };
@@ -164,10 +164,10 @@ export async function handleAuthPoll(req: Request): Promise<Response> {
   }
 }
 
-// ── POST /api/auth/authorize ──────────────────────────────────────────────────
+// â”€â”€ POST /api/auth/authorize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Body: { provider: string; meta?: Record<string, unknown> }
 // Opens an ephemeral local HTTP listener for the OAuth redirect, returns the authUrl
-// the browser should visit. Client then polls /api/auth/callback?session_id=…
+// the browser should visit. Client then polls /api/auth/callback?session_id=â€¦
 export async function handleAuthAuthorize(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as { provider?: string; meta?: Record<string, unknown> };
@@ -223,7 +223,7 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
   }
 }
 
-// ── GET /api/auth/callback?session_id=… ───────────────────────────────────────
+// â”€â”€ GET /api/auth/callback?session_id=â€¦ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Long-poll: resolves when the redirect lands on the ephemeral listener.
 export async function handleAuthCallback(req: Request): Promise<Response> {
   try {
@@ -267,7 +267,7 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
   }
 }
 
-// ── POST /api/auth/import ─────────────────────────────────────────────────────
+// â”€â”€ POST /api/auth/import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Body: { provider: string; input: string; meta?: Record<string, unknown> }
 export async function handleAuthImport(req: Request): Promise<Response> {
   try {
@@ -282,7 +282,7 @@ export async function handleAuthImport(req: Request): Promise<Response> {
   }
 }
 
-// ── POST /api/accounts/:id/toggle ────────────────────────────────────────────
+// â”€â”€ POST /api/accounts/:id/toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleAccountToggle(id: string): Response {
   const accounts = listAccounts();
   const account  = accounts.find((a) => a.id === id);
@@ -294,37 +294,44 @@ export function handleAccountToggle(id: string): Response {
   return json({ ok: true, is_active: newActive });
 }
 
-// ── DELETE /api/accounts/:id ──────────────────────────────────────────────────
+// â”€â”€ DELETE /api/accounts/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleAccountRemove(id: string): Response {
   const ok = removeAccount(id);
   return ok ? json({ ok: true }) : json({ error: "Account not found" }, 404);
 }
 
-// ── GET /api/setup-status ─────────────────────────────────────────────────────
+// â”€â”€ GET /api/setup-status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleSetupStatus(): Response {
   const done = getSetting("setup_done") === "1";
   return json({ done });
 }
 
-// ── POST /api/setup-done ──────────────────────────────────────────────────────
+// â”€â”€ POST /api/setup-done â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleSetupDone(): Response {
   setSetting("setup_done", "1");
   return json({ ok: true });
 }
 
-// ── GET /api/config ───────────────────────────────────────────────────────────
+// â”€â”€ GET /api/config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleGetConfig(): Response {
+  const requireClientAuth = getSetting("require_client_auth") ?? "false";
   return json({
     strategy:    getStrategy(),
     stickyLimit: getStickyLimit(),
     port:        getProxyPort(),
+    require_client_auth: requireClientAuth,
   });
 }
 
-// ── POST /api/config ──────────────────────────────────────────────────────────
+// â”€â”€ POST /api/config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleSetConfig(req: Request): Promise<Response> {
   try {
-    const body = (await req.json()) as { strategy?: string; stickyLimit?: number; port?: number };
+    const body = (await req.json()) as {
+      strategy?: string;
+      stickyLimit?: number;
+      port?: number;
+      require_client_auth?: string | boolean;
+    };
 
     if (body.strategy !== undefined) {
       if (body.strategy !== "fill-first" && body.strategy !== "round-robin")
@@ -335,28 +342,52 @@ export async function handleSetConfig(req: Request): Promise<Response> {
     if (body.stickyLimit !== undefined) {
       const v = Number(body.stickyLimit);
       if (!Number.isInteger(v) || v < 1 || v > 100)
-        return json({ error: "stickyLimit must be an integer 1–100" }, 400);
+        return json({ error: "stickyLimit must be an integer 1â€“100" }, 400);
       setSetting("sticky_limit", String(v));
     }
 
     if (body.port !== undefined) {
       const v = Number(body.port);
       if (!Number.isInteger(v) || v < 1 || v > 65535)
-        return json({ error: "port must be 1–65535" }, 400);
+        return json({ error: "port must be 1â€“65535" }, 400);
       setSetting("proxy_port", String(v));
     }
 
-    return json({ ok: true, strategy: getStrategy(), stickyLimit: getStickyLimit(), port: getProxyPort() });
+    if (body.require_client_auth !== undefined) {
+      const normalized =
+        body.require_client_auth === true || body.require_client_auth === "true" ? "true"
+          : body.require_client_auth === false || body.require_client_auth === "false" ? "false"
+            : null;
+      if (!normalized) {
+        return json({ error: "require_client_auth must be true or false" }, 400);
+      }
+      setSetting("require_client_auth", normalized);
+    }
+
+    return json({
+      ok: true,
+      strategy: getStrategy(),
+      stickyLimit: getStickyLimit(),
+      port: getProxyPort(),
+      require_client_auth: getSetting("require_client_auth") ?? "false",
+    });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
 }
 
-// ── GET /api/providers ────────────────────────────────────────────────────────
+// â”€â”€ GET /api/providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleGetProviders(): Response {
   const counts = getConnectionCountByProvider();
   const list = Object.values(PROVIDERS).map(p => {
     const adapter = getAdapter(p.id);
+    const models = getModelsForProvider(p.id);
+    const freeModelsCount = models.filter((m) => m.is_free).length;
+    const totalModelsCount = models.length;
+    const hasFreeModels = totalModelsCount > 0
+      ? freeModelsCount > 0
+      : providerHasFreeModelsById(p.id);
+    const topFreeRank = getTopFreeProviderRank(p.id);
     return {
       id:                p.id,
       name:              p.name,
@@ -373,13 +404,17 @@ export function handleGetProviders(): Response {
       connections:       counts[p.id] ?? 0,
       port:              getProviderPort(p.id),
       requiresMeta:      p.requiresMeta ?? null,
-      freeTier:          p.freeTier ?? null,
+      freeTier:          hasFreeModels ? (p.freeTier ?? null) : null,
+      hasFreeModels,
+      freeModelsCount,
+      totalModelsCount,
+      topFreeRank,
     };
   });
   return json({ providers: list });
 }
 
-// ── GET /api/providers/:id/connections ────────────────────────────────────────
+// â”€â”€ GET /api/providers/:id/connections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleGetProviderConnections(id: string): Response {
   const p = PROVIDERS[id];
   if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
@@ -403,11 +438,11 @@ export function handleGetProviderConnections(id: string): Response {
 
 function maskApiKey(key: string): string {
   if (!key) return "";
-  if (key.length <= 8) return "••••";
-  return key.slice(0, 4) + "…" + key.slice(-4);
+  if (key.length <= 8) return "â€¢â€¢â€¢â€¢";
+  return key.slice(0, 4) + "â€¦" + key.slice(-4);
 }
 
-// ── POST /api/providers/custom ────────────────────────────────────────────────
+// â”€â”€ POST /api/providers/custom â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleCreateCustomProvider(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as { name?: string; url?: string };
@@ -434,7 +469,7 @@ export async function handleCreateCustomProvider(req: Request): Promise<Response
   }
 }
 
-// ── POST /api/connections ─────────────────────────────────────────────────────
+// â”€â”€ POST /api/connections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleAddConnection(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as { provider?: string; api_key?: string; display_name?: string };
@@ -465,7 +500,7 @@ export async function handleAddConnection(req: Request): Promise<Response> {
   }
 }
 
-// ── GET /api/providers/:id/models ────────────────────────────────────────────
+// â”€â”€ GET /api/providers/:id/models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleGetProviderModels(id: string): Response {
   const p = PROVIDERS[id];
   if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
@@ -474,7 +509,7 @@ export function handleGetProviderModels(id: string): Response {
   return json({ provider: id, models, free_only });
 }
 
-// ── POST /api/providers/:id/config ───────────────────────────────────────────
+// â”€â”€ POST /api/providers/:id/config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleProviderConfig(id: string, req: Request): Promise<Response> {
   const p = PROVIDERS[id];
   if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
@@ -493,19 +528,58 @@ export async function handleProviderConfig(id: string, req: Request): Promise<Re
   }
 }
 
-// ── POST /api/providers/:id/refresh-models ───────────────────────────────────
+// â”€â”€ POST /api/providers/:id/refresh-models â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleRefreshProviderModels(id: string): Promise<Response> {
   const p = PROVIDERS[id];
   if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
   try {
     const result = await fetchAndSaveProviderModels(id);
+    (globalThis as any).__grouterClearModelsCache = true;
     return json({ provider: id, models: result.models, source: result.source });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
 }
 
-// ── GET /api/proxy-pools ──────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ POST /api/providers/refresh-models (batch) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+export async function handleRefreshProviderModelsBatch(req: Request): Promise<Response> {
+  try {
+    const body = (await req.json().catch(() => ({}))) as { providers?: string[] };
+    const requested = Array.isArray(body.providers) ? body.providers : null;
+    const targets = (requested && requested.length > 0 ? requested : Object.keys(PROVIDERS))
+      .map((providerId) => providerId.trim().toLowerCase())
+      .filter((providerId, idx, arr) => providerId.length > 0 && arr.indexOf(providerId) === idx);
+
+    const results = await Promise.all(targets.map(async (providerId) => {
+      if (!PROVIDERS[providerId]) {
+        return { provider: providerId, ok: false, error: `Unknown provider: ${providerId}` };
+      }
+      try {
+        const refreshed = await fetchAndSaveProviderModels(providerId);
+        return {
+          provider: providerId,
+          ok: true,
+          source: refreshed.source,
+          model_count: refreshed.models.length,
+        };
+      } catch (err) {
+        return { provider: providerId, ok: false, error: String(err) };
+      }
+    }));
+
+    (globalThis as any).__grouterClearModelsCache = true;
+    const success = results.filter((r) => r.ok).length;
+    return json({
+      ok: success === results.length,
+      summary: { total: results.length, success, failed: results.length - success },
+      results,
+    });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// â”€â”€ GET /api/proxy-pools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleListProxyPools(): Response {
   const pools = listProxyPools().map(p => ({
     ...p,
@@ -514,7 +588,7 @@ export function handleListProxyPools(): Response {
   return json({ pools });
 }
 
-// ── POST /api/proxy-pools ─────────────────────────────────────────────────────
+// â”€â”€ POST /api/proxy-pools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleCreateProxyPool(req: Request): Promise<Response> {
   try {
     const body = (await req.json()) as { name?: string; proxy_url?: string; no_proxy?: string };
@@ -525,17 +599,17 @@ export async function handleCreateProxyPool(req: Request): Promise<Response> {
   } catch (err) { return json({ error: String(err) }, 500); }
 }
 
-// ── DELETE /api/proxy-pools/:id ───────────────────────────────────────────────
+// â”€â”€ DELETE /api/proxy-pools/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleDeleteProxyPool(id: string): Response {
   const pool = getProxyPoolById(id);
   if (!pool) return json({ error: "Pool not found" }, 404);
   const bound = getConnectionCountForPool(id);
-  if (bound > 0) return json({ error: `Cannot delete — ${bound} connection(s) still use this pool` }, 409);
+  if (bound > 0) return json({ error: `Cannot delete â€” ${bound} connection(s) still use this pool` }, 409);
   deleteProxyPool(id);
   return json({ ok: true });
 }
 
-// ── PATCH /api/proxy-pools/:id ────────────────────────────────────────────────
+// â”€â”€ PATCH /api/proxy-pools/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleUpdateProxyPool(id: string, req: Request): Promise<Response> {
   try {
     const pool = getProxyPoolById(id);
@@ -546,7 +620,7 @@ export async function handleUpdateProxyPool(id: string, req: Request): Promise<R
   } catch (err) { return json({ error: String(err) }, 500); }
 }
 
-// ── PATCH /api/connections/:id ─────────────────────────────────────────────────
+// â”€â”€ PATCH /api/connections/:id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleUpdateConnection(id: string, req: Request): Promise<Response> {
   try {
     const accounts = listAccounts();
@@ -558,7 +632,7 @@ export async function handleUpdateConnection(id: string, req: Request): Promise<
   } catch (err) { return json({ error: String(err) }, 500); }
 }
 
-// ── POST /api/proxy-pools/:id/test ────────────────────────────────────────────
+// â”€â”€ POST /api/proxy-pools/:id/test â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleTestProxyPool(id: string): Promise<Response> {
   const pool = getProxyPoolById(id);
   if (!pool) return json({ error: "Pool not found" }, 404);
@@ -566,14 +640,14 @@ export async function handleTestProxyPool(id: string): Promise<Response> {
   return json(result);
 }
 
-// ── POST /api/proxy/stop ──────────────────────────────────────────────────────
+// â”€â”€ POST /api/proxy/stop â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleProxyStop(): Response {
   // Send the response first, then exit cleanly after a brief delay
   setTimeout(() => { try { removePid(); } catch {} process.exit(0); }, 300);
   return json({ ok: true });
 }
 
-// ── POST /api/unlock ──────────────────────────────────────────────────────────
+// â”€â”€ POST /api/unlock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleUnlockAll(): Response {
   clearModelLocks();
   // Reset backoff and test_status on all accounts
@@ -581,52 +655,135 @@ export function handleUnlockAll(): Response {
   return json({ ok: true });
 }
 
-// ── GET /api/client-keys ──────────────────────────────────────────────────────
+// â”€â”€ GET /api/client-keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleListClientKeys(): Response {
   return json({ keys: listClientKeys() });
 }
 
-// ── POST /api/client-keys ─────────────────────────────────────────────────────
+function normalizeAllowedProvidersInput(raw: unknown): string[] | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null) return null;
+  if (!Array.isArray(raw)) return undefined;
+  const cleaned = raw
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function normalizeExpiresAtInput(raw: unknown): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === "") return null;
+  if (typeof raw !== "string") return undefined;
+  const parsed = Date.parse(raw);
+  if (Number.isNaN(parsed)) return undefined;
+  return new Date(parsed).toISOString();
+}
+
+// â”€â”€ POST /api/client-keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleCreateClientKey(req: Request): Promise<Response> {
   try {
-    const body = await req.json() as { name: string; allowed_providers?: string[]; token_limit?: number; api_key?: string; expires_at?: string };
-    if (!body.name) return json({ error: "Missing name" }, 400);
-    const key = body.api_key || "grouter-sk-" + crypto.randomUUID().replace(/-/g, "");
+    const body = await req.json() as {
+      name?: string;
+      allowed_providers?: string[] | null;
+      token_limit?: number;
+      api_key?: string;
+      expires_at?: string | null;
+    };
+
+    const name = body.name?.trim();
+    if (!name) return json({ error: "Missing name" }, 400);
+
+    const allowedProviders = normalizeAllowedProvidersInput(body.allowed_providers);
+    if (allowedProviders === undefined) {
+      return json({ error: "allowed_providers must be an array of provider ids or null" }, 400);
+    }
+
+    const tokenLimit = Number(body.token_limit ?? 0);
+    if (!Number.isInteger(tokenLimit) || tokenLimit < 0) {
+      return json({ error: "token_limit must be a non-negative integer" }, 400);
+    }
+
+    const expiresAt = normalizeExpiresAtInput(body.expires_at);
+    if (expiresAt === undefined) {
+      return json({ error: "expires_at must be a valid ISO date or null" }, 400);
+    }
+
+    const key = body.api_key?.trim() || "grouter-sk-" + crypto.randomUUID().replace(/-/g, "");
     createClientKey({
-      name: body.name,
+      name,
       api_key: key,
-      allowed_providers: body.allowed_providers && body.allowed_providers.length > 0 ? body.allowed_providers : null,
-      token_limit: body.token_limit || 0,
-      expires_at: body.expires_at || null
+      allowed_providers: allowedProviders ?? null,
+      token_limit: tokenLimit,
+      expires_at: expiresAt ?? null
     });
-    return json({ ok: true, key });
+    return json({ ok: true, key, client_key: getClientKey(key) });
   } catch (err) {
+    if (String(err).includes("UNIQUE constraint failed")) {
+      return json({ error: "Client key already exists" }, 409);
+    }
     return json({ error: String(err) }, 500);
   }
 }
 
-// ── DELETE /api/client-keys/:api_key ──────────────────────────────────────────
+// â”€â”€ DELETE /api/client-keys/:api_key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function handleDeleteClientKey(key: string): Response {
   deleteClientKey(key);
   return json({ ok: true });
 }
 
-// ── PATCH /api/client-keys/:api_key ───────────────────────────────────────────
+// â”€â”€ PATCH /api/client-keys/:api_key â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export async function handleUpdateClientKey(req: Request, key: string): Promise<Response> {
   try {
-    const body = await req.json() as { name?: string; allowed_providers?: string[]; token_limit?: number; expires_at?: string };
-    if (!body.name) return json({ error: "Missing name" }, 400);
+    const body = await req.json() as {
+      name?: string;
+      allowed_providers?: string[] | null;
+      token_limit?: number;
+      expires_at?: string | null;
+    };
 
-    const k = getClientKey(key);
-    if (!k) return json({ error: "Key not found" }, 404);
+    const existing = getClientKey(key);
+    if (!existing) return json({ error: "Key not found" }, 404);
+
+    const hasAnyField =
+      body.name !== undefined ||
+      body.allowed_providers !== undefined ||
+      body.token_limit !== undefined ||
+      body.expires_at !== undefined;
+    if (!hasAnyField) {
+      return json({ error: "No fields provided for update" }, 400);
+    }
+
+    const name = body.name !== undefined ? body.name.trim() : existing.name;
+    if (!name) return json({ error: "Missing name" }, 400);
+
+    const allowedProvidersRaw = normalizeAllowedProvidersInput(body.allowed_providers);
+    if (body.allowed_providers !== undefined && allowedProvidersRaw === undefined) {
+      return json({ error: "allowed_providers must be an array of provider ids or null" }, 400);
+    }
+    const allowedProviders =
+      body.allowed_providers !== undefined
+        ? (allowedProvidersRaw ?? null)
+        : (parseAllowedProviders(existing.allowed_providers) ?? null);
+
+    const tokenLimit = body.token_limit !== undefined ? Number(body.token_limit) : existing.token_limit;
+    if (!Number.isInteger(tokenLimit) || tokenLimit < 0) {
+      return json({ error: "token_limit must be a non-negative integer" }, 400);
+    }
+
+    const expiresAtRaw = normalizeExpiresAtInput(body.expires_at);
+    if (body.expires_at !== undefined && expiresAtRaw === undefined) {
+      return json({ error: "expires_at must be a valid ISO date or null" }, 400);
+    }
+    const expiresAt = body.expires_at !== undefined ? (expiresAtRaw ?? null) : existing.expires_at;
 
     updateClientKey(key, {
-      name: body.name,
-      allowed_providers: body.allowed_providers && body.allowed_providers.length > 0 ? body.allowed_providers : null,
-      token_limit: body.token_limit || 0,
-      expires_at: body.expires_at || null
+      name,
+      allowed_providers: allowedProviders,
+      token_limit: tokenLimit,
+      expires_at: expiresAt
     });
-    return json({ ok: true });
+    return json({ ok: true, client_key: getClientKey(key) });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }

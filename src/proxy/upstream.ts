@@ -6,7 +6,8 @@
 // Coverage:
 //   ✅ openai-compat  — qwen, iflow, qoder, github (Copilot), kilocode, opencode,
 //                       cline, openrouter, openai (apikey), groq, deepseek, nvidia, ollama,
-//                       gemini (apikey via /v1beta/openai/), gitlab (apikey or OAuth Bearer).
+//                       gemini (apikey via /v1beta/openai/), gitlab (apikey or OAuth Bearer),
+//                       github-models, sambanova.
 //   ⚠️ claude-format   — claude (OAuth), anthropic (apikey), kimi-coding.
 //                       Needs OpenAI→Anthropic translator. Returns 501 for now.
 //   ⚠️ codex-responses — codex. Uses /responses endpoint, needs translator.
@@ -142,7 +143,7 @@ function buildCopilotHeaders(copilotToken: string, stream: boolean): Record<stri
 const OPENAI_EXTRA_FIELDS = ["store", "metadata", "service_tier", "logprobs", "top_logprobs", "logit_bias"];
 
 // Providers that don't accept OpenAI-specific extra fields
-const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface"]);
+const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface", "sambanova"]);
 
 function stripExtraFields(body: Record<string, unknown>): Record<string, unknown> {
   const out = { ...body };
@@ -221,6 +222,21 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
   // API key providers → plain OpenAI-compat
   if (ctx.account.auth_type === "apikey") {
     const apiKey = ctx.account.api_key ?? "";
+    if (provider === "github-models") {
+      return {
+        kind: "ok",
+        req: openaiCompat(
+          "https://models.github.ai/inference/chat/completions",
+          apiKey,
+          ctx.body,
+          ctx.stream,
+          {
+            "X-GitHub-Api-Version": "2022-11-28",
+            Accept: ctx.stream ? "text/event-stream" : "application/vnd.github+json",
+          },
+        ),
+      };
+    }
     const urls: Record<string, string> = {
       openrouter: "https://openrouter.ai/api/v1/chat/completions",
       openai:     "https://api.openai.com/v1/chat/completions",
@@ -230,6 +246,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       ollama:     "https://ollama.com/v1/chat/completions",
       gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       modal:      "https://api.us-west-2.modal.direct/v1/chat/completions",
+      sambanova:  "https://api.sambanova.ai/v1/chat/completions",
     };
     const url = urls[provider];
     if (url) {

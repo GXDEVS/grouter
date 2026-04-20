@@ -68,7 +68,7 @@ function loadCodexAuthJsonTokens(): Record<string, unknown> | null {
   }
 }
 
-// OpenAI Codex + OpenAI Native share the same OAuth app — two adapters, same mechanics.
+// OpenAI Codex + OpenAI Native share the same OAuth app - two adapters, same mechanics.
 function buildAdapter(id: string, originator: string): OAuthAdapter {
   const CONFIG = {
     clientId: "app_EMoamEEZ73f0CkXaXp7hrann",
@@ -80,11 +80,14 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
   };
 
   function normalize(tokens: Record<string, unknown>): NormalizedTokens {
+    const accessToken = tokens.access_token as string | undefined;
+    if (!accessToken) throw new Error("Token response missing access_token");
+
     const expiresIn = (tokens.expires_in as number | undefined) ?? 3600;
     const email = tokens.id_token ? parseIdTokenEmail(tokens.id_token as string) : null;
     const accountId = extractAccountId(tokens);
     return {
-      accessToken: tokens.access_token as string,
+      accessToken,
       refreshToken: (tokens.refresh_token as string | undefined) ?? null,
       expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
       email,
@@ -101,7 +104,7 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
   const adapter: OAuthAdapter = {
     id,
     flow: "authorization_code_pkce",
-    // Codex CLI binds to a fixed port 1455 — keep it for codex only.
+    // Codex CLI binds to a fixed port 1455 - keep it for codex only.
     fixedPort: isCodex ? 1455 : undefined,
     callbackPath: isCodex ? "/auth/callback" : "/callback",
     callbackHost: isCodex ? "localhost" : undefined,
@@ -181,7 +184,14 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
           refresh_token: refreshToken,
         }),
       });
+
+      // 400/401 = token revoked/expired - caller handles re-auth.
+      // 5xx/network = propagate so caller can retry.
+      if (resp.status >= 500) {
+        throw new Error(`OpenAI refresh failed with ${resp.status}: ${await resp.text()}`);
+      }
       if (!resp.ok) return null;
+
       const data = await resp.json() as Record<string, unknown>;
       if (!data.access_token) return null;
       return normalize(data);
@@ -190,5 +200,5 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
   return adapter;
 }
 
-export const codexAdapter  = buildAdapter("codex", "codex_cli_rs");
+export const codexAdapter = buildAdapter("codex", "codex_cli_rs");
 export const openaiAdapter = buildAdapter("openai", "openai_native");

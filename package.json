@@ -34,6 +34,7 @@
   "scripts": {
     "dev": "bun --hot index.ts serve fg",
     "start": "bun index.ts serve fg",
+    "logos:fetch": "bun run scripts/fetch-official-logos.ts",
     "prebuild": "bun run scripts/embed-logos.ts",
     "build": "bun build index.ts --target bun --outfile dist/grouter && (chmod +x dist/grouter || true)",
     "deploy": "bun run build && bun link && echo '\\n✓ Global binary updated — run: grouter serve'",

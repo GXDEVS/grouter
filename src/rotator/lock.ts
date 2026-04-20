@@ -68,3 +68,20 @@ export function getEarliestLockUntil(model: string | null): string | null {
     .get(key, ALL_MODELS, now);
   return row?.until ?? null;
 }
+
+export function getEarliestLockUntilForAccounts(accountIds: string[], model: string | null): string | null {
+  if (!accountIds.length) return null;
+  const now = new Date().toISOString();
+  const key = model ?? ALL_MODELS;
+  const placeholders = accountIds.map(() => "?").join(", ");
+  const sql =
+    `SELECT MIN(locked_until) as until
+     FROM model_locks
+     WHERE account_id IN (${placeholders})
+       AND (model = ? OR model = ?)
+       AND locked_until > ?`;
+  const row = db()
+    .query<{ until: string | null }, string[]>(sql)
+    .get(...accountIds, key, ALL_MODELS, now);
+  return row?.until ?? null;
+}

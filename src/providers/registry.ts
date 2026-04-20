@@ -665,6 +665,54 @@ export const PROVIDERS: Record<string, Provider> = {
     ],
   },
 
+  "github-models": {
+    id: "github-models",
+    name: "GitHub Models",
+    description: "GitHub inference API using a PAT with models:read scope",
+    category: "apikey",
+    authType: "apikey",
+    color: "#24292f",
+    baseUrl: "https://models.github.ai/inference",
+    apiKeyUrl: "https://github.com/settings/tokens",
+    logo: "/public/logos/github-copilot.png",
+    hasFreeModels: true,
+    freeTier: {
+      notice: "Free API usage is available for prototyping (rate-limited).",
+      url: "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models",
+    },
+    models: [
+      { id: "openai/gpt-4.1",      name: "OpenAI GPT-4.1",      isFree: true },
+      { id: "openai/gpt-4o",       name: "OpenAI GPT-4o",       isFree: true },
+      { id: "openai/gpt-4o-mini",  name: "OpenAI GPT-4o Mini",  isFree: true },
+      { id: "meta/Llama-3.3-70B-Instruct", name: "Meta Llama 3.3 70B", isFree: true },
+      { id: "deepseek/DeepSeek-R1", name: "DeepSeek R1", isFree: true },
+    ],
+  },
+
+  sambanova: {
+    id: "sambanova",
+    name: "SambaNova",
+    description: "SambaNova Cloud OpenAI-compatible API with free starter credits",
+    category: "apikey",
+    authType: "apikey",
+    color: "#0ea5e9",
+    baseUrl: "https://api.sambanova.ai/v1",
+    apiKeyUrl: "https://cloud.sambanova.ai",
+    hasFreeModels: true,
+    freeTier: {
+      notice: "Free starter credits available (no credit card required to start).",
+      url: "https://cloud.sambanova.ai/plans",
+    },
+    models: [
+      { id: "MiniMax-M2.5",                     name: "MiniMax M2.5",                     isFree: true },
+      { id: "DeepSeek-V3.1",                    name: "DeepSeek V3.1",                    isFree: true },
+      { id: "Meta-Llama-3.3-70B-Instruct",      name: "Meta Llama 3.3 70B",               isFree: true },
+      { id: "gpt-oss-120b",                     name: "GPT-OSS 120B",                     isFree: true },
+      { id: "DeepSeek-V3.2",                    name: "DeepSeek V3.2 (Preview)",          isFree: true },
+      { id: "Llama-4-Maverick-17B-128E-Instruct", name: "Llama 4 Maverick 17B",           isFree: true },
+    ],
+  },
+
   custom: {
     id: "custom",
     name: "Custom / Build Your Own",
