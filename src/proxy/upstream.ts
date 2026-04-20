@@ -138,14 +138,27 @@ function buildCopilotHeaders(copilotToken: string, stream: boolean): Record<stri
   };
 }
 
+// Fields that some stricter OpenAI-compat providers reject
+const OPENAI_EXTRA_FIELDS = ["store", "metadata", "service_tier", "logprobs", "top_logprobs", "logit_bias"];
+
+// Providers that don't accept OpenAI-specific extra fields
+const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface"]);
+
+function stripExtraFields(body: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...body };
+  for (const field of OPENAI_EXTRA_FIELDS) delete out[field];
+  return out;
+}
+
 function openaiCompat(
   url: string,
   token: string,
   body: Record<string, unknown>,
   stream: boolean,
   extraHeaders: Record<string, string> = {},
+  strict = false,
 ): UpstreamRequest {
-  const out: Record<string, unknown> = { ...body };
+  const out: Record<string, unknown> = strict ? stripExtraFields(body) : { ...body };
   // Some clients send Responses-style token caps to /chat/completions.
   // Normalize to chat-completions-compatible fields before forwarding.
   const maxOutput = out.max_output_tokens;
@@ -240,7 +253,8 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
     if (def?.baseUrl) {
       const base = def.baseUrl.replace(/\/$/, "");
       const dynamicUrl = base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
-      return { kind: "ok", req: openaiCompat(dynamicUrl, apiKey, ctx.body, ctx.stream) };
+      const strict = STRICT_COMPAT_PROVIDERS.has(provider);
+      return { kind: "ok", req: openaiCompat(dynamicUrl, apiKey, ctx.body, ctx.stream, {}, strict) };
     }
     return { kind: "unsupported", reason: `No upstream mapping for provider ${provider}` };
   }
