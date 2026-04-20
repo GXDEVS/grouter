@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { buildQwenHeaders, buildQwenUrl, buildQwenModelsUrl, QWEN_MODELS_OAUTH, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
+import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
@@ -10,7 +11,10 @@ import { checkAndRefreshAccount } from "../token/refresh.ts";
 import { isRateLimitedResult } from "../types.ts";
 import { listAccounts } from "../db/accounts.ts";
 import { recordUsage } from "../db/usage.ts";
-import { getProvider } from "../providers/registry.ts";
+import { getProvider, PROVIDERS } from "../providers/registry.ts";
+import { getModelsForProvider } from "../providers/model-fetcher.ts";
+import { getConnectionCountByProvider } from "../db/accounts.ts";
+import { getClientKey, updateClientKeyUsage } from "../db/client_keys.ts";
 import {
   handleStatus,
   handleAuthStart,
@@ -35,6 +39,13 @@ import {
   handleDeleteProxyPool,
   handleTestProxyPool,
   handleUpdateConnection,
+  handleCreateCustomProvider,
+  handleGetProviderModels,
+  handleRefreshProviderModels,
+  handleProviderConfig,
+  handleListClientKeys,
+  handleCreateClientKey,
+  handleDeleteClientKey,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
 import { listProviderPorts } from "../db/ports.ts";
@@ -57,42 +68,93 @@ function serveWizard():    Response { return new Response(WIZARD_HTML    as unkn
 function serveDashboard(): Response { return new Response(DASHBOARD_HTML as unknown as string, { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
 
 const MAX_RETRIES = 3;
+const SERVER_IDLE_TIMEOUT_SECONDS = 240;
 
 // ── Model cache ───────────────────────────────────────────────────────────────
 
 let modelsCache: { data: unknown[]; at: number } | null = null;
 const MODELS_TTL = 10 * 60 * 1000;
 
-async function fetchModels() {
-  if (modelsCache && Date.now() - modelsCache.at < MODELS_TTL) return modelsCache.data;
+/**
+ * Aggregate models from ALL providers that have active connections.
+ * Each model is prefixed: "provider/model-id".
+ * Uses DB-stored models when available, otherwise falls back to registry.
+ */
+async function fetchModels(req?: Request) {
+  if ((globalThis as any).__grouterClearModelsCache) {
+    modelsCache = null;
+    (globalThis as any).__grouterClearModelsCache = false;
+  }
+  
+  let baseData: unknown[] = [];
+  if (modelsCache && Date.now() - modelsCache.at < MODELS_TTL) {
+    baseData = modelsCache.data;
+  } else {
 
-  const accounts = listAccounts();
-  const account = accounts.find((a) => a.is_active && a.test_status !== "unavailable");
-  if (!account) return fallbackModels();
 
-  try {
-    const refreshed = await checkAndRefreshAccount(account);
-    const resp = await fetch(buildQwenModelsUrl(refreshed.resource_url), {
-      headers: buildQwenHeaders(refreshed.access_token, false),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (resp.ok) {
-      const json = (await resp.json()) as { data?: { id: string }[] };
-      const raw = json.data;
-      if (raw && raw.length > 0) {
-        const data = raw.map((m) => ({ id: m.id, object: "model", created: 1720000000, owned_by: "qwen" }));
-        modelsCache = { data, at: Date.now() };
-        return data;
-      }
+  const counts = getConnectionCountByProvider();
+  const data: unknown[] = [];
+
+  for (const [providerId, provider] of Object.entries(PROVIDERS)) {
+    // Include providers with connections, or all providers with models defined
+    const hasConnections = (counts[providerId] ?? 0) > 0;
+    if (!hasConnections && provider.category !== "free") continue;
+
+    const models = getModelsForProvider(providerId);
+    const freeOnly = getSetting(`provider_free_only_${providerId}`) === "true";
+    for (const m of models) {
+      if (freeOnly && !m.is_free) continue;
+      data.push({
+        id: `${providerId}/${m.id}`,
+        object: "model",
+        created: 1720000000,
+        owned_by: providerId,
+      });
     }
-  } catch { /* fall through */ }
-  return fallbackModels();
-}
+  }
 
-function fallbackModels() {
-  const data = QWEN_MODELS_OAUTH.map((id) => ({ id, object: "model", created: 1720000000, owned_by: "qwen" }));
-  modelsCache = { data, at: Date.now() };
-  return data;
+  if (data.length === 0) {
+    // Ultimate fallback: Qwen hardcoded models
+    const fallback = QWEN_MODELS_OAUTH.map((id) => ({
+      id: `qwen/${id}`,
+      object: "model",
+      created: 1720000000,
+      owned_by: "qwen",
+    }));
+    modelsCache = { data: fallback, at: Date.now() };
+    baseData = fallback;
+  } else {
+    modelsCache = { data, at: Date.now() };
+    baseData = data;
+  }
+  } // <-- Added brace to close the `if (modelsCache...) { ... } else {` block
+
+  // --- Dynamic Filtering depending on request Client API Key ---
+  if (req) {
+    const authHeader = req.headers.get("Authorization");
+    const requireAuth = getSetting("require_client_auth") === "true";
+    let clientKey = null;
+
+    if (authHeader?.startsWith("Bearer ")) {
+      clientKey = getClientKey(authHeader.slice(7).trim());
+    }
+
+    if (clientKey) {
+      if (clientKey.allowed_providers) {
+        try {
+          const allowed: string[] = JSON.parse(clientKey.allowed_providers);
+          if (allowed.length > 0) {
+            return baseData.filter((m: any) => allowed.includes(m.id.split("/")[0]));
+          }
+        } catch {}
+      }
+    } else if (requireAuth) {
+      // Key is absent or invalid, but auth is required
+      return [];
+    }
+  }
+
+  return baseData;
 }
 
 // ── Logger ────────────────────────────────────────────────────────────────────
@@ -112,16 +174,17 @@ function logReq(method: string, path: string, status: number, ms: number,
 
 // ── Provider/model parsing ────────────────────────────────────────────────────
 
-function parseProviderModel(raw: string | null, pinnedProvider?: string): { provider: string; model: string } {
+function parseProviderModel(raw: string | null, pinnedProvider?: string): { provider: string | null; model: string } {
   if (pinnedProvider) {
     if (!raw) return { provider: pinnedProvider, model: "" };
     const slash = raw.indexOf("/");
     // If the model already carries a provider prefix, strip it — the port pins the provider.
     return { provider: pinnedProvider, model: slash === -1 ? raw : raw.slice(slash + 1) };
   }
-  if (!raw) return { provider: "qwen", model: "" };
+  // Without a pinned provider the format "provider/model" is required.
+  if (!raw) return { provider: null, model: "" };
   const slash = raw.indexOf("/");
-  if (slash === -1) return { provider: "qwen", model: raw }; // backward compat
+  if (slash === -1) return { provider: null, model: raw };
   return { provider: raw.slice(0, slash), model: raw.slice(slash + 1) };
 }
 
@@ -167,6 +230,7 @@ function extractUsageFromSSE(tail: string): TokenUsage | null {
 export function startServer(port: number) {
   return Bun.serve({
     port,
+    idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
 
     routes: {
       // ── Dashboard ───────────────────────────────────────────────────────────
@@ -228,6 +292,15 @@ export function startServer(port: number) {
         POST:    () => handleSetupDone(),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
+      "/api/client-keys": {
+        GET:     () => handleListClientKeys(),
+        POST:    (req: Request) => handleCreateClientKey(req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/client-keys/:key": {
+        DELETE:  (req: BunRequest) => handleDeleteClientKey(req.params.key!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
       "/api/config": {
         GET:     () => handleGetConfig(),
         POST:    (req: Request) => handleSetConfig(req),
@@ -241,8 +314,24 @@ export function startServer(port: number) {
         GET:     () => handleGetProviders(),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
+      "/api/providers/custom": {
+        POST:    (req: Request) => handleCreateCustomProvider(req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
       "/api/providers/:id/connections": {
         GET:     (req: BunRequest) => handleGetProviderConnections(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/models": {
+        GET:     (req: BunRequest) => handleGetProviderModels(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/refresh-models": {
+        POST:    (req: BunRequest) => handleRefreshProviderModels(req.params.id!),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/config": {
+        POST:    (req: BunRequest) => handleProviderConfig(req.params.id!, req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/connections": {
@@ -315,6 +404,7 @@ export function startServer(port: number) {
 export function startProviderServer(provider: string, port: number) {
   return Bun.serve({
     port,
+    idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
     routes: {
       "/health": {
         GET: () => jsonResponse({ status: "ok", provider, port }),
@@ -360,8 +450,33 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
   try { body = await req.json() as Record<string, unknown>; }
   catch { logReq("POST", "/v1/chat/completions", 400, Date.now() - start); return jsonResponse({ error: { message: "Invalid JSON body" } }, 400); }
 
+  const authHeader = req.headers.get("Authorization");
+  const requireAuth = getSetting("require_client_auth") === "true";
+  let clientKey = null;
+
+  if (authHeader?.startsWith("Bearer ")) {
+    clientKey = getClientKey(authHeader.slice(7).trim());
+  }
+
+  if (requireAuth && !clientKey) {
+    logReq("POST", "/v1/chat/completions", 401, Date.now() - start);
+    return jsonResponse({ error: { message: "Unauthorized. Invalid or missing Client API Key.", type: "invalid_request_error", code: 401 } }, 401);
+  }
+
   const rawModel = typeof body.model === "string" ? body.model : null;
   const { provider, model } = parseProviderModel(rawModel, pinnedProvider);
+
+  if (!provider) {
+    logReq("POST", "/v1/chat/completions", 400, Date.now() - start, { model: rawModel });
+    return jsonResponse({
+      error: {
+        message: `Invalid model format: "${rawModel ?? ""}". Use "provider/model" (e.g. "anthropic/claude-sonnet-4-20250514") or send the request to a provider-specific port.`,
+        type: "grouter_error",
+        code: 400,
+      },
+    }, 400);
+  }
+
   const stream = body.stream === true;
   const excludeIds = new Set<string>();
   let rotations = 0;
@@ -454,9 +569,10 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       const dec = new TextDecoder();
       const enc = new TextEncoder();
       const fmt = dispatch.format;
-      const needsTranslation = fmt === "claude" || fmt === "gemini";
+      const needsTranslation = fmt === "claude" || fmt === "gemini" || fmt === "codex";
       const claudeState = fmt === "claude" ? newClaudeStreamState() : null;
       const geminiState = fmt === "gemini" ? newGeminiStreamState() : null;
+      const codexState = fmt === "codex" ? newCodexStreamState() : null;
       let tail = "";
       let lineBuf = "";
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
@@ -474,7 +590,9 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
               if (!trimmed) continue;
               const translated = claudeState
                 ? claudeChunkToOpenAI(trimmed, claudeState)
-                : geminiChunkToOpenAI(trimmed, geminiState!);
+                : geminiState
+                  ? geminiChunkToOpenAI(trimmed, geminiState)
+                  : codexChunkToOpenAI(trimmed, codexState!);
               for (const out of translated) {
                 ctrl.enqueue(enc.encode(out));
                 tail += out;
@@ -489,7 +607,10 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
             ? { prompt: (stateUsage.prompt_tokens as number) ?? 0, completion: (stateUsage.completion_tokens as number) ?? 0, total: (stateUsage.total_tokens as number) ?? 0 }
             : extractUsageFromSSE(tail);
           logReq("POST", "/v1/chat/completions", 200, ms, { model: rawModel, account: label, rotated: rotations, tokens: usage?.total || undefined });
-          if (usage) recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total });
+          if (usage) {
+            recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total });
+            if (clientKey) updateClientKeyUsage(clientKey.api_key, usage.total);
+          }
         },
       });
       upstreamResp.body!.pipeTo(writable).catch(() => {});
@@ -503,12 +624,16 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
     // Translate non-stream responses → OpenAI format
     if (dispatch.format === "claude") data = translateClaudeNonStream(data);
     else if (dispatch.format === "gemini") data = translateGeminiNonStream(data);
+    else if (dispatch.format === "codex") data = translateCodexNonStream(data);
 
     const rawUsage = data["usage"] as Record<string, number> | undefined;
     const promptTok     = rawUsage?.prompt_tokens     ?? 0;
     const completionTok = rawUsage?.completion_tokens ?? 0;
     const totalTok      = rawUsage?.total_tokens      ?? (promptTok + completionTok);
-    if (totalTok > 0) recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: promptTok, completion_tokens: completionTok, total_tokens: totalTok });
+    if (totalTok > 0) {
+      recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: promptTok, completion_tokens: completionTok, total_tokens: totalTok });
+      if (clientKey) updateClientKeyUsage(clientKey.api_key, totalTok);
+    }
     logReq("POST", "/v1/chat/completions", 200, Date.now() - start, { model: rawModel, account: label, rotated: rotations, tokens: totalTok || undefined });
     return jsonResponse(data);
   }

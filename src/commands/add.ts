@@ -2,7 +2,7 @@ import chalk from "chalk";
 import ora from "ora";
 import open from "open";
 import { select, input, password, editor, Separator } from "@inquirer/prompts";
-import { PROVIDERS, getProvider, type Provider } from "../providers/registry.ts";
+import { PROVIDERS, getProvider, type Provider, saveCustomProvider } from "../providers/registry.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { startCallbackListener } from "../auth/server.ts";
 import {
@@ -151,38 +151,56 @@ async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
     }
   }
 
-  // Spin up ephemeral listener
-  const listener = startCallbackListener({
-    port: adapter.fixedPort ?? 0,
-    path: adapter.callbackPath ?? "/callback",
-  });
-
-  const started = startAuthCodeFlow(providerId, listener.redirectUri, meta);
-
-  console.log("");
-  console.log(chalk.bold(`  Authorize ${p.name} in your browser:`));
-  console.log(`  ${chalk.cyan("URL:")}  ${chalk.underline(started.authUrl)}`);
-  console.log("");
-
-  try { await open(started.authUrl); console.log(chalk.gray("  (Browser opened automatically)")); }
-  catch { console.log(chalk.gray("  (Open the URL above manually)")); }
-
-  console.log("");
-  const spinner = ora("Waiting for callback…").start();
+  // Spin up ephemeral listener - wrap in try/finally to guarantee cleanup
+  let listener;
+  try {
+    listener = startCallbackListener({
+      port: adapter.fixedPort ?? 0,
+      path: adapter.callbackPath ?? "/callback",
+      redirectHost: adapter.callbackHost,
+    });
+  } catch (err) {
+    // Port already in use - provide helpful error
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("port") && adapter.fixedPort) {
+      throw new Error(
+        `Port ${adapter.fixedPort} is already in use. ` +
+        `Another OAuth session may be in progress. ` +
+        `Try: killing any process on port ${adapter.fixedPort} or wait a few minutes.`
+      );
+    }
+    throw err;
+  }
 
   try {
-    const capture = await listener.wait();
-    listener.close();
-    if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
-    if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+    const started = startAuthCodeFlow(providerId, listener.redirectUri, meta);
 
-    spinner.text = "Exchanging code for tokens…";
-    const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
-    spinner.succeed(chalk.green("Authorization successful!"));
-    printSavedAccount(connection, p);
-  } catch (err) {
+    console.log("");
+    console.log(chalk.bold(`  Authorize ${p.name} in your browser:`));
+    console.log(`  ${chalk.cyan("URL:")}  ${chalk.underline(started.authUrl)}`);
+    console.log("");
+
+    try { await open(started.authUrl); console.log(chalk.gray("  (Browser opened automatically)")); }
+    catch { console.log(chalk.gray("  (Open the URL above manually)")); }
+
+    console.log("");
+    const spinner = ora("Waiting for callback…").start();
+
+    try {
+      const capture = await listener.wait();
+      if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
+      if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+
+      spinner.text = "Exchanging code for tokens…";
+      const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
+      spinner.succeed(chalk.green("Authorization successful!"));
+      printSavedAccount(connection, p);
+    } catch (err) {
+      spinner.fail(err instanceof Error ? err.message : String(err));
+    }
+  } finally {
+    // ALWAYS close the listener, even if startAuthCodeFlow or any other step throws
     listener.close();
-    spinner.fail(err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -222,12 +240,40 @@ async function runImportFlow(providerId: string, p: Provider): Promise<void> {
 
 async function runApiKeyFlow(p: Provider): Promise<void> {
   console.log("");
-  if (p.apiKeyUrl) console.log(chalk.gray(`  Get a key at: ${chalk.underline(p.apiKeyUrl)}`));
-  if (p.freeTier?.notice) console.log(chalk.green(`  ${p.freeTier.notice}`));
+  let providerToSave = p;
+  
+  if (p.id === "custom") {
+    const customName = await input({
+      message: "Provider Name (e.g. My Remote API)",
+      validate: (v) => !!v.trim() || "Name is required",
+    });
+    const customUrl = await input({
+      message: "API URL (e.g. https://api.example.com/v1)",
+      validate: (v) => !!v.trim() || "URL is required",
+    });
+    
+    const safeId = "custom_" + crypto.randomUUID().slice(0, 8) + "_" + customName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    providerToSave = {
+      id: safeId,
+      name: customName,
+      description: "Custom provider",
+      category: "apikey",
+      authType: "apikey",
+      color: "#94a3b8",
+      baseUrl: customUrl,
+      models: [{ id: "default", name: "Default" }]
+    };
+    
+    saveCustomProvider(providerToSave);
+  }
+
+  if (providerToSave.apiKeyUrl) console.log(chalk.gray(`  Get a key at: ${chalk.underline(providerToSave.apiKeyUrl)}`));
+  if (providerToSave.freeTier?.notice) console.log(chalk.green(`  ${providerToSave.freeTier.notice}`));
   console.log("");
 
   const apiKey = await password({
-    message: `${p.name} API key`,
+    message: `${providerToSave.name} API key`,
     mask: "•",
     validate: (v) => v.trim() ? true : "API key is required",
   });
@@ -240,12 +286,12 @@ async function runApiKeyFlow(p: Provider): Promise<void> {
   const spinner = ora("Saving connection…").start();
   try {
     const connection = addApiKeyConnection({
-      provider: p.id,
+      provider: providerToSave.id,
       api_key: apiKey.trim(),
       display_name: displayName.trim() || null,
     });
     spinner.succeed(chalk.green("API key saved"));
-    printSavedAccount(connection, p);
+    printSavedAccount(connection, providerToSave);
   } catch (err) {
     spinner.fail(err instanceof Error ? err.message : String(err));
   }

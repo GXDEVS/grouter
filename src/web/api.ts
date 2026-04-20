@@ -13,18 +13,32 @@ import { getStrategy, getStickyLimit, getProxyPort, getSetting, setSetting, db }
 import { isRunning, readPid, removePid } from "../daemon/index.ts";
 import { estimateCostUSD } from "../constants.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
-import { PROVIDERS, OAUTH_PROVIDERS, FREE_PROVIDERS, APIKEY_PROVIDERS } from "../providers/registry.ts";
+import { PROVIDERS, OAUTH_PROVIDERS, FREE_PROVIDERS, APIKEY_PROVIDERS, saveCustomProvider, type Provider } from "../providers/registry.ts";
 import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 import { listConnectionsByProvider } from "../db/accounts.ts";
+import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
+import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey } from "../db/client_keys.ts";
 
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
   close: () => void;
   waiter: Promise<{ code: string | null; state: string | null; error: string | null }>;
   done: boolean;
+  createdAt: number;
 }
 const pendingListeners = new Map<string, PendingListener>();
+const CALLBACK_POLL_WAIT_MS = 8_000;
+const PENDING_LISTENER_TTL_MS = 15 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, pending] of pendingListeners) {
+    if (pending.done || (now - pending.createdAt) <= PENDING_LISTENER_TTL_MS) continue;
+    try { pending.close(); } catch { /* ignore */ }
+    pendingListeners.delete(sessionId);
+  }
+}, 60 * 1000);
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
 function cors(): Record<string, string> {
@@ -104,11 +118,12 @@ export function handleStatus(): Response {
 }
 
 // ── POST /api/auth/start ──────────────────────────────────────────────────────
-// Body: { provider?: string }   (defaults to "qwen" for back-compat)
+// Body: { provider: string }
 export async function handleAuthStart(req: Request): Promise<Response> {
   try {
     const body = await req.json().catch(() => ({})) as { provider?: string };
-    const providerId = body.provider ?? "qwen";
+    if (!body.provider) return json({ error: "provider is required" }, 400);
+    const providerId = body.provider;
     const meta = PROVIDERS[providerId];
     if (!meta) return json({ error: `Unknown provider: ${providerId}` }, 400);
     if (meta.deprecated) return json({ error: meta.deprecationReason ?? `${meta.name} is deprecated` }, 410);
@@ -164,11 +179,36 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
     const listener = startCallbackListener({
       port: adapter.fixedPort ?? 0,
       path: adapter.callbackPath ?? "/callback",
+      redirectHost: adapter.callbackHost,
     });
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
-    const started = startAuthCodeFlow(body.provider, listener.redirectUri, body.meta);
-    pendingListeners.set(started.session_id, { close: listener.close, waiter, done: false });
+    let started: ReturnType<typeof startAuthCodeFlow>;
+    try {
+      started = startAuthCodeFlow(body.provider, listener.redirectUri, body.meta);
+    } catch (err) {
+      // If auth setup fails after binding the callback port, immediately release it.
+      listener.close();
+      throw err;
+    }
+
+    pendingListeners.set(started.session_id, {
+      close: listener.close,
+      waiter,
+      done: false,
+      createdAt: Date.now(),
+    });
+
+    // If the callback flow fails (timeout/denied) and no poll request is in flight,
+    // release the fixed port anyway so a new auth attempt can start immediately.
+    waiter.then((capture) => {
+      if (!capture?.error) return;
+      const pending = pendingListeners.get(started.session_id);
+      if (!pending || pending.done) return;
+      pending.done = true;
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(started.session_id);
+    }).catch(() => { /* ignore */ });
 
     return json({
       session_id: started.session_id,
@@ -192,12 +232,29 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
     if (!pending) return json({ status: "expired" });
     if (pending.done) return json({ status: "expired" });
 
-    const capture = await pending.waiter;
-    pending.done = true;
-    pending.close();
-    pendingListeners.delete(sessionId);
+    const capture = await Promise.race([
+      pending.waiter,
+      Bun.sleep(CALLBACK_POLL_WAIT_MS).then(() => null),
+    ]);
+    if (!capture) return json({ status: "pending" });
 
-    if (capture.error) return json({ status: "denied", message: capture.error });
+    pending.done = true;
+    // Give the callback tab enough time to render "Authorization complete"
+    // before closing the local listener.
+    setTimeout(() => {
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(sessionId);
+    }, 350);
+
+    if (capture.error) {
+      const msg = String(capture.error);
+      const lower = msg.toLowerCase();
+      if (lower.includes("timeout")) return json({ status: "expired", message: msg });
+      if (lower.includes("access_denied") || lower.includes("denied")) {
+        return json({ status: "denied", message: msg });
+      }
+      return json({ status: "error", message: msg });
+    }
     if (!capture.code || !capture.state) return json({ status: "error", message: "missing code/state" });
 
     const connection = await completeAuthCodeFlow(sessionId, capture.code, capture.state);
@@ -346,6 +403,33 @@ function maskApiKey(key: string): string {
   return key.slice(0, 4) + "…" + key.slice(-4);
 }
 
+// ── POST /api/providers/custom ────────────────────────────────────────────────
+export async function handleCreateCustomProvider(req: Request): Promise<Response> {
+  try {
+    const body = (await req.json()) as { name?: string; url?: string };
+    if (!body.name) return json({ error: "name is required" }, 400);
+    if (!body.url)  return json({ error: "url is required" }, 400);
+
+    const safeId = "custom_" + crypto.randomUUID().slice(0, 8) + "_" + body.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    
+    const p: Provider = {
+      id: safeId,
+      name: body.name,
+      description: "Custom provider",
+      category: "apikey",
+      authType: "apikey",
+      color: "#94a3b8",
+      baseUrl: body.url,
+      models: [{ id: "default", name: "Default" }]
+    };
+    
+    saveCustomProvider(p);
+    return json(p);
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
 // ── POST /api/connections ─────────────────────────────────────────────────────
 export async function handleAddConnection(req: Request): Promise<Response> {
   try {
@@ -364,7 +448,51 @@ export async function handleAddConnection(req: Request): Promise<Response> {
       display_name: body.display_name ?? null,
     });
     const port = getProviderPort(body.provider);
+
+    // Background: fetch models from provider API using the new key
+    fetchAndSaveProviderModels(body.provider, body.api_key.trim()).catch(() => {});
+
     return json({ ok: true, connection, port });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// ── GET /api/providers/:id/models ────────────────────────────────────────────
+export function handleGetProviderModels(id: string): Response {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  const models = getModelsForProvider(id);
+  const free_only = getSetting(`provider_free_only_${id}`) === "true";
+  return json({ provider: id, models, free_only });
+}
+
+// ── POST /api/providers/:id/config ───────────────────────────────────────────
+export async function handleProviderConfig(id: string, req: Request): Promise<Response> {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  try {
+    const body = (await req.json()) as { free_only?: boolean };
+    if (typeof body.free_only === "boolean") {
+      setSetting(`provider_free_only_${id}`, body.free_only ? "true" : "false");
+      // Give server instances a hint to discard cache by touching models DB (already implemented implicitly next refresh)
+      // They use modelsCache with TTL, so we can export a way or just let it expire in 10 mins.
+      // Easiest is to do nothing complicated, but let's expose a global flag if needed.
+      (globalThis as any).__grouterClearModelsCache = true;
+    }
+    return json({ ok: true, free_only: body.free_only });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// ── POST /api/providers/:id/refresh-models ───────────────────────────────────
+export async function handleRefreshProviderModels(id: string): Promise<Response> {
+  const p = PROVIDERS[id];
+  if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
+  try {
+    const result = await fetchAndSaveProviderModels(id);
+    return json({ provider: id, models: result.models, source: result.source });
   } catch (err) {
     return json({ error: String(err) }, 500);
   }
@@ -444,4 +572,55 @@ export function handleUnlockAll(): Response {
   // Reset backoff and test_status on all accounts
   db().exec(`UPDATE accounts SET backoff_level = 0, test_status = 'unknown', last_error = NULL, error_code = NULL, last_error_at = NULL`);
   return json({ ok: true });
+}
+
+// ── GET /api/client-keys ──────────────────────────────────────────────────────
+export function handleListClientKeys(): Response {
+  return json({ keys: listClientKeys() });
+}
+
+// ── POST /api/client-keys ─────────────────────────────────────────────────────
+export async function handleCreateClientKey(req: Request): Promise<Response> {
+  try {
+    const body = await req.json() as { name: string; allowed_providers?: string[]; token_limit?: number; api_key?: string; expires_at?: string };
+    if (!body.name) return json({ error: "Missing name" }, 400);
+    const key = body.api_key || "grouter-sk-" + crypto.randomUUID().replace(/-/g, "");
+    createClientKey({
+      name: body.name,
+      api_key: key,
+      allowed_providers: body.allowed_providers && body.allowed_providers.length > 0 ? body.allowed_providers : null,
+      token_limit: body.token_limit || 0,
+      expires_at: body.expires_at || null
+    });
+    return json({ ok: true, key });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
+}
+
+// ── DELETE /api/client-keys/:api_key ──────────────────────────────────────────
+export function handleDeleteClientKey(key: string): Response {
+  deleteClientKey(key);
+  return json({ ok: true });
+}
+
+// ── PATCH /api/client-keys/:api_key ───────────────────────────────────────────
+export async function handleUpdateClientKey(req: Request, key: string): Promise<Response> {
+  try {
+    const body = await req.json() as { name?: string; allowed_providers?: string[]; token_limit?: number; expires_at?: string };
+    if (!body.name) return json({ error: "Missing name" }, 400);
+
+    const k = getClientKey(key);
+    if (!k) return json({ error: "Key not found" }, 404);
+
+    updateClientKey(key, {
+      name: body.name,
+      allowed_providers: body.allowed_providers && body.allowed_providers.length > 0 ? body.allowed_providers : null,
+      token_limit: body.token_limit || 0,
+      expires_at: body.expires_at || null
+    });
+    return json({ ok: true });
+  } catch (err) {
+    return json({ error: String(err) }, 500);
+  }
 }
