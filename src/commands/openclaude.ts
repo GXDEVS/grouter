@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import chalk from "chalk";
-import { select } from "@inquirer/prompts";
+import { select, input } from "@inquirer/prompts";
 import { getProxyPort } from "../db/index.ts";
 import { getProvider, PROVIDERS } from "../providers/registry.ts";
 import { getProviderPort } from "../db/ports.ts";
@@ -233,6 +233,23 @@ interface UpOptions {
   noInteractive?: boolean;
 }
 
+async function pickModel(choices: { name: string; value: string }[], message: string): Promise<string> {
+  const customSentinel = "__custom__";
+  const allChoices = [
+    ...choices,
+    { name: "✏  Digite um modelo personalizado…", value: customSentinel },
+  ];
+  const picked = await select({ message, choices: allChoices, pageSize: 16 });
+  if (picked === customSentinel) {
+    let modelId = "";
+    while (!modelId.trim()) {
+      modelId = await input({ message: "Model ID (não pode ser vazio):" });
+    }
+    return modelId.trim();
+  }
+  return picked;
+}
+
 async function wizard(routerPort: number): Promise<{ providerId: string | null; port: number; model: string }> {
   const counts = getConnectionCountByProvider();
 
@@ -278,7 +295,7 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
       console.log(`\n  ${chalk.yellow("⚠")}  No connected providers. Run ${chalk.cyan("grouter add")} first.\n`);
       process.exit(1);
     }
-    const model = await select({ message: "Which model?", choices: modelChoices, pageSize: 14 });
+    const model = await pickModel(modelChoices, "Which model?");
     return { providerId: null, port: routerPort, model };
   }
 
@@ -288,11 +305,7 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
     name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(m.name)}`,
     value: m.id,
   }));
-  const model = await select({
-    message: `Which ${p.name} model?`,
-    choices: modelChoices,
-    pageSize: 14,
-  });
+  const model = await pickModel(modelChoices, `Which ${p.name} model?`);
 
   return { providerId: p.id, port, model };
 }
