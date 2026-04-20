@@ -7,7 +7,7 @@ import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
 import { checkAndRefreshAccount } from "../token/refresh.ts";
-import { isRateLimitedResult } from "../types.ts";
+import { isRateLimitedResult, isTemporarilyUnavailableResult } from "../types.ts";
 import { listAccounts } from "../db/accounts.ts";
 import { recordUsage } from "../db/usage.ts";
 import { PROVIDERS } from "../providers/registry.ts";
@@ -540,6 +540,13 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       return jsonResponse(
         { error: { message: `All accounts rate limited. ${selected.retryAfterHuman}`, type: "grouter_error", code: 429 } },
         429, { "Retry-After": selected.retryAfter },
+      );
+    }
+    if (isTemporarilyUnavailableResult(selected)) {
+      logReq("POST", "/v1/chat/completions", 503, Date.now() - start, { model: rawModel, rotated: rotations });
+      return jsonResponse(
+        { error: { message: `All accounts temporarily unavailable. ${selected.retryAfterHuman}`, type: "grouter_error", code: 503 } },
+        503, { "Retry-After": selected.retryAfter },
       );
     }
 

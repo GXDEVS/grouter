@@ -112,6 +112,22 @@ export const FREE_OVERRIDES: Record<string, ProviderFreeOverride> = {
       },
     },
   },
+  "github-models": {
+    allModelsFree: {
+      isFree: true,
+      verifiedAt: "2026-04-20",
+      sourceUrl: "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models",
+      note: "GitHub provides free API usage for prototyping, with rate limits.",
+    },
+  },
+  sambanova: {
+    allModelsFree: {
+      isFree: true,
+      verifiedAt: "2026-04-20",
+      sourceUrl: "https://cloud.sambanova.ai/plans",
+      note: "SambaNova provides free starter API credits (time/credit limited).",
+    },
+  },
 };
 
 export function getProviderFreeOverride(providerId: string): ProviderFreeOverride | null {
@@ -151,6 +167,8 @@ export const FREE_PROVIDER_CANDIDATES: FreeProviderCandidate[] = [
   { providerId: "kilocode", displayName: "KiloCode", openaiCompatible: true, freeTierActive: true, docsUrl: "https://www.kilocode.ai/", integrated: true, stability: "beta" },
   { providerId: "nvidia", displayName: "NVIDIA NIM", openaiCompatible: true, freeTierActive: true, docsUrl: "https://build.nvidia.com/", integrated: true, stability: "stable" },
   { providerId: "gemini", displayName: "Google Gemini", openaiCompatible: true, freeTierActive: true, docsUrl: "https://aistudio.google.com/app/apikey", integrated: true, stability: "stable" },
+  { providerId: "github-models", displayName: "GitHub Models", openaiCompatible: true, freeTierActive: true, docsUrl: "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models", integrated: true, stability: "stable" },
+  { providerId: "sambanova", displayName: "SambaNova", openaiCompatible: true, freeTierActive: true, docsUrl: "https://cloud.sambanova.ai/plans", integrated: true, stability: "stable" },
 ];
 
 function candidateScore(c: FreeProviderCandidate): number {
