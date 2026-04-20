@@ -112,16 +112,17 @@ function logReq(method: string, path: string, status: number, ms: number,
 
 // ── Provider/model parsing ────────────────────────────────────────────────────
 
-function parseProviderModel(raw: string | null, pinnedProvider?: string): { provider: string; model: string } {
+function parseProviderModel(raw: string | null, pinnedProvider?: string): { provider: string | null; model: string } {
   if (pinnedProvider) {
     if (!raw) return { provider: pinnedProvider, model: "" };
     const slash = raw.indexOf("/");
     // If the model already carries a provider prefix, strip it — the port pins the provider.
     return { provider: pinnedProvider, model: slash === -1 ? raw : raw.slice(slash + 1) };
   }
-  if (!raw) return { provider: "qwen", model: "" };
+  // Without a pinned provider the format "provider/model" is required.
+  if (!raw) return { provider: null, model: "" };
   const slash = raw.indexOf("/");
-  if (slash === -1) return { provider: "qwen", model: raw }; // backward compat
+  if (slash === -1) return { provider: null, model: raw };
   return { provider: raw.slice(0, slash), model: raw.slice(slash + 1) };
 }
 
@@ -362,6 +363,18 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
 
   const rawModel = typeof body.model === "string" ? body.model : null;
   const { provider, model } = parseProviderModel(rawModel, pinnedProvider);
+
+  if (!provider) {
+    logReq("POST", "/v1/chat/completions", 400, Date.now() - start, { model: rawModel });
+    return jsonResponse({
+      error: {
+        message: `Invalid model format: "${rawModel ?? ""}". Use "provider/model" (e.g. "anthropic/claude-sonnet-4-20250514") or send the request to a provider-specific port.`,
+        type: "grouter_error",
+        code: 400,
+      },
+    }, 400);
+  }
+
   const stream = body.stream === true;
   const excludeIds = new Set<string>();
   let rotations = 0;

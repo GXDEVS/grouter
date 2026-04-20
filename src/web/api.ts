@@ -104,11 +104,12 @@ export function handleStatus(): Response {
 }
 
 // ── POST /api/auth/start ──────────────────────────────────────────────────────
-// Body: { provider?: string }   (defaults to "qwen" for back-compat)
+// Body: { provider: string }
 export async function handleAuthStart(req: Request): Promise<Response> {
   try {
     const body = await req.json().catch(() => ({})) as { provider?: string };
-    const providerId = body.provider ?? "qwen";
+    if (!body.provider) return json({ error: "provider is required" }, 400);
+    const providerId = body.provider;
     const meta = PROVIDERS[providerId];
     if (!meta) return json({ error: `Unknown provider: ${providerId}` }, 400);
     if (meta.deprecated) return json({ error: meta.deprecationReason ?? `${meta.name} is deprecated` }, 410);

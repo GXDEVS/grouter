@@ -119,8 +119,10 @@ export function db(): Database {
     "SELECT name FROM pragma_table_info(?)"
   ).all("accounts").map(r => r.name);
 
-  if (!cols.includes("provider"))
-    _db.exec(`ALTER TABLE accounts ADD COLUMN provider TEXT NOT NULL DEFAULT 'qwen'`);
+  if (!cols.includes("provider")) {
+    _db.exec(`ALTER TABLE accounts ADD COLUMN provider TEXT NOT NULL DEFAULT ''`);
+    _db.exec(`UPDATE accounts SET provider = 'qwen' WHERE provider = ''`);
+  }
   if (!cols.includes("auth_type"))
     _db.exec(`ALTER TABLE accounts ADD COLUMN auth_type TEXT NOT NULL DEFAULT 'oauth'`);
   if (!cols.includes("api_key"))
