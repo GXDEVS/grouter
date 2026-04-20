@@ -4,9 +4,10 @@ import { join } from "node:path";
 import chalk from "chalk";
 import { select, input } from "@inquirer/prompts";
 import { getProxyPort } from "../db/index.ts";
-import { getProvider, PROVIDERS } from "../providers/registry.ts";
+import { getProvider, providerHasFreeModelsById, PROVIDERS } from "../providers/registry.ts";
 import { getProviderPort } from "../db/ports.ts";
 import { getConnectionCountByProvider } from "../db/accounts.ts";
+import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -266,7 +267,7 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
     ...sorted.map(p => {
       const port = getProviderPort(p.id);
       const n    = counts[p.id] ?? 0;
-      const tag  = p.freeTier ? chalk.green(" FREE") : "";
+      const tag  = providerHasFreeModelsById(p.id) ? chalk.green(" FREE") : "";
       const portStr = port ? chalk.cyan(`:${port}`) : chalk.gray("(no port yet)");
       const connStr = n > 0 ? chalk.green(`${n} conn`) : chalk.gray("0 conn");
       return {
@@ -285,12 +286,22 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
   });
 
   if (providerId === "__router__") {
+    // Try to refresh connected providers so model choices are up to date.
+    await Promise.allSettled(
+      sorted
+        .filter((p) => (counts[p.id] ?? 0) > 0)
+        .map((p) => fetchAndSaveProviderModels(p.id)),
+    );
+
     const modelChoices = sorted
       .filter(p => (counts[p.id] ?? 0) > 0)
-      .flatMap(p => p.models.map(m => ({
-        name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(p.name + " · " + m.name)}`,
-        value: m.id,
-      })));
+      .flatMap((p) => {
+        const models = getModelsForProvider(p.id);
+        return models.map((m) => ({
+          name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(p.name + " · " + m.name)}${m.is_free ? chalk.green(" FREE") : ""}`,
+          value: `${p.id}/${m.id}`,
+        }));
+      });
     if (modelChoices.length === 0) {
       console.log(`\n  ${chalk.yellow("⚠")}  No connected providers. Run ${chalk.cyan("grouter add")} first.\n`);
       process.exit(1);
@@ -301,8 +312,10 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
 
   const p = getProvider(providerId)!;
   const port = getProviderPort(p.id) ?? routerPort;
-  const modelChoices = p.models.map(m => ({
-    name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(m.name)}`,
+  // Refresh chosen provider models before presenting the picker.
+  await fetchAndSaveProviderModels(p.id).catch(() => null);
+  const modelChoices = getModelsForProvider(p.id).map((m) => ({
+    name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(m.name)}${m.is_free ? chalk.green(" FREE") : ""}`,
     value: m.id,
   }));
   const model = await pickModel(modelChoices, `Which ${p.name} model?`);
@@ -423,6 +436,10 @@ export async function upOpenclaudeCommand(options: UpOptions): Promise<void> {
   console.log("");
   console.log(`  ${chalk.dim("To undo:")}  ${chalk.cyan("grouter up openclaude --remove")}`);
   console.log("");
+  console.log(`  ${chalk.yellow("⚠")}  ${chalk.bold("Restart your Claude Code / openclaude session")} to apply the new model.`);
+  console.log(`     ${chalk.gray("The model is read at startup — changes only take effect in a new session.")}`);
+  console.log(`     ${chalk.gray("Close this terminal and run")} ${chalk.cyan("claude")} ${chalk.gray("again.")}`);
+  console.log("");
 }
 
 export function upOpenclaudeRemoveCommand(): void {
@@ -452,3 +469,4 @@ export function upOpenclaudeRemoveCommand(): void {
 
   console.log("");
 }
+
