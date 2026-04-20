@@ -6,6 +6,7 @@ import {
   importToken,
 } from "../auth/orchestrator.ts";
 import { startCallbackListener } from "../auth/server.ts";
+import { ensureProviderServer } from "../proxy/server.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider } from "../db/accounts.ts";
 import { getUsageTotals, getUsageByModel, getUsageByAccount } from "../db/usage.ts";
@@ -150,6 +151,7 @@ export async function handleAuthPoll(req: Request): Promise<Response> {
 
     const result = await pollDeviceFlow(sessionId);
     if (result.status === "complete") {
+      ensureProviderServer(result.connection.provider);
       return json({ status: "complete", account: result.connection });
     }
     if (result.status === "error") {
@@ -258,6 +260,7 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
     if (!capture.code || !capture.state) return json({ status: "error", message: "missing code/state" });
 
     const connection = await completeAuthCodeFlow(sessionId, capture.code, capture.state);
+    ensureProviderServer(connection.provider);
     return json({ status: "complete", account: connection });
   } catch (err) {
     return json({ status: "error", message: String(err) });
@@ -272,6 +275,7 @@ export async function handleAuthImport(req: Request): Promise<Response> {
     if (!body.provider) return json({ error: "provider required" }, 400);
     if (!body.input) return json({ error: "input required" }, 400);
     const connection = await importToken(body.provider, body.input, body.meta);
+    ensureProviderServer(body.provider);
     return json({ status: "complete", account: connection });
   } catch (err) {
     return json({ status: "error", message: String(err) });
@@ -451,6 +455,9 @@ export async function handleAddConnection(req: Request): Promise<Response> {
 
     // Background: fetch models from provider API using the new key
     fetchAndSaveProviderModels(body.provider, body.api_key.trim()).catch(() => {});
+
+    // Start the per-provider server on the fly if not already running
+    ensureProviderServer(body.provider);
 
     return json({ ok: true, connection, port });
   } catch (err) {

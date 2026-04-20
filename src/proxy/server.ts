@@ -429,6 +429,25 @@ export function startProviderServer(provider: string, port: number) {
   });
 }
 
+// Track which providers already have a running dedicated server
+const _runningProviderServers = new Set<string>();
+
+/**
+ * Start a provider server only if one isn't already running.
+ * Safe to call at any time — e.g. right after a new connection is added.
+ */
+export function ensureProviderServer(provider: string): void {
+  if (_runningProviderServers.has(provider)) return;
+  const port = getProviderPort(provider);
+  if (!port) return;
+  try {
+    startProviderServer(provider, port);
+    _runningProviderServers.add(provider);
+  } catch (err) {
+    console.error(`  ${chalk.yellow("⚠")} Failed to bind ${provider} on :${port} — ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 /** Starts the main server plus one dedicated listener per configured provider port. */
 export function startAllServers(mainPort: number) {
   const main = startServer(mainPort);
@@ -436,6 +455,7 @@ export function startAllServers(mainPort: number) {
   for (const row of listProviderPorts()) {
     try {
       startProviderServer(row.provider, row.port);
+      _runningProviderServers.add(row.provider);
       providerServers.push({ provider: row.provider, port: row.port });
     } catch (err) {
       console.error(`  ${chalk.yellow("⚠")} Failed to bind ${row.provider} on :${row.port} — ${err instanceof Error ? err.message : String(err)}`);
