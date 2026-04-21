@@ -6,8 +6,11 @@ FROM oven/bun:1.2-alpine AS builder
 WORKDIR /app
 
 # Install deps first (cache-friendly layer)
+# --ignore-scripts: skip the `prepare` lifecycle — it triggers `prebuild`
+# (scripts/embed-logos.ts) which isn't in the build context yet.
+# The explicit `bun run build` below runs the full chain after sources are copied.
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 
 # Copy sources and build the single-file binary
 COPY tsconfig.json ./
