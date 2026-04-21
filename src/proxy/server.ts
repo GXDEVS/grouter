@@ -197,6 +197,31 @@ function parseProviderModel(raw: string | null, pinnedProvider?: string): { prov
   return { provider: raw.slice(0, slash), model: raw.slice(slash + 1) };
 }
 
+const GEMINI_MODEL_FALLBACKS: Record<string, string[]> = {
+  "gemini-3.1-pro-preview": ["gemini-2.5-pro", "gemini-2.5-flash"],
+  "gemini-3.1-flash-preview": ["gemini-2.5-flash", "gemini-2.5-pro"],
+  "gemini-2.5-pro": ["gemini-2.5-flash"],
+};
+
+function isGeminiModelCapacityError(provider: string, status: number, errorText: string): boolean {
+  if (provider !== "gemini-cli" || (status !== 429 && status !== 503)) return false;
+  const lower = errorText.toLowerCase();
+  return (
+    lower.includes("reason\":\"model_capacity_exhausted") ||
+    lower.includes("model_capacity_exhausted") ||
+    lower.includes("no capacity available for model") ||
+    lower.includes("resource_exhausted")
+  );
+}
+
+function nextGeminiFallbackModel(currentModel: string, tried: Set<string>): string | null {
+  const candidates = GEMINI_MODEL_FALLBACKS[currentModel] ?? ["gemini-2.5-pro", "gemini-2.5-flash"];
+  for (const candidate of candidates) {
+    if (candidate !== currentModel && !tried.has(candidate)) return candidate;
+  }
+  return null;
+}
+
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function corsHeaders(): Record<string, string> {
@@ -526,20 +551,65 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
   const stream = body.stream === true;
   const excludeIds = new Set<string>();
   let rotations = 0;
-
-  // Normalise model in body â€” strip provider prefix before sending upstream
-  const normalizedBody = { ...body, model };
+  let currentModel = model;
+  const triedGeminiModels = new Set<string>();
+  if (provider === "gemini-cli" && currentModel) {
+    triedGeminiModels.add(currentModel);
+  }
 
   let lastFetchError: { provider: string; url: string; message: string } | null = null;
 
+  const tryGeminiModelFallback = (reason: string): boolean => {
+    if (provider !== "gemini-cli" || !currentModel) return false;
+    const fallbackModel = nextGeminiFallbackModel(currentModel, triedGeminiModels);
+    if (!fallbackModel) return false;
+    console.log(
+      `  ${chalk.yellow("->")} switching Gemini model ${chalk.magenta(currentModel)} -> ${chalk.magenta(fallbackModel)} ${chalk.gray(`(${reason})`)}`,
+    );
+    triedGeminiModels.add(fallbackModel);
+    currentModel = fallbackModel;
+    excludeIds.clear();
+    return true;
+  };
+
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    const selected = selectAccount(provider, model || null, excludeIds);
+    const selected = selectAccount(provider, currentModel || null, excludeIds);
 
     if (!selected) {
+      // If this attempt excluded prior candidates (rotation), re-check without
+      // exclusion so we can surface accurate pool cooldown state (429/503)
+      // instead of "no connections".
+      if (excludeIds.size > 0) {
+        const poolState = selectAccount(provider, currentModel || null);
+        if (isRateLimitedResult(poolState)) {
+          if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback("pool rate limited")) {
+            continue;
+          }
+          logReq("POST", "/v1/chat/completions", 429, Date.now() - start, { model: rawModel, rotated: rotations });
+          return jsonResponse(
+            { error: { message: `All accounts rate limited. ${poolState.retryAfterHuman}`, type: "grouter_error", code: 429 } },
+            429, { "Retry-After": poolState.retryAfter },
+          );
+        }
+        if (isTemporarilyUnavailableResult(poolState)) {
+          if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback("pool temporarily unavailable")) {
+            continue;
+          }
+          logReq("POST", "/v1/chat/completions", 503, Date.now() - start, { model: rawModel, rotated: rotations });
+          return jsonResponse(
+            { error: { message: `All accounts temporarily unavailable. ${poolState.retryAfterHuman}`, type: "grouter_error", code: 503 } },
+            503, { "Retry-After": poolState.retryAfter },
+          );
+        }
+      }
+
       logReq("POST", "/v1/chat/completions", 503, Date.now() - start, { model: rawModel });
       return jsonResponse({ error: { message: `No connections available for provider "${provider}"`, type: "grouter_error", code: 503 } }, 503);
     }
     if (isRateLimitedResult(selected)) {
+      if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback("rate limited")) {
+        continue;
+      }
       logReq("POST", "/v1/chat/completions", 429, Date.now() - start, { model: rawModel, rotated: rotations });
       return jsonResponse(
         { error: { message: `All accounts rate limited. ${selected.retryAfterHuman}`, type: "grouter_error", code: 429 } },
@@ -547,6 +617,9 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       );
     }
     if (isTemporarilyUnavailableResult(selected)) {
+      if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback("temporarily unavailable")) {
+        continue;
+      }
       logReq("POST", "/v1/chat/completions", 503, Date.now() - start, { model: rawModel, rotated: rotations });
       return jsonResponse(
         { error: { message: `All accounts temporarily unavailable. ${selected.retryAfterHuman}`, type: "grouter_error", code: 503 } },
@@ -561,6 +634,8 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       ? await checkAndRefreshAccount(selected)
       : selected;
 
+    // Normalize model before sending upstream by removing provider prefix.
+    const normalizedBody = { ...body, model: currentModel };
     const dispatch = buildUpstream({ account, body: normalizedBody, stream });
     if (dispatch.kind === "unsupported") {
       logReq("POST", "/v1/chat/completions", 501, Date.now() - start, { model: rawModel, account: label, rotated: rotations });
@@ -597,13 +672,22 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       lastFetchError = { provider, url: upstreamUrl, message: msg };
       console.log(`  ${chalk.red("âœ–")} fetch failed â†’ ${chalk.cyan(label)} ${chalk.gray(upstreamUrl)} ${chalk.red(msg)}`);
       excludeIds.add(selected.id); rotations++;
-      markAccountUnavailable(selected.id, 503, msg, model || null);
+      markAccountUnavailable(selected.id, 503, msg, currentModel || null);
       continue;
     }
 
     if (!upstreamResp.ok) {
       const errText = await upstreamResp.text();
-      const { shouldFallback } = markAccountUnavailable(selected.id, upstreamResp.status, errText, model || null);
+      if (isGeminiModelCapacityError(provider, upstreamResp.status, errText)) {
+        if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback(`capacity exhausted (${upstreamResp.status})`)) {
+          continue;
+        }
+        logReq("POST", "/v1/chat/completions", upstreamResp.status, Date.now() - start, { model: rawModel, account: label, rotated: rotations });
+        const ct = upstreamResp.headers.get("content-type") ?? "";
+        if (ct.includes("json")) { try { return jsonResponse(JSON.parse(errText), upstreamResp.status); } catch {/* fall */} }
+        return new Response(errText, { status: upstreamResp.status, headers: { "Content-Type": ct || "text/plain", ...corsHeaders() } });
+      }
+      const { shouldFallback } = markAccountUnavailable(selected.id, upstreamResp.status, errText, currentModel || null);
       if (shouldFallback && attempt < MAX_RETRIES - 1) {
         console.log(`  ${chalk.yellow("â†»")} rotating away from ${chalk.cyan(label)} (${upstreamResp.status})`);
         excludeIds.add(selected.id); rotations++;
@@ -615,7 +699,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       return new Response(errText, { status: upstreamResp.status, headers: { "Content-Type": ct || "text/plain", ...corsHeaders() } });
     }
 
-    clearAccountError(selected.id, model || null);
+    clearAccountError(selected.id, currentModel || null);
 
     if (stream) {
       const ms = Date.now() - start;
@@ -715,6 +799,56 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
             if (sseDataLines.length > 0) {
               emitTranslated(sseDataLines.join("\n"));
               sseDataLines = [];
+            }
+
+            // Some upstreams may terminate the HTTP stream without an explicit
+            // terminal SSE frame. Ensure clients always receive a final chunk
+            // and [DONE] so they don't hang waiting forever.
+            if (claudeState && !claudeState.finishReasonSent) {
+              const modelName = claudeState.model || (typeof rawModel === "string" ? rawModel : "claude");
+              const finalChunk: Record<string, unknown> = {
+                id: `chatcmpl-${claudeState.messageId || Date.now().toString(36)}`,
+                object: "chat.completion.chunk",
+                created: Math.floor(Date.now() / 1000),
+                model: modelName,
+                choices: [{ index: 0, delta: {}, finish_reason: claudeState.finishReason ?? "stop" }],
+              };
+              if (claudeState.usage) finalChunk.usage = claudeState.usage;
+              const finalWire = `data: ${JSON.stringify(finalChunk)}\n\n`;
+              const doneWire = "data: [DONE]\n\n";
+              ctrl.enqueue(enc.encode(finalWire));
+              ctrl.enqueue(enc.encode(doneWire));
+              tail += finalWire + doneWire;
+              claudeState.finishReasonSent = true;
+            } else if (geminiState && !geminiState.finished) {
+              const finalChunk: Record<string, unknown> = {
+                id: geminiState.id,
+                object: "chat.completion.chunk",
+                created: geminiState.created,
+                model: geminiState.model,
+                choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+              };
+              if (geminiState.usage) finalChunk.usage = geminiState.usage;
+              const finalWire = `data: ${JSON.stringify(finalChunk)}\n\n`;
+              const doneWire = "data: [DONE]\n\n";
+              ctrl.enqueue(enc.encode(finalWire));
+              ctrl.enqueue(enc.encode(doneWire));
+              tail += finalWire + doneWire;
+              geminiState.finished = true;
+            } else if (codexState && !codexState.completed) {
+              const finalChunk: Record<string, unknown> = {
+                id: codexState.id,
+                object: "chat.completion.chunk",
+                created: Math.floor(Date.now() / 1000),
+                model: codexState.model,
+                choices: [{ index: 0, delta: {}, finish_reason: codexState.sawToolDelta ? "tool_calls" : "stop" }],
+              };
+              const finalWire = `data: ${JSON.stringify(finalChunk)}\n\n`;
+              const doneWire = "data: [DONE]\n\n";
+              ctrl.enqueue(enc.encode(finalWire));
+              ctrl.enqueue(enc.encode(doneWire));
+              tail += finalWire + doneWire;
+              codexState.completed = true;
             }
           } else {
             tail += dec.decode();
