@@ -4,6 +4,7 @@ import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
+import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
@@ -655,7 +656,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
           }
         },
         flush() {
-          const stateUsage = claudeState?.usage ?? geminiState?.usage;
+          const stateUsage = claudeState?.usage ?? geminiState?.usage ?? null;
           const usage = needsTranslation && stateUsage
             ? { prompt: (stateUsage.prompt_tokens as number) ?? 0, completion: (stateUsage.completion_tokens as number) ?? 0, total: (stateUsage.total_tokens as number) ?? 0 }
             : extractUsageFromSSE(tail);
