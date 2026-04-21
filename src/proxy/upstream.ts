@@ -25,8 +25,6 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
-import { openaiToCodexResponses } from "./codex-translator.ts";
-import { extractCodexAccountId } from "../auth/providers/codex.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -194,23 +192,6 @@ function buildQwen(ctx: BuildContext): UpstreamRequest {
     headers: buildQwenHeaders(ctx.account.access_token, ctx.stream),
     body,
   };
-}
-
-function resolveCodexResponsesUrl(baseUrl: string | null | undefined): string {
-  const base = (baseUrl ?? "https://chatgpt.com/backend-api/codex").replace(/\/$/, "");
-  return base.endsWith("/responses") ? base : `${base}/responses`;
-}
-
-function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
-    "Accept": stream ? "text/event-stream" : "application/json",
-    "originator": "codex_cli_rs",
-    "User-Agent": `codex_cli_rs/0.0.1 (${mapStainlessOs()}; ${arch()})`,
-  };
-  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
-  return headers;
 }
 
 function buildGithub(ctx: BuildContext): UpstreamResult {

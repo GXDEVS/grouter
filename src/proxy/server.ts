@@ -4,7 +4,6 @@ import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
-import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
@@ -629,6 +628,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       const codexState = fmt === "codex" ? newCodexStreamState() : null;
       let tail = "";
       let lineBuf = "";
+      let sseDataLines: string[] = [];
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
         transform(chunk, ctrl) {
           if (!needsTranslation) {
@@ -636,26 +636,91 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
             tail += dec.decode(chunk, { stream: true });
             if (tail.length > 4096) tail = tail.slice(-4096);
           } else {
-            lineBuf += dec.decode(chunk, { stream: true });
-            const lines = lineBuf.split("\n");
-            lineBuf = lines.pop() ?? "";
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed) continue;
+            const emitTranslated = (payload: string) => {
+              const trimmedPayload = payload.trim();
+              if (!trimmedPayload) return;
               const translated = claudeState
-                ? claudeChunkToOpenAI(trimmed, claudeState)
+                ? claudeChunkToOpenAI(trimmedPayload, claudeState)
                 : geminiState
-                  ? geminiChunkToOpenAI(trimmed, geminiState)
-                  : codexChunkToOpenAI(trimmed, codexState!);
+                  ? geminiChunkToOpenAI(trimmedPayload, geminiState)
+                  : codexChunkToOpenAI(trimmedPayload, codexState!);
               for (const out of translated) {
                 ctrl.enqueue(enc.encode(out));
                 tail += out;
               }
-            }
-            if (tail.length > 4096) tail = tail.slice(-4096);
+              if (tail.length > 4096) tail = tail.slice(-4096);
+            };
+
+            const processDecoded = (decoded: string) => {
+              lineBuf += decoded;
+              const lines = lineBuf.split("\n");
+              lineBuf = lines.pop() ?? "";
+              for (const rawLine of lines) {
+                const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+                if (line.startsWith("data:")) {
+                  sseDataLines.push(line.slice(5).trimStart());
+                  continue;
+                }
+                if (line.trim() === "") {
+                  if (sseDataLines.length > 0) {
+                    emitTranslated(sseDataLines.join("\n"));
+                    sseDataLines = [];
+                  }
+                  continue;
+                }
+                // Ignore non-data SSE fields (event:, id:, retry:, comments).
+                if (line.startsWith("event:") || line.startsWith("id:") || line.startsWith("retry:") || line.startsWith(":")) {
+                  continue;
+                }
+                // Fallback for plain line-delimited JSON streams.
+                emitTranslated(line);
+              }
+            };
+
+            processDecoded(dec.decode(chunk, { stream: true }));
           }
         },
-        flush() {
+        flush(ctrl) {
+          if (needsTranslation) {
+            const remainingDecoded = dec.decode();
+            if (remainingDecoded) {
+              lineBuf += remainingDecoded;
+            }
+
+            const emitTranslated = (payload: string) => {
+              const trimmedPayload = payload.trim();
+              if (!trimmedPayload) return;
+              const translated = claudeState
+                ? claudeChunkToOpenAI(trimmedPayload, claudeState)
+                : geminiState
+                  ? geminiChunkToOpenAI(trimmedPayload, geminiState)
+                  : codexChunkToOpenAI(trimmedPayload, codexState!);
+              for (const out of translated) {
+                ctrl.enqueue(enc.encode(out));
+                tail += out;
+              }
+              if (tail.length > 4096) tail = tail.slice(-4096);
+            };
+
+            if (lineBuf.trim()) {
+              const trailing = lineBuf.endsWith("\r") ? lineBuf.slice(0, -1) : lineBuf;
+              if (trailing.startsWith("data:")) {
+                sseDataLines.push(trailing.slice(5).trimStart());
+              } else if (trailing.trim() !== "") {
+                emitTranslated(trailing);
+              }
+            }
+            lineBuf = "";
+
+            if (sseDataLines.length > 0) {
+              emitTranslated(sseDataLines.join("\n"));
+              sseDataLines = [];
+            }
+          } else {
+            tail += dec.decode();
+            if (tail.length > 4096) tail = tail.slice(-4096);
+          }
+
           const stateUsage = claudeState?.usage ?? geminiState?.usage ?? null;
           const usage = needsTranslation && stateUsage
             ? { prompt: (stateUsage.prompt_tokens as number) ?? 0, completion: (stateUsage.completion_tokens as number) ?? 0, total: (stateUsage.total_tokens as number) ?? 0 }
