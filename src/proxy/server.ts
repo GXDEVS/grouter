@@ -1,10 +1,9 @@
 import chalk from "chalk";
-import { buildQwenHeaders, buildQwenUrl, buildQwenModelsUrl, QWEN_MODELS_OAUTH, QWEN_SYSTEM_MSG } from "../constants.ts";
+import { QWEN_MODELS_OAUTH } from "../constants.ts";
 import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
-import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
@@ -78,16 +77,17 @@ const SERVER_IDLE_TIMEOUT_SECONDS = 240;
 let modelsCache: { data: unknown[]; at: number } | null = null;
 const MODELS_TTL = 10 * 60 * 1000;
 
+/** Invalidates the in-memory models cache. Called by API handlers after config changes. */
+export function clearModelsCache(): void {
+  modelsCache = null;
+}
+
 /**
  * Aggregate models from ALL providers that have active connections.
  * Each model is prefixed: "provider/model-id".
  * Uses DB-stored models when available, otherwise falls back to registry.
  */
 async function fetchModels(req?: Request) {
-  if ((globalThis as any).__grouterClearModelsCache) {
-    modelsCache = null;
-    (globalThis as any).__grouterClearModelsCache = false;
-  }
   
   let baseData: unknown[] = [];
   if (modelsCache && Date.now() - modelsCache.at < MODELS_TTL) {
@@ -212,10 +212,7 @@ function jsonResponse(data: unknown, status = 200, extra?: Record<string, string
   return Response.json(data, { status, headers: { ...corsHeaders(), ...extra } });
 }
 
-function injectSystemMsg(body: Record<string, unknown>): Record<string, unknown> {
-  const messages = Array.isArray(body.messages) ? body.messages : [];
-  return { ...body, messages: [QWEN_SYSTEM_MSG, ...messages] };
-}
+
 
 interface TokenUsage { prompt: number; completion: number; total: number }
 

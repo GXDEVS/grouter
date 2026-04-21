@@ -1,6 +1,6 @@
 import { db } from "./index.ts";
 import { allocateProviderPort, releaseProviderPortIfEmpty } from "./ports.ts";
-import type { Connection, QwenAccount } from "../types.ts";
+import type { Connection } from "../types.ts";
 
 export function listAccounts(): Connection[] {
   return db()
@@ -43,27 +43,7 @@ export function getConnectionCountByProvider(): Record<string, number> {
   return Object.fromEntries(rows.map(r => [r.provider, r.count]));
 }
 
-export function addAccount(data: {
-  email: string | null;
-  display_name: string | null;
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  resource_url: string | null;
-}): Connection {
-  // Back-compat shim → addOAuthConnection with provider='qwen'
-  return addOAuthConnection({
-    provider: "qwen",
-    email: data.email,
-    display_name: data.display_name,
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: data.expires_at,
-    resource_url: data.resource_url,
-    api_key: null,
-    provider_data: null,
-  });
-}
+
 
 export function addOAuthConnection(data: {
   provider: string;
@@ -82,7 +62,7 @@ export function addOAuthConnection(data: {
   // Upsert by (provider, email)
   if (data.email) {
     const existing = db()
-      .query<QwenAccount, [string, string]>(
+      .query<Connection, [string, string]>(
         "SELECT * FROM accounts WHERE provider = ? AND email = ?"
       )
       .get(data.provider, data.email);

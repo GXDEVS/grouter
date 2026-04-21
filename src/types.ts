@@ -28,9 +28,6 @@ export interface Connection {
   updated_at: string;
 }
 
-// Backward-compat alias — existing code that imports QwenAccount keeps working
-export type QwenAccount = Connection;
-
 export interface ModelLock {
   id: number;
   account_id: string;
@@ -41,23 +38,6 @@ export interface ModelLock {
 export interface Setting {
   key: string;
   value: string;
-}
-
-export interface DeviceCodeResponse {
-  device_code: string;
-  user_code: string;
-  verification_uri: string;
-  verification_uri_complete: string;
-  expires_in: number;
-  interval: number;
-}
-
-export interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  resource_url?: string;
-  id_token?: string;
 }
 
 export interface RefreshedCredentials {

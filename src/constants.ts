@@ -5,13 +5,14 @@ export const QWEN_SCOPE = "openid profile email model.completion";
 export const QWEN_DEFAULT_API_BASE = "https://portal.qwen.ai/v1";
 export const QWEN_CODE_VERSION = "0.13.2";
 
+import { mapPlatformOs } from "./utils.ts";
+
 export const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;
 
 // Cooldowns
 export const COOLDOWN_UNAUTHORIZED_MS = 15 * 60 * 1000;
 export const COOLDOWN_PAYMENT_MS = 60 * 60 * 1000;
 export const COOLDOWN_TRANSIENT_MS = 5_000;
-export const COOLDOWN_NOT_FOUND_MS = 15 * 60 * 1000;
 export const RATE_LIMIT_BACKOFF_BASE_MS = 1_000;
 export const RATE_LIMIT_BACKOFF_MAX_MS = 2 * 60 * 1000;
 export const RATE_LIMIT_BACKOFF_MAX_LEVEL = 15;
@@ -25,11 +26,7 @@ const STAINLESS = {
   runtime: "node",
 };
 
-function stainlessOs(): string {
-  if (process.platform === "darwin") return "MacOS";
-  if (process.platform === "win32") return "Windows";
-  return "Linux";
-}
+
 
 export function qwenUserAgent(): string {
   return `QwenCode/${QWEN_CODE_VERSION} (${process.platform}; ${process.arch})`;
@@ -48,7 +45,7 @@ export function buildQwenHeaders(accessToken: string, stream = true): Record<str
     "X-Stainless-Runtime-Version": STAINLESS.runtimeVersion,
     "X-Stainless-Lang": STAINLESS.lang,
     "X-Stainless-Arch": process.arch,
-    "X-Stainless-Os": stainlessOs(),
+    "X-Stainless-Os": mapPlatformOs(),
     "X-Stainless-Package-Version": STAINLESS.packageVersion,
     "X-Stainless-Retry-Count": STAINLESS.retryCount,
     Accept: stream ? "text/event-stream" : "application/json",
@@ -66,9 +63,7 @@ export function buildQwenUrl(resourceUrl: string | null): string {
   return `${buildQwenApiBase(resourceUrl)}/chat/completions`;
 }
 
-export function buildQwenModelsUrl(resourceUrl: string | null): string {
-  return `${buildQwenApiBase(resourceUrl)}/models`;
-}
+
 
 // Known models for Qwen OAuth portal (QwenCode IDE endpoint)
 export const QWEN_MODELS_OAUTH = [

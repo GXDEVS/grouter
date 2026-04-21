@@ -2,7 +2,7 @@ import { db, getStrategy, getStickyLimit } from "../db/index.ts";
 import { updateAccount } from "../db/accounts.ts";
 import { isModelLockActive, setModelLock, clearModelLock, getEarliestLockUntilForAccounts } from "./lock.ts";
 import { checkFallbackError, formatDuration } from "./fallback.ts";
-import type { Connection, QwenAccount, RateLimitedResult, TemporarilyUnavailableResult, FallbackDecision } from "../types.ts";
+import type { Connection, RateLimitedResult, TemporarilyUnavailableResult, FallbackDecision } from "../types.ts";
 
 export function selectAccount(
   provider: string,
@@ -104,7 +104,7 @@ export function markAccountUnavailable(
 
   const decision = checkFallbackError(status, errorText, account?.backoff_level ?? 0);
 
-  const patch: Partial<QwenAccount> = {
+  const patch: Partial<Connection> = {
     last_error: errorText.slice(0, 500),
     error_code: status,
     last_error_at: new Date().toISOString(),

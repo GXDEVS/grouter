@@ -16,6 +16,7 @@
 
 import { platform, arch } from "node:os";
 import type { Connection } from "../types.ts";
+import { parseProviderData, decodeJwtPayload, mapPlatformOs } from "../utils.ts";
 import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { getProvider } from "../providers/registry.ts";
 import {
@@ -25,8 +26,6 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
-import { openaiToCodexResponses } from "./codex-translator.ts";
-import { extractCodexAccountId } from "../auth/providers/codex.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -44,21 +43,7 @@ interface BuildContext {
   stream: boolean;
 }
 
-function parseProviderData(raw: string | null): Record<string, unknown> | null {
-  if (!raw) return null;
-  try { return JSON.parse(raw) as Record<string, unknown>; } catch { return null; }
-}
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  const parts = token.split(".");
-  const payload = parts[1];
-  if (!payload) return null;
-  try {
-    return JSON.parse(Buffer.from(payload, "base64url").toString("utf-8")) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
 
 function extractCodexAccountId(token: string, providerData: Record<string, unknown> | null): string | null {
   const fromProviderData = typeof providerData?.accountId === "string" ? providerData.accountId : null;
@@ -84,37 +69,11 @@ function extractCodexAccountId(token: string, providerData: Record<string, unkno
   return null;
 }
 
-function resolveCodexResponsesUrl(baseUrl: string | null): string {
-  const base = (baseUrl && baseUrl.trim()) || "https://chatgpt.com/backend-api/codex";
-  const normalized = base.replace(/\/+$/, "");
-  if (normalized.endsWith("/codex/responses")) return normalized;
-  if (normalized.endsWith("/codex")) return `${normalized}/responses`;
-  return `${normalized}/codex/responses`;
-}
 
-function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: stream ? "text/event-stream" : "application/json",
-    Authorization: `Bearer ${token}`,
-    originator: "codex_cli_rs",
-    "User-Agent": `codex_cli_rs/0.0.1 (${platform()}; ${arch()})`,
-    Origin: "https://chatgpt.com",
-    Referer: "https://chatgpt.com/",
-    "Accept-Language": "en-US,en;q=0.9",
-  };
-  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
-  return headers;
-}
 
 // ── Header helpers ───────────────────────────────────────────────────────────
 
-function mapStainlessOs(): string {
-  const p = platform();
-  if (p === "darwin") return "MacOS";
-  if (p === "win32")  return "Windows";
-  return "Linux";
-}
+
 
 function buildKimiHeaders(): Record<string, string> {
   return {
@@ -207,7 +166,7 @@ function buildCodexHeaders(token: string, accountId: string | null, stream: bool
     "Authorization": `Bearer ${token}`,
     "Accept": stream ? "text/event-stream" : "application/json",
     "originator": "codex_cli_rs",
-    "User-Agent": `codex_cli_rs/0.0.1 (${mapStainlessOs()}; ${arch()})`,
+    "User-Agent": `codex_cli_rs/0.0.1 (${mapPlatformOs()}; ${arch()})`,
   };
   if (accountId) headers["ChatGPT-Account-ID"] = accountId;
   return headers;

@@ -265,7 +265,7 @@ scripts/
 └── embed-logos.ts    # prebuild — emits src/web/logos-embedded.ts
 ```
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full architecture guide — request flow, provider-registry rules, database migration conventions, and Bun-first runtime defaults.
+See [`AGENTS.md`](./AGENTS.md) for the full architecture guide — request flow, provider-registry rules, database migration conventions, and Bun-first runtime defaults.
 
 ---
 
@@ -289,7 +289,7 @@ Lowercase, kebab-case, under 60 chars. Types:
 | `refactor/` | internal restructuring, no behavior change |
 | `perf/` | performance improvement |
 | `chore/` | deps, build, tooling |
-| `docs/` | README, CLAUDE.md, comments |
+| `docs/` | README, AGENTS.md, comments |
 | `test/` | tests only |
 | `ci/` | `.github/workflows`, release pipelines |
 | `release/` | release prep (e.g. `release/v4.8.0`) |
@@ -357,7 +357,7 @@ For non-trivial changes (new provider with odd OAuth flow, schema migration, rot
 
 - **Bugs & feature requests** → [GitHub Issues](https://github.com/GXDEVS/grouter/issues)
 - **Security issues** → do not open a public issue. Email the maintainer or use GitHub's private vulnerability reporting.
-- **Architecture questions** → [`CLAUDE.md`](./CLAUDE.md) covers the request flow, DB schema, and provider-registry contract.
+- **Architecture questions** → [`AGENTS.md`](./AGENTS.md) covers the request flow, DB schema, and provider-registry contract.
 
 ---
 

@@ -6,7 +6,7 @@ import {
   importToken,
 } from "../auth/orchestrator.ts";
 import { startCallbackListener } from "../auth/server.ts";
-import { ensureProviderServer } from "../proxy/server.ts";
+import { ensureProviderServer, clearModelsCache } from "../proxy/server.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider } from "../db/accounts.ts";
 import { getUsageTotals, getUsageByModel, getUsageByAccount } from "../db/usage.ts";
@@ -525,7 +525,7 @@ export async function handleProviderConfig(id: string, req: Request): Promise<Re
       // Give server instances a hint to discard cache by touching models DB (already implemented implicitly next refresh)
       // They use modelsCache with TTL, so we can export a way or just let it expire in 10 mins.
       // Easiest is to do nothing complicated, but let's expose a global flag if needed.
-      (globalThis as any).__grouterClearModelsCache = true;
+      clearModelsCache();
     }
     return json({ ok: true, free_only: body.free_only });
   } catch (err) {
@@ -539,7 +539,7 @@ export async function handleRefreshProviderModels(id: string): Promise<Response>
   if (!p) return json({ error: `Unknown provider: ${id}` }, 404);
   try {
     const result = await fetchAndSaveProviderModels(id);
-    (globalThis as any).__grouterClearModelsCache = true;
+    clearModelsCache();
     return json({ provider: id, models: result.models, source: result.source });
   } catch (err) {
     return json({ error: String(err) }, 500);
@@ -572,7 +572,7 @@ export async function handleRefreshProviderModelsBatch(req: Request): Promise<Re
       }
     }));
 
-    (globalThis as any).__grouterClearModelsCache = true;
+    clearModelsCache();
     const success = results.filter((r) => r.ok).length;
     return json({
       ok: success === results.length,

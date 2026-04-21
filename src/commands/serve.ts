@@ -162,9 +162,17 @@ export async function serveRestartCommand(options: { port?: number }): Promise<v
 
 export function serveLogsCommand(): void {
   console.log(chalk.gray(`\n  Tailing ${LOG_FILE}  (Ctrl+C to stop)\n`));
-  Bun.spawn(["tail", "-f", "-n", "50", LOG_FILE], {
-    stdio: ["ignore", "inherit", "inherit"],
-  });
+
+  if (process.platform === "win32") {
+    // Windows: use PowerShell's Get-Content -Wait (equivalent to tail -f)
+    Bun.spawn(["powershell", "-NoProfile", "-Command", `Get-Content -Path '${LOG_FILE}' -Tail 50 -Wait`], {
+      stdio: ["ignore", "inherit", "inherit"],
+    });
+  } else {
+    Bun.spawn(["tail", "-f", "-n", "50", LOG_FILE], {
+      stdio: ["ignore", "inherit", "inherit"],
+    });
+  }
 }
 
 // ── Foreground (legacy / daemon entry point) ──────────────────────────────────

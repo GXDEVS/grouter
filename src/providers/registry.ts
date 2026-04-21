@@ -720,7 +720,7 @@ export const PROVIDERS: Record<string, Provider> = {
     baseUrl: "https://api.sambanova.ai/v1",
     apiKeyUrl: "https://cloud.sambanova.ai",
     underConstruction: true,
-    underConstructionReason: "Integração do SambaNova ainda está em construção — ela ficará disponível em uma próxima release.",
+    underConstructionReason: "SambaNova integration is under construction — it will be available in an upcoming release.",
     hasFreeModels: true,
     freeTier: {
       notice: "Free starter credits available (no credit card required to start).",
