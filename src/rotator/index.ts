@@ -63,16 +63,16 @@ export function selectAccount(
     if (withoutUsage.length > 0) {
       selected = withoutUsage[0]!;
     } else {
-      const sorted = withUsage.sort(
+      const oldestFirst = [...withUsage].sort(
         (a, b) => new Date(a.last_used_at!).getTime() - new Date(b.last_used_at!).getTime()
       );
       // Check if most-recently-used is under sticky limit
-      const mostRecent = withUsage.sort(
+      const mostRecent = [...withUsage].sort(
         (a, b) => new Date(b.last_used_at!).getTime() - new Date(a.last_used_at!).getTime()
       )[0];
       selected = (mostRecent && mostRecent.consecutive_use_count < stickyLimit)
         ? mostRecent
-        : (sorted[0] ?? candidates[0]!);
+        : (oldestFirst[0] ?? candidates[0]!);
     }
   } else {
     selected = candidates[0]!; // fill-first: already sorted by priority
