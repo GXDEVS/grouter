@@ -88,6 +88,10 @@ Recent hardening updates shipped on **April 21, 2026**:
 - Added unit coverage for `rotator`, `upstream`, `claude-translator`, `codex-translator`, and `gemini-translator`.
 - Fixed round-robin sticky selection edge case in `src/rotator/index.ts` (selection now stays correct when sticky limit is reached).
 - Added explicit field validation and safe patch typing in account update flow (`src/db/accounts.ts`) to prevent invalid patch keys.
+- Added aggressive asset optimization pipeline:
+  - logos are now packed with brotli in prebuild and lazily decompressed at runtime
+  - `animation.js` is embedded as gzip payload and inflated only when needed
+- Added `bun run assets:benchmark` to measure logo pack size, animation payload size, and final binary size.
 - Added safe static asset delivery optimization for dashboard assets (`ETag`/`304` and gzip for `/public/animation.js` when supported).
 - Finalized CLI status output cleanup to remove encoding artifacts and keep terminal-safe output.
 - Kept CI-style validation for this branch: `bun test` and `bun run build` passing.
@@ -242,6 +246,7 @@ bun run dev           # hot-reload, foreground proxy (bun --hot index.ts serve f
 bun run start         # foreground proxy, no hot-reload
 bun run build         # embeds logos, bundles to dist/grouter
 bun run deploy        # build + bun link (refresh the globally-linked binary)
+bun run assets:benchmark  # print asset + binary size metrics
 bun test              # Bun test runner
 ```
 
@@ -269,7 +274,9 @@ src/
 |-- web/              # dashboard + wizard (served as text imports)
 `-- update/           # update banner
 scripts/
-`-- embed-logos.ts    # prebuild - emits src/web/logos-embedded.ts
+|-- embed-logos.ts       # prebuild - emits src/web/logos-embedded.ts (brotli-packed)
+|-- embed-animation.ts   # prebuild - emits src/public/animation-embedded.ts (gzip-packed)
+`-- asset-benchmark.ts   # prints asset + binary size metrics
 ```
 
 See [`AGENTS.md`](./AGENTS.md) for the full architecture guide - request flow, provider-registry rules, database migration conventions, and Bun-first runtime defaults.

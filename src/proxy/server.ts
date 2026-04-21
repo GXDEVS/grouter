@@ -1,6 +1,5 @@
 import chalk from "chalk";
-import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
+import { gunzipSync } from "node:zlib";
 import { listAccounts } from "../db/accounts.ts";
 import { getSetting } from "../db/index.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
@@ -41,14 +40,18 @@ import {
   handleUpdateProxyPool,
 } from "../web/api.ts";
 import { serveLogo } from "../web/logos.ts";
+import {
+  ANIMATION_GZIP_B64,
+  ANIMATION_GZIP_LENGTH,
+  ANIMATION_RAW_LENGTH,
+  ANIMATION_RAW_SHA1,
+} from "../public/animation-embedded.ts";
 import { handleChatCompletions } from "./chat-handler.ts";
 import { clearModelsCache, fetchModels } from "./models.ts";
 import { SERVER_IDLE_TIMEOUT_SECONDS, corsHeaders, jsonResponse } from "./server-helpers.ts";
 import type { BunRequest } from "./server-helpers.ts";
 
-// HTML pages and static assets embedded at build time.
-// @ts-ignore
-import ANIMATION_JS from "../public/animation.js" with { type: "text" };
+// HTML pages embedded at build time.
 // @ts-ignore
 import DASHBOARD_HTML from "../web/dashboard.html" with { type: "text" };
 // @ts-ignore
@@ -62,10 +65,15 @@ function serveDashboard(): Response {
   return new Response(DASHBOARD_HTML as unknown as string, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
-const ANIMATION_TEXT = ANIMATION_JS as unknown as string;
-const ANIMATION_BYTES = Buffer.from(ANIMATION_TEXT, "utf8");
-const ANIMATION_GZIP_BYTES = gzipSync(ANIMATION_BYTES, { level: 9 });
-const ANIMATION_ETAG = `"${createHash("sha1").update(ANIMATION_BYTES).digest("hex")}"`;
+const ANIMATION_GZIP_BYTES = Buffer.from(ANIMATION_GZIP_B64, "base64");
+const ANIMATION_BYTES = gunzipSync(ANIMATION_GZIP_BYTES);
+const ANIMATION_ETAG = `"${ANIMATION_RAW_SHA1}"`;
+if (ANIMATION_GZIP_BYTES.length !== ANIMATION_GZIP_LENGTH) {
+  throw new Error("Invalid embedded animation gzip payload length");
+}
+if (ANIMATION_BYTES.length !== ANIMATION_RAW_LENGTH) {
+  throw new Error("Invalid embedded animation raw payload length");
+}
 
 function hasMatchingEtag(req: Request, etag: string): boolean {
   const ifNoneMatch = req.headers.get("if-none-match");
