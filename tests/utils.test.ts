@@ -26,7 +26,7 @@ describe("decodeJwtPayload", () => {
     const payload = { sub: "user123", name: "Test" };
     const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
     const fakeJwt = `header.${encoded}.signature`;
-    
+
     const result = decodeJwtPayload(fakeJwt);
     expect(result).toEqual(payload);
   });

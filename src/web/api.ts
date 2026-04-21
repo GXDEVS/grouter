@@ -8,14 +8,14 @@ import {
 import { startCallbackListener } from "../auth/server.ts";
 import { ensureProviderServer, clearModelsCache } from "../proxy/server.ts";
 import { getAdapter } from "../auth/providers/index.ts";
-import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider } from "../db/accounts.ts";
+import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider, type AccountPatch } from "../db/accounts.ts";
 import { getUsageTotals, getUsageByModel, getUsageByAccount } from "../db/usage.ts";
 import { getStrategy, getStickyLimit, getProxyPort, getSetting, setSetting, db } from "../db/index.ts";
 import { isRunning, readPid, removePid } from "../daemon/index.ts";
 import { estimateCostUSD } from "../constants.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
 import { PROVIDERS, getTopFreeProviderRank, providerHasFreeModelsById, saveCustomProvider, getProviderLock, type Provider } from "../providers/registry.ts";
-import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool } from "../db/pools.ts";
+import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool, type ProxyPoolPatch } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 import { listConnectionsByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
@@ -619,8 +619,46 @@ export async function handleUpdateProxyPool(id: string, req: Request): Promise<R
   try {
     const pool = getProxyPoolById(id);
     if (!pool) return json({ error: "Pool not found" }, 404);
-    const body = (await req.json()) as Partial<{ name: string; proxy_url: string; no_proxy: string | null; is_active: number }>;
-    updateProxyPool(id, body);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const allowed = new Set(["name", "proxy_url", "no_proxy", "is_active"]);
+    const unknownFields = Object.keys(body).filter((k) => !allowed.has(k));
+    if (unknownFields.length > 0) {
+      return json({ error: `Unknown field(s): ${unknownFields.join(", ")}` }, 400);
+    }
+
+    const patch: ProxyPoolPatch = {};
+    if ("name" in body) {
+      if (typeof body.name !== "string" || !body.name.trim()) {
+        return json({ error: "name must be a non-empty string" }, 400);
+      }
+      patch.name = body.name.trim();
+    }
+    if ("proxy_url" in body) {
+      if (typeof body.proxy_url !== "string" || !body.proxy_url.trim()) {
+        return json({ error: "proxy_url must be a non-empty string" }, 400);
+      }
+      patch.proxy_url = body.proxy_url.trim();
+    }
+    if ("no_proxy" in body) {
+      if (body.no_proxy !== null && typeof body.no_proxy !== "string") {
+        return json({ error: "no_proxy must be a string or null" }, 400);
+      }
+      patch.no_proxy = body.no_proxy === null ? null : body.no_proxy.trim();
+    }
+    if ("is_active" in body) {
+      const value = Number(body.is_active);
+      if (!Number.isInteger(value) || (value !== 0 && value !== 1)) {
+        return json({ error: "is_active must be 0 or 1" }, 400);
+      }
+      patch.is_active = value;
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return json({ error: "No valid fields provided for update" }, 400);
+    }
+
+    updateProxyPool(id, patch);
     return json({ ok: true, pool: getProxyPoolById(id) });
   } catch (err) { return json({ error: String(err) }, 500); }
 }
@@ -631,8 +669,34 @@ export async function handleUpdateConnection(id: string, req: Request): Promise<
     const accounts = listAccounts();
     const account  = accounts.find((a) => a.id === id);
     if (!account) return json({ error: "Connection not found" }, 404);
-    const body = (await req.json()) as { proxy_pool_id?: string | null };
-    updateAccount(id, body);
+
+    const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+    const unknownFields = Object.keys(body).filter((k) => k !== "proxy_pool_id");
+    if (unknownFields.length > 0) {
+      return json({ error: `Unknown field(s): ${unknownFields.join(", ")}` }, 400);
+    }
+    if (!("proxy_pool_id" in body)) {
+      return json({ error: "proxy_pool_id is required" }, 400);
+    }
+
+    const poolId = body.proxy_pool_id;
+    if (poolId !== null && typeof poolId !== "string") {
+      return json({ error: "proxy_pool_id must be a string or null" }, 400);
+    }
+
+    const patch: AccountPatch = {};
+    if (poolId === null) {
+      patch.proxy_pool_id = null;
+    } else {
+      const trimmed = poolId.trim();
+      if (!trimmed) return json({ error: "proxy_pool_id must not be empty" }, 400);
+      if (!getProxyPoolById(trimmed)) {
+        return json({ error: `Proxy pool not found: ${trimmed}` }, 404);
+      }
+      patch.proxy_pool_id = trimmed;
+    }
+
+    updateAccount(id, patch);
     return json({ ok: true });
   } catch (err) { return json({ error: String(err) }, 500); }
 }
