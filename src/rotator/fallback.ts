@@ -1,6 +1,4 @@
 import {
-  COOLDOWN_UNAUTHORIZED_MS,
-  COOLDOWN_PAYMENT_MS,
   COOLDOWN_TRANSIENT_MS,
   RATE_LIMIT_BACKOFF_BASE_MS,
   RATE_LIMIT_BACKOFF_MAX_MS,
@@ -49,7 +47,14 @@ function isRateLimitSignal(status: number, lowerErrorText: string): boolean {
 export function checkFallbackError(status: number, errorText: string, backoffLevel = 0): FallbackDecision {
   const lower = errorText.toLowerCase();
 
-  if (status === 401) return { shouldFallback: true, cooldownMs: COOLDOWN_UNAUTHORIZED_MS };
+  // Auth/permission failures should be surfaced quickly (401/402/403),
+  // not converted into minute-long cooldown locks that become opaque 503 loops.
+  // 401/402/403 should not place accounts into cooldown locks.
+  // Returning fallback=true with cooldown=0 still allows in-request rotation
+  // across other accounts, but prevents future instant 503 "all unavailable".
+  if (status === 401 || status === 402 || status === 403) {
+    return { shouldFallback: true, cooldownMs: 0 };
+  }
   // 404 model_not_found = wrong model ID, not provider outage, so do not lock account.
   if (status === 404) return { shouldFallback: false, cooldownMs: 0 };
   // 422 invalid request body/params is client-side and should not trigger account cooldown.
@@ -72,14 +77,6 @@ export function checkFallbackError(status: number, errorText: string, backoffLev
       cooldownMs: getExponentialCooldown(backoffLevel),
       newBackoffLevel: newLevel,
     };
-  }
-
-  if (lower.includes("request not allowed")) {
-    return { shouldFallback: true, cooldownMs: COOLDOWN_UNAUTHORIZED_MS };
-  }
-
-  if (status === 402 || status === 403) {
-    return { shouldFallback: true, cooldownMs: COOLDOWN_PAYMENT_MS };
   }
 
   if (status >= 500 || lower.includes("timeout")) {

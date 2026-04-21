@@ -20,6 +20,18 @@ function extractText(content: unknown): string {
   return "";
 }
 
+function serializeContent(content: unknown): string {
+  const text = extractText(content);
+  if (text) return text;
+  if (content === null || content === undefined) return "";
+  if (typeof content === "string") return content;
+  try {
+    return JSON.stringify(content);
+  } catch {
+    return String(content);
+  }
+}
+
 function buildParts(msg: OpenAIMsg): Part[] {
   const parts: Part[] = [];
   if (typeof msg.content === "string") {
@@ -37,6 +49,18 @@ function buildParts(msg: OpenAIMsg): Part[] {
   return parts;
 }
 
+function buildToolCallSummaryParts(msg: OpenAIMsg): Part[] {
+  const toolCalls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+  const parts: Part[] = [];
+  for (const rawToolCall of toolCalls) {
+    const toolCall = rawToolCall as { type?: string; function?: { name?: string; arguments?: string } };
+    if (toolCall.type !== "function" || !toolCall.function?.name) continue;
+    const args = toolCall.function.arguments ?? "{}";
+    parts.push({ text: `Tool call ${toolCall.function.name}: ${args}` });
+  }
+  return parts;
+}
+
 // ── Request: OpenAI → Code Assist envelope ───────────────────────────────────
 
 export function openaiToGemini(
@@ -46,16 +70,24 @@ export function openaiToGemini(
 ): Record<string, unknown> {
   const messages = (body.messages as OpenAIMsg[]) ?? [];
   const contents: Record<string, unknown>[] = [];
-  let systemInstruction: Record<string, unknown> | undefined;
+  const systemParts: Part[] = [];
 
   for (const msg of messages) {
     const role = msg.role as string;
-    if (role === "system") {
-      const text = extractText(msg.content);
-      if (text) systemInstruction = { role: "user", parts: [{ text }] };
+    if (role === "system" || role === "developer") {
+      const text = serializeContent(msg.content);
+      if (text) systemParts.push({ text });
       continue;
     }
     const parts = buildParts(msg);
+    if (role === "assistant") parts.push(...buildToolCallSummaryParts(msg));
+    if (role === "tool") {
+      const toolResultText = serializeContent(msg.content);
+      if (toolResultText) {
+        parts.length = 0;
+        parts.push({ text: `Tool result: ${toolResultText}` });
+      }
+    }
     if (parts.length === 0) continue;
     contents.push({ role: role === "assistant" ? "model" : "user", parts });
   }
@@ -66,7 +98,7 @@ export function openaiToGemini(
   if (typeof body.max_tokens === "number")  generationConfig.maxOutputTokens = body.max_tokens;
 
   const request: Record<string, unknown> = { contents };
-  if (systemInstruction) request.systemInstruction = systemInstruction;
+  if (systemParts.length > 0) request.systemInstruction = { role: "user", parts: systemParts };
   if (Object.keys(generationConfig).length > 0) request.generationConfig = generationConfig;
 
   return {

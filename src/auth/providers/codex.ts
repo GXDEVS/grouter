@@ -42,7 +42,7 @@ function extractAccountId(tokens: Record<string, unknown>): string | null {
   return null;
 }
 
-function loadCodexAuthJsonTokens(): Record<string, unknown> | null {
+function loadCodexAuthJsonTokens(minLifetimeSec = 60): Record<string, unknown> | null {
   const authPath = join(homedir(), ".codex", "auth.json");
   if (!existsSync(authPath)) return null;
   try {
@@ -54,6 +54,8 @@ function loadCodexAuthJsonTokens(): Record<string, unknown> | null {
 
     const exp = parseJwtExp(t.access_token);
     const now = Math.floor(Date.now() / 1000);
+    // Reject stale cached tokens to avoid refresh loops with already-expired auth.json data.
+    if (exp !== null && exp <= (now + minLifetimeSec)) return null;
     const expiresIn = exp && exp > now ? exp - now : 3600;
 
     return {
@@ -168,7 +170,13 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
     },
 
     async refresh({ refreshToken }) {
-      if (!refreshToken) return null;
+      if (!refreshToken) {
+        if (isCodex) {
+          const cached = loadCodexAuthJsonTokens();
+          if (cached) return normalize(cached);
+        }
+        return null;
+      }
       const resp = await fetch(CONFIG.tokenUrl, {
         method: "POST",
         headers: {
@@ -190,7 +198,13 @@ function buildAdapter(id: string, originator: string): OAuthAdapter {
       if (resp.status >= 500) {
         throw new Error(`OpenAI refresh failed with ${resp.status}: ${await resp.text()}`);
       }
-      if (!resp.ok) return null;
+      if (!resp.ok) {
+        if (isCodex && (resp.status === 400 || resp.status === 401)) {
+          const cached = loadCodexAuthJsonTokens();
+          if (cached) return normalize(cached);
+        }
+        return null;
+      }
 
       const data = await resp.json() as Record<string, unknown>;
       if (!data.access_token) return null;
