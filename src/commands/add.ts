@@ -152,38 +152,54 @@ async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
     }
   }
 
-  // Spin up ephemeral listener
-  const listener = startCallbackListener({
-    port: adapter.fixedPort ?? 0,
-    path: adapter.callbackPath ?? "/callback",
-  });
-
-  const started = startAuthCodeFlow(providerId, listener.redirectUri, meta);
-
-  console.log("");
-  console.log(chalk.bold(`  Authorize ${p.name} in your browser:`));
-  console.log(`  ${chalk.cyan("URL:")}  ${chalk.underline(started.authUrl)}`);
-  console.log("");
-
-  try { await open(started.authUrl); console.log(chalk.gray("  (Browser opened automatically)")); }
-  catch { console.log(chalk.gray("  (Open the URL above manually)")); }
-
-  console.log("");
-  const spinner = ora("Waiting for callbackâ€¦").start();
+  // Spin up ephemeral listener - wrap in try/finally to guarantee cleanup
+  let listener;
+  try {
+    listener = startCallbackListener({
+      port: adapter.fixedPort ?? 0,
+      path: adapter.callbackPath ?? "/callback",
+      redirectHost: adapter.callbackHost,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("port") && adapter.fixedPort) {
+      throw new Error(
+        `Port ${adapter.fixedPort} is already in use. ` +
+        `Another OAuth session may be in progress. ` +
+        `Try: killing any process on port ${adapter.fixedPort} or wait a few minutes.`
+      );
+    }
+    throw err;
+  }
 
   try {
-    const capture = await listener.wait();
-    listener.close();
-    if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
-    if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+    const started = startAuthCodeFlow(providerId, listener.redirectUri, meta);
 
-    spinner.text = "Exchanging code for tokensâ€¦";
-    const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
-    spinner.succeed(chalk.green("Authorization successful!"));
-    printSavedAccount(connection, p);
-  } catch (err) {
+    console.log("");
+    console.log(chalk.bold(`  Authorize ${p.name} in your browser:`));
+    console.log(`  ${chalk.cyan("URL:")}  ${chalk.underline(started.authUrl)}`);
+    console.log("");
+
+    try { await open(started.authUrl); console.log(chalk.gray("  (Browser opened automatically)")); }
+    catch { console.log(chalk.gray("  (Open the URL above manually)")); }
+
+    console.log("");
+    const spinner = ora("Waiting for callback…").start();
+
+    try {
+      const capture = await listener.wait();
+      if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
+      if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+
+      spinner.text = "Exchanging code for tokens…";
+      const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
+      spinner.succeed(chalk.green("Authorization successful!"));
+      printSavedAccount(connection, p);
+    } catch (err) {
+      spinner.fail(err instanceof Error ? err.message : String(err));
+    }
+  } finally {
     listener.close();
-    spinner.fail(err instanceof Error ? err.message : String(err));
   }
 }
 

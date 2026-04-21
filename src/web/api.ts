@@ -169,6 +169,7 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
     const listener = startCallbackListener({
       port: adapter.fixedPort ?? 0,
       path: adapter.callbackPath ?? "/callback",
+      redirectHost: adapter.callbackHost,
     });
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
