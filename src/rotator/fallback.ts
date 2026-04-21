@@ -54,6 +54,16 @@ export function checkFallbackError(status: number, errorText: string, backoffLev
   if (status === 404) return { shouldFallback: false, cooldownMs: 0 };
   // 422 invalid request body/params is client-side and should not trigger account cooldown.
   if (status === 422) return { shouldFallback: false, cooldownMs: 0 };
+  // 413 request-too-large is generally a client payload issue (prompt/tool schema/context),
+  // so return it directly instead of putting the account into cooldown rotation.
+  if (status === 413 && (
+    lower.includes("request too large") ||
+    lower.includes("tokens per minute") ||
+    lower.includes("context length") ||
+    lower.includes("prompt is too long")
+  )) {
+    return { shouldFallback: false, cooldownMs: 0 };
+  }
 
   if (isRateLimitSignal(status, lower)) {
     const newLevel = Math.min(backoffLevel + 1, RATE_LIMIT_BACKOFF_MAX_LEVEL);
