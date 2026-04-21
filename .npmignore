@@ -7,7 +7,6 @@ bun.lock
 # Dev / install scripts
 setup.sh
 uninstall.sh
-CLAUDE.md
 
 # Runtime data
 .grouter/

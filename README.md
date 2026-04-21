@@ -93,6 +93,7 @@ Recent hardening updates shipped on **April 21, 2026**:
   - `animation.js` is embedded as gzip payload and inflated only when needed
 - Added `bun run assets:benchmark` to measure logo pack size, animation payload size, and final binary size.
 - Added safe static asset delivery optimization for dashboard assets (`ETag`/`304` and gzip for `/public/animation.js` when supported).
+- Hardened CORS defaults for dashboard/API responses: allow-origin is now opt-in via `GROUTER_CORS_ALLOW_ALL=true` or `GROUTER_CORS_ALLOW_ORIGIN=https://your-origin`.
 - Finalized CLI status output cleanup to remove encoding artifacts and keep terminal-safe output.
 - Kept CI-style validation for this branch: `bun test` and `bun run build` passing.
 

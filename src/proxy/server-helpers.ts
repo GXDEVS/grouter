@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { buildCorsHeaders } from "../cors.ts";
 
 // Bun route params are not in the standard Request type.
 export interface BunRequest extends Request {
@@ -48,11 +49,7 @@ export function parseProviderModel(raw: string | null, pinnedProvider?: string):
 }
 
 export function corsHeaders(): Record<string, string> {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  };
+  return buildCorsHeaders("Content-Type, Authorization");
 }
 
 export function jsonResponse(data: unknown, status = 200, extra?: Record<string, string>): Response {

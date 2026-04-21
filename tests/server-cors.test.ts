@@ -15,16 +15,26 @@ afterAll(() => {
 });
 
 describe("server CORS preflight", () => {
-  test("returns 204 + CORS headers for known API route without explicit OPTIONS handler", async () => {
+  test("returns 204 for known API route without explicit OPTIONS handler", async () => {
     const res = await fetch(`${baseUrl}/api/status`, { method: "OPTIONS" });
     expect(res.status).toBe(204);
-    expect(res.headers.get("access-control-allow-origin")).toBe("*");
     expect(res.headers.get("access-control-allow-methods")).toContain("OPTIONS");
   });
 
-  test("returns 204 + CORS headers for unknown route OPTIONS request", async () => {
+  test("returns 204 for unknown route OPTIONS request", async () => {
     const res = await fetch(`${baseUrl}/__unknown__`, { method: "OPTIONS" });
     expect(res.status).toBe(204);
+  });
+
+  test("does not emit allow-origin by default (secure-by-default)", async () => {
+    const res = await fetch(`${baseUrl}/api/status`, { method: "OPTIONS" });
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("emits wildcard allow-origin when explicitly enabled", async () => {
+    process.env.GROUTER_CORS_ALLOW_ALL = "true";
+    const res = await fetch(`${baseUrl}/api/status`, { method: "OPTIONS" });
     expect(res.headers.get("access-control-allow-origin")).toBe("*");
+    delete process.env.GROUTER_CORS_ALLOW_ALL;
   });
 });

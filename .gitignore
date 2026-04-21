@@ -73,3 +73,6 @@ desktop.ini
 # *.local.json holds per-developer overrides (permission allowlists, etc.).
 .claude/settings.local.json
 .claude/*.local.json
+
+# Local maintenance leftovers
+scripts/fix-utf8.js
