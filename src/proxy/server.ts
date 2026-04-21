@@ -222,6 +222,36 @@ function nextGeminiFallbackModel(currentModel: string, tried: Set<string>): stri
   return null;
 }
 
+function isGroqLargePromptError(provider: string, status: number, errorText: string): boolean {
+  if (provider !== "groq" || status !== 413) return false;
+  const lower = errorText.toLowerCase();
+  return (
+    lower.includes("request too large for model") ||
+    (lower.includes("tokens per minute") && lower.includes("requested")) ||
+    lower.includes("\"type\":\"tokens\"")
+  );
+}
+
+function trimLargeRequestFields(body: Record<string, unknown>): { body: Record<string, unknown>; removed: string[] } {
+  const out: Record<string, unknown> = { ...body };
+  const removed: string[] = [];
+  const drop = (key: string) => {
+    if (Object.prototype.hasOwnProperty.call(out, key)) {
+      delete out[key];
+      removed.push(key);
+    }
+  };
+  drop("tools");
+  drop("tool_choice");
+  drop("parallel_tool_calls");
+  drop("response_format");
+  drop("metadata");
+  drop("store");
+  drop("logprobs");
+  drop("top_logprobs");
+  return { body: out, removed };
+}
+
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function corsHeaders(): Record<string, string> {
@@ -552,6 +582,8 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
   const excludeIds = new Set<string>();
   let rotations = 0;
   let currentModel = model;
+  let requestBodyBase: Record<string, unknown> = body;
+  let usedGroqTrimRetry = false;
   const triedGeminiModels = new Set<string>();
   if (provider === "gemini-cli" && currentModel) {
     triedGeminiModels.add(currentModel);
@@ -635,7 +667,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       : selected;
 
     // Normalize model before sending upstream by removing provider prefix.
-    const normalizedBody = { ...body, model: currentModel };
+    const normalizedBody = { ...requestBodyBase, model: currentModel };
     const dispatch = buildUpstream({ account, body: normalizedBody, stream });
     if (dispatch.kind === "unsupported") {
       logReq("POST", "/v1/chat/completions", 501, Date.now() - start, { model: rawModel, account: label, rotated: rotations });
@@ -678,6 +710,17 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
 
     if (!upstreamResp.ok) {
       const errText = await upstreamResp.text();
+      if (isGroqLargePromptError(provider, upstreamResp.status, errText) && !usedGroqTrimRetry && attempt < MAX_RETRIES - 1) {
+        const trimmed = trimLargeRequestFields(requestBodyBase);
+        if (trimmed.removed.length > 0) {
+          usedGroqTrimRetry = true;
+          requestBodyBase = trimmed.body;
+          console.log(
+            `  ${chalk.yellow("->")} retrying ${chalk.cyan(label)} after trimming large fields: ${chalk.gray(trimmed.removed.join(", "))}`,
+          );
+          continue;
+        }
+      }
       if (isGeminiModelCapacityError(provider, upstreamResp.status, errText)) {
         if (attempt < MAX_RETRIES - 1 && tryGeminiModelFallback(`capacity exhausted (${upstreamResp.status})`)) {
           continue;

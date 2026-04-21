@@ -22,7 +22,16 @@ function isRateLimitSignal(status: number, lowerErrorText: string): boolean {
     "rate limit reached",
   ];
   const hasStructuredMarker = structuredMarkers.some((m) => lowerErrorText.includes(m));
-  if (hasStructuredMarker && (status === 400 || status === 403 || status === 503 || status === 529)) {
+  if (hasStructuredMarker && (status === 400 || status === 403 || status === 413 || status === 503 || status === 529)) {
+    return true;
+  }
+
+  // Some providers (e.g. Groq) return 413 when the request blows past TPM/prompt limits.
+  if (status === 413 && (
+    lowerErrorText.includes("request too large") ||
+    lowerErrorText.includes("tokens per minute") ||
+    lowerErrorText.includes("context length")
+  )) {
     return true;
   }
 
