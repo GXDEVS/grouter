@@ -252,6 +252,66 @@ function trimLargeRequestFields(body: Record<string, unknown>): { body: Record<s
   return { body: out, removed };
 }
 
+function compactContentForGroq(content: unknown, maxChars = 6_000): unknown {
+  if (typeof content === "string") {
+    return content.length > maxChars ? content.slice(-maxChars) : content;
+  }
+  if (!Array.isArray(content)) return content;
+  const compacted = content
+    .filter((item) => item && typeof item === "object" && ((item as Record<string, unknown>).type === "text" || !("type" in (item as Record<string, unknown>))))
+    .map((item) => {
+      if (!item || typeof item !== "object") return item;
+      const rec = { ...(item as Record<string, unknown>) };
+      if (typeof rec.text === "string" && rec.text.length > maxChars) {
+        rec.text = rec.text.slice(-maxChars);
+      }
+      return rec;
+    });
+  return compacted.length > 0 ? compacted : content;
+}
+
+function compactGroqMessages(body: Record<string, unknown>): { body: Record<string, unknown>; changed: boolean } {
+  const messages = Array.isArray(body.messages) ? (body.messages as Array<Record<string, unknown>>) : null;
+  if (!messages || messages.length === 0) return { body, changed: false };
+
+  const sanitized = messages.map((msg) => {
+    const rec: Record<string, unknown> = { ...msg };
+    delete rec.tool_calls;
+    delete rec.function_call;
+    delete rec.audio;
+    rec.content = compactContentForGroq(rec.content);
+    return rec;
+  });
+
+  const systemLike = sanitized.filter((m) => {
+    const role = typeof m.role === "string" ? m.role : "";
+    return role === "system" || role === "developer";
+  });
+  const tail = sanitized.slice(-8);
+  const lastUser = [...sanitized].reverse().find((m) => m.role === "user") ?? null;
+
+  const selected: Array<Record<string, unknown>> = [];
+  if (systemLike.length > 0) selected.push(systemLike[systemLike.length - 1]!);
+  for (const m of tail) selected.push(m);
+  if (lastUser && !selected.includes(lastUser)) selected.push(lastUser);
+
+  const deduped: Array<Record<string, unknown>> = [];
+  const seen = new Set<Record<string, unknown>>();
+  for (const m of selected) {
+    if (seen.has(m)) continue;
+    seen.add(m);
+    deduped.push(m);
+  }
+
+  const reduced = deduped.length > 0 ? deduped : sanitized.slice(-2);
+  const out: Record<string, unknown> = { ...body, messages: reduced };
+  // Reduce completion target to leave room for prompt on strict TPM tiers.
+  if (typeof out.max_tokens !== "number" && typeof out.max_completion_tokens !== "number") {
+    out.max_tokens = 512;
+  }
+  return { body: out, changed: true };
+}
+
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function corsHeaders(): Record<string, string> {
@@ -584,6 +644,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
   let currentModel = model;
   let requestBodyBase: Record<string, unknown> = body;
   let usedGroqTrimRetry = false;
+  let usedGroqContextRetry = false;
   const triedGeminiModels = new Set<string>();
   if (provider === "gemini-cli" && currentModel) {
     triedGeminiModels.add(currentModel);
@@ -717,6 +778,17 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
           requestBodyBase = trimmed.body;
           console.log(
             `  ${chalk.yellow("->")} retrying ${chalk.cyan(label)} after trimming large fields: ${chalk.gray(trimmed.removed.join(", "))}`,
+          );
+          continue;
+        }
+      }
+      if (isGroqLargePromptError(provider, upstreamResp.status, errText) && !usedGroqContextRetry && attempt < MAX_RETRIES - 1) {
+        const compacted = compactGroqMessages(requestBodyBase);
+        if (compacted.changed) {
+          usedGroqContextRetry = true;
+          requestBodyBase = compacted.body;
+          console.log(
+            `  ${chalk.yellow("->")} retrying ${chalk.cyan(label)} after compacting message history for Groq TPM limits`,
           );
           continue;
         }
