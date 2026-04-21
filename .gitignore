@@ -58,6 +58,7 @@ pnpm-lock.yaml
 # ── Editor / IDE ────────────────────────────────────────────────────────────
 .idea/
 .vscode/
+.agents/
 *.swp
 *.swo
 *~
