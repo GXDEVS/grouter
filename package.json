@@ -1,6 +1,6 @@
 {
   "name": "grouter-auth",
-  "version": "5.2.1",
+  "version": "5.2.2",
   "description": "Universal AI router — OAuth + API Key providers (Claude, GitHub Copilot, Gemini, Kimi, Kiro, Qwen, Cursor, OpenRouter, Groq…) behind one OpenAI-compatible local proxy",
   "author": "gxdev",
   "license": "MIT",
