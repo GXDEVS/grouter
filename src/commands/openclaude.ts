@@ -4,7 +4,7 @@ import { join } from "node:path";
 import chalk from "chalk";
 import { select, input } from "@inquirer/prompts";
 import { getProxyPort } from "../db/index.ts";
-import { getProvider, providerHasFreeModelsById, PROVIDERS } from "../providers/registry.ts";
+import { getProvider, providerHasFreeModelsById, PROVIDERS, isProviderLocked } from "../providers/registry.ts";
 import { getProviderPort } from "../db/ports.ts";
 import { getConnectionCountByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
@@ -255,7 +255,7 @@ async function wizard(routerPort: number): Promise<{ providerId: string | null; 
   const counts = getConnectionCountByProvider();
 
   // Build provider list: connected providers first, then the rest.
-  const all = Object.values(PROVIDERS).filter(p => !p.deprecated);
+  const all = Object.values(PROVIDERS).filter(p => !isProviderLocked(p));
   const sorted = [...all].sort((a, b) => (counts[b.id] ?? 0) - (counts[a.id] ?? 0));
 
   const choices = [

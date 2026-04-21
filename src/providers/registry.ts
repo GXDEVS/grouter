@@ -65,11 +65,32 @@ export interface Provider {
   models: ProviderModel[];
   deprecated?: boolean;
   deprecationReason?: string;
+  underConstruction?: boolean;
+  underConstructionReason?: string;
   logo?: string;
   requiresMeta?: { key: string; label: string; placeholder?: string; required?: boolean }[];
   freeTier?: { notice: string; url?: string };
   hasFreeModels?: boolean;
   allModelsFree?: boolean;
+}
+
+export type ProviderLockKind = "deprecated" | "under-construction";
+
+export function getProviderLock(
+  p: Pick<Provider, "deprecated" | "deprecationReason" | "underConstruction" | "underConstructionReason" | "name"> | undefined | null,
+): { kind: ProviderLockKind; reason: string } | null {
+  if (!p) return null;
+  if (p.deprecated) {
+    return { kind: "deprecated", reason: p.deprecationReason ?? `${p.name} is deprecated` };
+  }
+  if (p.underConstruction) {
+    return { kind: "under-construction", reason: p.underConstructionReason ?? `${p.name} is under construction` };
+  }
+  return null;
+}
+
+export function isProviderLocked(p: Pick<Provider, "deprecated" | "underConstruction"> | undefined | null): boolean {
+  return !!(p && (p.deprecated || p.underConstruction));
 }
 
 export const PROVIDERS: Record<string, Provider> = {
@@ -698,6 +719,8 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#0ea5e9",
     baseUrl: "https://api.sambanova.ai/v1",
     apiKeyUrl: "https://cloud.sambanova.ai",
+    underConstruction: true,
+    underConstructionReason: "Integração do SambaNova ainda está em construção — ela ficará disponível em uma próxima release.",
     hasFreeModels: true,
     freeTier: {
       notice: "Free starter credits available (no credit card required to start).",

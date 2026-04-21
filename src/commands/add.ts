@@ -2,7 +2,7 @@
 import ora from "ora";
 import open from "open";
 import { select, input, password, editor, Separator } from "@inquirer/prompts";
-import { PROVIDERS, getProvider, providerHasFreeModelsById, type Provider, saveCustomProvider } from "../providers/registry.ts";
+import { PROVIDERS, getProvider, providerHasFreeModelsById, isProviderLocked, type Provider, saveCustomProvider } from "../providers/registry.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { startCallbackListener } from "../auth/server.ts";
 import {
@@ -55,7 +55,7 @@ export async function addCommand(): Promise<void> {
 // Ã¢â€â‚¬Ã¢â€â‚¬ Provider picker Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function pickProvider(): Promise<string | null> {
-  const all = Object.values(PROVIDERS).filter(p => !p.deprecated);
+  const all = Object.values(PROVIDERS).filter(p => !isProviderLocked(p));
 
   const freeOAuth = all.filter(p => p.authType === "oauth" && providerHasFreeModelsById(p.id));
   const paidOAuth = all.filter(p => p.authType === "oauth" && !providerHasFreeModelsById(p.id));

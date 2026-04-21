@@ -14,7 +14,7 @@ import { getStrategy, getStickyLimit, getProxyPort, getSetting, setSetting, db }
 import { isRunning, readPid, removePid } from "../daemon/index.ts";
 import { estimateCostUSD } from "../constants.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
-import { PROVIDERS, getTopFreeProviderRank, providerHasFreeModelsById, saveCustomProvider, type Provider } from "../providers/registry.ts";
+import { PROVIDERS, getTopFreeProviderRank, providerHasFreeModelsById, saveCustomProvider, getProviderLock, type Provider } from "../providers/registry.ts";
 import { listProxyPools, getProxyPoolById, createProxyPool, updateProxyPool, deleteProxyPool, testProxyPool, getConnectionCountForPool } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 import { listConnectionsByProvider } from "../db/accounts.ts";
@@ -99,6 +99,7 @@ export function handleStatus(): Response {
     logo: p.logo ?? null,
     authType: p.authType,
     deprecated: p.deprecated ?? false,
+    underConstruction: p.underConstruction ?? false,
     connections: providerCounts[id] ?? 0,
     port: portMap[id] ?? null,
   })).filter(p => p.connections > 0);
@@ -127,7 +128,8 @@ export async function handleAuthStart(req: Request): Promise<Response> {
     const providerId = body.provider;
     const meta = PROVIDERS[providerId];
     if (!meta) return json({ error: `Unknown provider: ${providerId}` }, 400);
-    if (meta.deprecated) return json({ error: meta.deprecationReason ?? `${meta.name} is deprecated` }, 410);
+    const lock = getProviderLock(meta);
+    if (lock) return json({ error: lock.reason }, lock.kind === "deprecated" ? 410 : 503);
     const adapter = getAdapter(providerId);
     if (!adapter) return json({ error: `No OAuth adapter for ${providerId}` }, 400);
     if (adapter.flow !== "device_code") {
@@ -400,6 +402,8 @@ export function handleGetProviders(): Response {
       apiKeyUrl:         p.apiKeyUrl ?? null,
       deprecated:        p.deprecated ?? false,
       deprecationReason: p.deprecationReason ?? null,
+      underConstruction:       p.underConstruction ?? false,
+      underConstructionReason: p.underConstructionReason ?? null,
       models:            p.models,
       connections:       counts[p.id] ?? 0,
       port:              getProviderPort(p.id),
@@ -478,7 +482,8 @@ export async function handleAddConnection(req: Request): Promise<Response> {
 
     const p = PROVIDERS[body.provider];
     if (!p) return json({ error: `Unknown provider: ${body.provider}` }, 400);
-    if (p.deprecated) return json({ error: `${p.name} is no longer accepting new connections: ${p.deprecationReason ?? "deprecated"}` }, 410);
+    const addLock = getProviderLock(p);
+    if (addLock) return json({ error: addLock.reason }, addLock.kind === "deprecated" ? 410 : 503);
     if (p.authType !== "apikey") return json({ error: "Use OAuth flow for this provider" }, 400);
 
     const connection = addApiKeyConnection({

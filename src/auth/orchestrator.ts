@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { getAdapter } from "./providers/index.ts";
 import { generatePKCE } from "./pkce.ts";
 import { addOAuthConnection } from "../db/accounts.ts";
-import { getProvider } from "../providers/registry.ts";
+import { getProvider, getProviderLock } from "../providers/registry.ts";
 import type {
   NormalizedTokens,
   OAuthAdapter,
@@ -37,10 +37,8 @@ export function deleteSession(id: string): void {
 function requireAdapter(providerId: string): OAuthAdapter {
   const a = getAdapter(providerId);
   if (!a) throw new Error(`No OAuth adapter for provider: ${providerId}`);
-  const meta = getProvider(providerId);
-  if (meta?.deprecated) {
-    throw new Error(meta.deprecationReason ?? `${providerId} is deprecated`);
-  }
+  const lock = getProviderLock(getProvider(providerId));
+  if (lock) throw new Error(lock.reason);
   return a;
 }
 

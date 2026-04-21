@@ -80,12 +80,15 @@
     .provider-card.connected { border-color:rgba(34,197,94,0.35); }
     .provider-card.deprecated { opacity:0.55; cursor:not-allowed; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.03); }
     .provider-card.deprecated:hover { border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.04); }
+    .provider-card.under-construction { opacity:0.7; cursor:not-allowed; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.04); }
+    .provider-card.under-construction:hover { border-color:rgba(245,158,11,0.45); background:rgba(245,158,11,0.05); }
     .provider-icon { width:2.25rem; height:2.25rem; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; letter-spacing:0.03em; color:#121212; flex-shrink:0; overflow:hidden; }
     .provider-icon iconify-icon { font-size:1.5rem; color:#fff; }
     .provider-icon.logo-light { background:#ffffff; }
     .provider-icon.logo-light iconify-icon { color:inherit; }
     .provider-badge { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(34,197,94,0.15); color:#22c55e; }
     .provider-badge-deprecated { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(239,68,68,0.18); color:#ef4444; text-transform:uppercase; letter-spacing:0.05em; }
+    .provider-badge-under-construction { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(245,158,11,0.2); color:#f59e0b; text-transform:uppercase; letter-spacing:0.05em; }
     .provider-badge-free { position:absolute; top:0.5rem; left:0.5rem; font-size:0.56rem; font-weight:800; padding:0.1rem 0.4rem; border-radius:9999px; background:linear-gradient(135deg,#10b981,#22c55e); color:#0a0a0a; text-transform:uppercase; letter-spacing:0.06em; box-shadow:0 0 6px rgba(34,197,94,0.3); }
     .provider-port-tag { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.6rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:6px; background:#0d0d0d; color:#0AB9DC; font-family:monospace; }
     .apikey-row { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:10px; background:#0d0d0d; border:1px solid #1f1f1f; }
@@ -800,9 +803,9 @@ const I18N = {
     cfg_unlock_btn:'Unlock',cfg_unlocked:'Unlocked!',
     // Providers section
     providers_oauth_title:'OAuth Providers',providers_free_title:'Free Providers',providers_apikey_title:'API Key Providers',
-    provider_badge_free:'Free',provider_badge_deprecated:'Deprecated',
+    provider_badge_free:'Free',provider_badge_deprecated:'Deprecated',provider_badge_under_construction:'Soon',
     provider_meta_none:'None configured yet.',
-    provider_status_connected:'{n} connected',provider_status_none:'No connections',provider_status_discontinued:'Discontinued',
+    provider_status_connected:'{n} connected',provider_status_none:'No connections',provider_status_discontinued:'Discontinued',provider_status_under_construction:'Under construction',
     // OAuth flows
     flow_device_code:'Device code flow',flow_auth_code:'Authorization code flow',flow_import_token:'Paste token',
     // OAuth picker
@@ -830,6 +833,8 @@ const I18N = {
     // Deprecation / qwen
     qwen_deprecated_title:'Qwen Code Free discontinued',
     qwen_deprecated_msg:'Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.',
+    under_construction_title:'Provider under construction',
+    under_construction_msg:'This provider is not available yet. It will be enabled in an upcoming release.',
     btn_add_another:'Add another',btn_try_again:'Try again',
     no_oauth_available:'No OAuth providers available. Add an API key provider instead.',
     models_title_suffix:'Models',models_loading:'Loading...',models_refresh:'Refresh Models',
@@ -878,9 +883,9 @@ const I18N = {
     cfg_unlock_label:'Desbloquear todas as contas',cfg_unlock_hint:'Limpa todos os bloqueios e reseta o estado de backoff.',
     cfg_unlock_btn:'Desbloquear',cfg_unlocked:'Desbloqueado!',
     providers_oauth_title:'Provedores OAuth',providers_free_title:'Provedores Gratuitos',providers_apikey_title:'Provedores com API Key',
-    provider_badge_free:'Grátis',provider_badge_deprecated:'Descontinuado',
+    provider_badge_free:'Grátis',provider_badge_deprecated:'Descontinuado',provider_badge_under_construction:'Em breve',
     provider_meta_none:'Nenhum configurado ainda.',
-    provider_status_connected:'{n} conectado(s)',provider_status_none:'Sem conexões',provider_status_discontinued:'Descontinuado',
+    provider_status_connected:'{n} conectado(s)',provider_status_none:'Sem conexões',provider_status_discontinued:'Descontinuado',provider_status_under_construction:'Em construção',
     flow_device_code:'Fluxo de código do dispositivo',flow_auth_code:'Fluxo de código de autorização',flow_import_token:'Colar token',
     picker_title:'Escolha um provedor',picker_sub:'Selecione qual provedor OAuth conectar',
     modal_connect_title:'Conectar',
@@ -902,6 +907,8 @@ const I18N = {
     err_meta_required:'{label} é obrigatório.',
     qwen_deprecated_title:'Qwen Code Free descontinuado',
     qwen_deprecated_msg:'O Qwen Code Free foi descontinuado. Contas existentes continuam funcionando, mas novos cadastros OAuth não são mais aceitos.',
+    under_construction_title:'Provedor em construção',
+    under_construction_msg:'Este provedor ainda não está disponível. Ele será liberado em uma próxima release.',
     btn_add_another:'Adicionar outro',btn_try_again:'Tentar novamente',
     no_oauth_available:'Nenhum provedor OAuth disponível. Adicione um provedor com API Key.',
     models_title_suffix:'Modelos',models_loading:'Carregando...',models_refresh:'Atualizar Modelos',
@@ -950,9 +957,9 @@ const I18N = {
     cfg_unlock_label:'解锁所有账户',cfg_unlock_hint:'清除所有限速锁定并重置退避状态。',
     cfg_unlock_btn:'解锁',cfg_unlocked:'已解锁！',
     providers_oauth_title:'OAuth 提供商',providers_free_title:'免费提供商',providers_apikey_title:'API 密钥提供商',
-    provider_badge_free:'免费',provider_badge_deprecated:'已弃用',
+    provider_badge_free:'免费',provider_badge_deprecated:'已弃用',provider_badge_under_construction:'即将推出',
     provider_meta_none:'尚未配置。',
-    provider_status_connected:'已连接 {n} 个',provider_status_none:'无连接',provider_status_discontinued:'已停用',
+    provider_status_connected:'已连接 {n} 个',provider_status_none:'无连接',provider_status_discontinued:'已停用',provider_status_under_construction:'建设中',
     flow_device_code:'设备代码流程',flow_auth_code:'授权码流程',flow_import_token:'粘贴令牌',
     picker_title:'选择提供商',picker_sub:'选择要连接的 OAuth 提供商',
     modal_connect_title:'连接',
@@ -972,6 +979,8 @@ const I18N = {
     err_network:'网络错误。',
     err_empty_token:'请先粘贴令牌。',err_import_fail:'导入失败。',
     err_meta_required:'{label} 为必填项。',
+    under_construction_title:'提供商建设中',
+    under_construction_msg:'此提供商尚未可用。将在即将发布的版本中启用。',
     qwen_deprecated_title:'Qwen Code Free 已停用',
     qwen_deprecated_msg:'Qwen Code Free 已停用。现有账户继续可用，但不再接受新的 OAuth 注册。',
     btn_add_another:'再添加一个',btn_try_again:'重试',
@@ -1608,21 +1617,27 @@ function renderProviderGrid(gridId, providers) {
   el.innerHTML = providers.map(p => {
     const connected  = p.connections > 0;
     const deprecated = !!p.deprecated;
+    const underConstruction = !!p.underConstruction;
+    const locked     = deprecated || underConstruction;
     const meta       = deprecated ? tr('provider_status_discontinued')
+                       : underConstruction ? tr('provider_status_under_construction')
                        : connected ? (tr('provider_status_connected',{n:p.connections}) + (p.port ? ' · :' + p.port : ''))
                        : tr('provider_status_none');
     const badge      = deprecated ? `<span class="provider-badge-deprecated">${tr('provider_badge_deprecated')}</span>`
+                       : underConstruction ? `<span class="provider-badge-under-construction">${tr('provider_badge_under_construction')}</span>`
                        : connected ? `<span class="provider-badge">${p.connections}</span>` : '';
-    const freeBadge  = p.freeTier ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
-    const click      = deprecated ? '' : `onclick="openProviderCard('${p.id}')"`;
-    const modelsBtn  = (p.id !== 'custom' && !deprecated)
+    const freeBadge  = (p.freeTier && !underConstruction) ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
+    const click      = locked ? '' : `onclick="openProviderCard('${p.id}')"`;
+    const modelsBtn  = (p.id !== 'custom' && !locked)
       ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:list-bold-duotone" style="font-size:0.8rem;"></iconify-icon></button>`
       : '';
-    return `<div class="provider-card${connected?' connected':''}${deprecated?' deprecated':''}" ${click}>
+    const metaColor  = deprecated ? '#ef4444' : underConstruction ? '#f59e0b' : '#6b7280';
+    const stateClass = deprecated ? ' deprecated' : underConstruction ? ' under-construction' : '';
+    return `<div class="provider-card${connected?' connected':''}${stateClass}" ${click}>
       ${providerIconHtml(p)}
       <div style="min-width:0;flex:1;">
         <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
-        <p style="font-size:0.68rem;color:${deprecated?'#ef4444':'#6b7280'};margin-top:0.1rem;">${meta}</p>
+        <p style="font-size:0.68rem;color:${metaColor};margin-top:0.1rem;">${meta}</p>
       </div>
       ${modelsBtn}
       ${freeBadge}
@@ -1636,6 +1651,7 @@ function openProviderCard(providerId) {
     const p = providers.find(x=>x.id===providerId);
     if (!p) return;
     if (p.deprecated) { alert(p.name + ': ' + (p.deprecationReason || 'This provider is no longer accepting new connections.')); return; }
+    if (p.underConstruction) { alert(p.name + ': ' + (p.underConstructionReason || tr('under_construction_msg'))); return; }
     if (p.authType === 'oauth') { openOAuthModal(p); return; }
     openConnectModal(p);
   }).catch(()=>{});
@@ -1927,7 +1943,7 @@ async function openAddModal() {
   try {
     const res = await fetch('/api/providers');
     const { providers } = await res.json();
-    const list = (providers || []).filter(p => p.authType === 'oauth' && !p.deprecated);
+    const list = (providers || []).filter(p => p.authType === 'oauth' && !p.deprecated && !p.underConstruction);
     if (list.length === 1) { openOAuthModal(list[0]); return; }
     if (list.length === 0) { alert(tr('no_oauth_available')); return; }
     // Simple picker: render as buttons in the idle panel
@@ -2006,10 +2022,24 @@ function openOAuthModal(p) {
   const titleEl = document.getElementById('modal-deprecation-title');
   const startBtn = document.getElementById('modal-start-auth-btn');
   if (startBtn) { startBtn.style.display = ''; startBtn.disabled = false; startBtn.style.opacity = ''; }
+  const applyBannerPalette = (primary, bg, border) => {
+    banner.style.background = bg;
+    banner.style.borderColor = border;
+    const icon = banner.querySelector('iconify-icon');
+    if (icon) icon.style.color = primary;
+    if (titleEl) titleEl.style.color = primary;
+  };
   if (p.deprecated) {
     banner.classList.remove('hidden');
+    applyBannerPalette('#ef4444', 'rgba(239,68,68,0.08)', 'rgba(239,68,68,0.25)');
     if (titleEl) titleEl.textContent = tr('qwen_deprecated_title');
     reasonEl.textContent = p.deprecationReason || tr('qwen_deprecated_msg');
+    if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
+  } else if (p.underConstruction) {
+    banner.classList.remove('hidden');
+    applyBannerPalette('#f59e0b', 'rgba(245,158,11,0.08)', 'rgba(245,158,11,0.28)');
+    if (titleEl) titleEl.textContent = tr('under_construction_title');
+    reasonEl.textContent = p.underConstructionReason || tr('under_construction_msg');
     if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
   } else {
     banner.classList.add('hidden');

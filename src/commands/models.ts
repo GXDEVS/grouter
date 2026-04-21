@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { PROVIDERS, getProvider, providerHasFreeModelsById } from "../providers/registry.ts";
+import { PROVIDERS, getProvider, providerHasFreeModelsById, getProviderLock } from "../providers/registry.ts";
 import { getProxyPort } from "../db/index.ts";
 import { getProviderPort } from "../db/ports.ts";
 import { getConnectionCountByProvider } from "../db/accounts.ts";
@@ -30,7 +30,9 @@ export async function modelsCommand(provider?: string): Promise<void> {
         ? models.some((m) => m.is_free)
         : providerHasFreeModelsById(p.id);
       const dot = n > 0 ? chalk.green("*") : chalk.gray("o");
-      const tag = p.deprecated ? chalk.red(" (deprecated)")
+      const lock = getProviderLock(p);
+      const tag = lock?.kind === "deprecated" ? chalk.red(" (deprecated)")
+        : lock?.kind === "under-construction" ? chalk.yellow(" (em construção)")
         : hasFreeModels ? chalk.green(" FREE")
           : "";
       const portStr = port ? chalk.cyan(`:${port}`) : chalk.gray("-");
@@ -64,8 +66,13 @@ export async function modelsCommand(provider?: string): Promise<void> {
     ? models.some((m) => m.is_free)
     : providerHasFreeModelsById(p.id);
 
+  const detailLock = getProviderLock(p);
+  const headerBadge = detailLock?.kind === "deprecated" ? chalk.red("deprecated")
+    : detailLock?.kind === "under-construction" ? chalk.yellow("em construção")
+    : hasFreeModels ? chalk.green("FREE")
+    : chalk.gray(p.authType);
   console.log("");
-  console.log(`  ${chalk.bold(p.name)}  ${hasFreeModels ? chalk.green("FREE") : p.deprecated ? chalk.red("deprecated") : chalk.gray(p.authType)}`);
+  console.log(`  ${chalk.bold(p.name)}  ${headerBadge}`);
   console.log(`  ${chalk.gray(p.description)}`);
   console.log(`  ${chalk.gray("-----------------------------------------------------")}`);
   console.log(`  ${chalk.gray("connections")}  ${n > 0 ? chalk.green(`${n} active`) : chalk.gray("none - run `grouter add` first")}`);
@@ -73,7 +80,8 @@ export async function modelsCommand(provider?: string): Promise<void> {
   if (hasFreeModels && p.freeTier?.notice) {
     console.log(`  ${chalk.gray("free tier")}    ${chalk.green(p.freeTier.notice)}`);
   }
-  if (p.deprecated) console.log(`  ${chalk.red("warning")}      ${chalk.red(p.deprecationReason ?? "no longer accepting new connections")}`);
+  if (detailLock?.kind === "deprecated") console.log(`  ${chalk.red("warning")}      ${chalk.red(detailLock.reason)}`);
+  if (detailLock?.kind === "under-construction") console.log(`  ${chalk.yellow("aviso")}        ${chalk.yellow(detailLock.reason)}`);
   console.log("");
   console.log(`  ${chalk.bold("Models")}`);
   for (const m of models) {
