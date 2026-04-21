@@ -25,8 +25,6 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
-import { openaiToCodexResponses } from "./codex-translator.ts";
-import { extractCodexAccountId } from "../auth/providers/codex.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -145,7 +143,23 @@ function buildCopilotHeaders(copilotToken: string, stream: boolean): Record<stri
 const OPENAI_EXTRA_FIELDS = ["store", "metadata", "service_tier", "logprobs", "top_logprobs", "logit_bias"];
 
 // Providers that don't accept OpenAI-specific extra fields
-const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface", "sambanova"]);
+const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface", "sambanova", "groq"]);
+
+const SAMBANOVA_MODEL_ALIASES: Record<string, string> = {
+  "llama-3.3-70b-versatile": "Meta-Llama-3.3-70B-Instruct",
+  "meta-llama/llama-3.3-70b-instruct": "Meta-Llama-3.3-70B-Instruct",
+  "meta-llama-3.3-70b-instruct": "Meta-Llama-3.3-70B-Instruct",
+  "llama-4-maverick-17b-128e-instruct": "Llama-4-Maverick-17B-128E-Instruct",
+};
+
+function normalizeSambaNovaBody(body: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...body };
+  const rawModel = typeof out.model === "string" ? out.model.trim() : "";
+  if (!rawModel) return out;
+  const alias = SAMBANOVA_MODEL_ALIASES[rawModel.toLowerCase()];
+  if (alias) out.model = alias;
+  return out;
+}
 
 function stripExtraFields(body: Record<string, unknown>): Record<string, unknown> {
   const out = { ...body };
@@ -194,23 +208,6 @@ function buildQwen(ctx: BuildContext): UpstreamRequest {
     headers: buildQwenHeaders(ctx.account.access_token, ctx.stream),
     body,
   };
-}
-
-function resolveCodexResponsesUrl(baseUrl: string | null | undefined): string {
-  const base = (baseUrl ?? "https://chatgpt.com/backend-api/codex").replace(/\/$/, "");
-  return base.endsWith("/responses") ? base : `${base}/responses`;
-}
-
-function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
-    "Accept": stream ? "text/event-stream" : "application/json",
-    "originator": "codex_cli_rs",
-    "User-Agent": `codex_cli_rs/0.0.1 (${mapStainlessOs()}; ${arch()})`,
-  };
-  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
-  return headers;
 }
 
 function buildGithub(ctx: BuildContext): UpstreamResult {
@@ -269,7 +266,11 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
     };
     const url = urls[provider];
     if (url) {
-      return { kind: "ok", req: openaiCompat(url, apiKey, ctx.body, ctx.stream) };
+      if (provider === "sambanova") {
+        return { kind: "ok", req: openaiCompat(url, apiKey, normalizeSambaNovaBody(ctx.body), ctx.stream, {}, true) };
+      }
+      const strict = STRICT_COMPAT_PROVIDERS.has(provider);
+      return { kind: "ok", req: openaiCompat(url, apiKey, ctx.body, ctx.stream, {}, strict) };
     }
     // Anthropic API-key — translate to Claude /v1/messages format
     if (provider === "anthropic") {

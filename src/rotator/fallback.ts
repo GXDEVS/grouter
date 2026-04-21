@@ -1,6 +1,4 @@
 import {
-  COOLDOWN_UNAUTHORIZED_MS,
-  COOLDOWN_PAYMENT_MS,
   COOLDOWN_TRANSIENT_MS,
   RATE_LIMIT_BACKOFF_BASE_MS,
   RATE_LIMIT_BACKOFF_MAX_MS,
@@ -22,7 +20,16 @@ function isRateLimitSignal(status: number, lowerErrorText: string): boolean {
     "rate limit reached",
   ];
   const hasStructuredMarker = structuredMarkers.some((m) => lowerErrorText.includes(m));
-  if (hasStructuredMarker && (status === 400 || status === 403 || status === 503 || status === 529)) {
+  if (hasStructuredMarker && (status === 400 || status === 403 || status === 413 || status === 503 || status === 529)) {
+    return true;
+  }
+
+  // Some providers (e.g. Groq) return 413 when the request blows past TPM/prompt limits.
+  if (status === 413 && (
+    lowerErrorText.includes("request too large") ||
+    lowerErrorText.includes("tokens per minute") ||
+    lowerErrorText.includes("context length")
+  )) {
     return true;
   }
 
@@ -40,11 +47,28 @@ function isRateLimitSignal(status: number, lowerErrorText: string): boolean {
 export function checkFallbackError(status: number, errorText: string, backoffLevel = 0): FallbackDecision {
   const lower = errorText.toLowerCase();
 
-  if (status === 401) return { shouldFallback: true, cooldownMs: COOLDOWN_UNAUTHORIZED_MS };
+  // Auth/permission failures should be surfaced quickly (401/402/403),
+  // not converted into minute-long cooldown locks that become opaque 503 loops.
+  // 401/402/403 should not place accounts into cooldown locks.
+  // Returning fallback=true with cooldown=0 still allows in-request rotation
+  // across other accounts, but prevents future instant 503 "all unavailable".
+  if (status === 401 || status === 402 || status === 403) {
+    return { shouldFallback: true, cooldownMs: 0 };
+  }
   // 404 model_not_found = wrong model ID, not provider outage, so do not lock account.
   if (status === 404) return { shouldFallback: false, cooldownMs: 0 };
   // 422 invalid request body/params is client-side and should not trigger account cooldown.
   if (status === 422) return { shouldFallback: false, cooldownMs: 0 };
+  // 413 request-too-large is generally a client payload issue (prompt/tool schema/context),
+  // so return it directly instead of putting the account into cooldown rotation.
+  if (status === 413 && (
+    lower.includes("request too large") ||
+    lower.includes("tokens per minute") ||
+    lower.includes("context length") ||
+    lower.includes("prompt is too long")
+  )) {
+    return { shouldFallback: false, cooldownMs: 0 };
+  }
 
   if (isRateLimitSignal(status, lower)) {
     const newLevel = Math.min(backoffLevel + 1, RATE_LIMIT_BACKOFF_MAX_LEVEL);
@@ -53,14 +77,6 @@ export function checkFallbackError(status: number, errorText: string, backoffLev
       cooldownMs: getExponentialCooldown(backoffLevel),
       newBackoffLevel: newLevel,
     };
-  }
-
-  if (lower.includes("request not allowed")) {
-    return { shouldFallback: true, cooldownMs: COOLDOWN_UNAUTHORIZED_MS };
-  }
-
-  if (status === 402 || status === 403) {
-    return { shouldFallback: true, cooldownMs: COOLDOWN_PAYMENT_MS };
   }
 
   if (status >= 500 || lower.includes("timeout")) {
