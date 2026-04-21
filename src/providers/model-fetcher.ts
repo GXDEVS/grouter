@@ -135,7 +135,7 @@ function isModelFree(
 /** Convert model IDs like "meta-llama/llama-3.3-70b-instruct" to a readable name. */
 function formatModelName(id: string): string {
   const parts = id.split("/");
-  const name = parts[parts.length - 1];
+  const name = parts[parts.length - 1] ?? id;
   return name
     .split(/[-_]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))

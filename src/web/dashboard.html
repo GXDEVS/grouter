@@ -2125,14 +2125,37 @@ async function runAuthCodeFlow(providerId, meta) {
   document.getElementById('modal-started').classList.remove('hidden');
 
   // Auto-open in a new tab
-  try { window.open(data.auth_url, '_blank', 'noopener'); } catch {}
+  try { window.open(data.auth_url, '_blank'); } catch {}
 
-  // Long-poll /api/auth/callback — the server blocks until the redirect lands
+  // Poll /api/auth/callback until authorization completes/denies/expires.
   try {
-    const cb = await fetch(`/api/auth/callback?session_id=${encodeURIComponent(data.session_id)}`);
-    const cd = await cb.json();
-    if (cd.status === 'complete') onAuthSuccess(cd.account);
-    else onAuthError(cd.status === 'denied' ? tr('err_access_denied') : tr('err_auth_failed'), cd.message || '');
+    while (true) {
+      const cb = await fetch(`/api/auth/callback?session_id=${encodeURIComponent(data.session_id)}`);
+      const cd = await cb.json();
+
+      if (cd.status === 'pending') {
+        await new Promise(r => setTimeout(r, 900));
+        continue;
+      }
+
+      if (cd.status === 'complete') {
+        onAuthSuccess(cd.account);
+        return;
+      }
+
+      if (cd.status === 'denied') {
+        onAuthError(tr('err_access_denied'), cd.message || tr('err_access_denied_sub'));
+        return;
+      }
+
+      if (cd.status === 'expired') {
+        onAuthError(tr('err_code_expired'), cd.message || tr('err_code_expired_sub'));
+        return;
+      }
+
+      onAuthError(tr('err_auth_failed'), cd.message || '');
+      return;
+    }
   } catch (e) {
     onAuthError(tr('err_network'), String(e));
   }

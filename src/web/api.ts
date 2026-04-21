@@ -25,8 +25,20 @@ interface PendingListener {
   close: () => void;
   waiter: Promise<{ code: string | null; state: string | null; error: string | null }>;
   done: boolean;
+  createdAt: number;
 }
 const pendingListeners = new Map<string, PendingListener>();
+const CALLBACK_POLL_WAIT_MS = 8_000;
+const PENDING_LISTENER_TTL_MS = 15 * 60 * 1000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, pending] of pendingListeners) {
+    if (pending.done || (now - pending.createdAt) <= PENDING_LISTENER_TTL_MS) continue;
+    try { pending.close(); } catch { /* ignore */ }
+    pendingListeners.delete(sessionId);
+  }
+}, 60 * 1000);
 
 // ── CORS headers ──────────────────────────────────────────────────────────────
 function cors(): Record<string, string> {
@@ -167,11 +179,36 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
     const listener = startCallbackListener({
       port: adapter.fixedPort ?? 0,
       path: adapter.callbackPath ?? "/callback",
+      redirectHost: adapter.callbackHost,
     });
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
-    const started = startAuthCodeFlow(body.provider, listener.redirectUri, body.meta);
-    pendingListeners.set(started.session_id, { close: listener.close, waiter, done: false });
+    let started: ReturnType<typeof startAuthCodeFlow>;
+    try {
+      started = startAuthCodeFlow(body.provider, listener.redirectUri, body.meta);
+    } catch (err) {
+      // If auth setup fails after binding the callback port, immediately release it.
+      listener.close();
+      throw err;
+    }
+
+    pendingListeners.set(started.session_id, {
+      close: listener.close,
+      waiter,
+      done: false,
+      createdAt: Date.now(),
+    });
+
+    // If the callback flow fails (timeout/denied) and no poll request is in flight,
+    // release the fixed port anyway so a new auth attempt can start immediately.
+    waiter.then((capture) => {
+      if (!capture?.error) return;
+      const pending = pendingListeners.get(started.session_id);
+      if (!pending || pending.done) return;
+      pending.done = true;
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(started.session_id);
+    }).catch(() => { /* ignore */ });
 
     return json({
       session_id: started.session_id,
@@ -195,12 +232,29 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
     if (!pending) return json({ status: "expired" });
     if (pending.done) return json({ status: "expired" });
 
-    const capture = await pending.waiter;
-    pending.done = true;
-    pending.close();
-    pendingListeners.delete(sessionId);
+    const capture = await Promise.race([
+      pending.waiter,
+      Bun.sleep(CALLBACK_POLL_WAIT_MS).then(() => null),
+    ]);
+    if (!capture) return json({ status: "pending" });
 
-    if (capture.error) return json({ status: "denied", message: capture.error });
+    pending.done = true;
+    // Give the callback tab enough time to render "Authorization complete"
+    // before closing the local listener.
+    setTimeout(() => {
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(sessionId);
+    }, 350);
+
+    if (capture.error) {
+      const msg = String(capture.error);
+      const lower = msg.toLowerCase();
+      if (lower.includes("timeout")) return json({ status: "expired", message: msg });
+      if (lower.includes("access_denied") || lower.includes("denied")) {
+        return json({ status: "denied", message: msg });
+      }
+      return json({ status: "error", message: msg });
+    }
     if (!capture.code || !capture.state) return json({ status: "error", message: "missing code/state" });
 
     const connection = await completeAuthCodeFlow(sessionId, capture.code, capture.state);

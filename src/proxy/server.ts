@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { buildQwenHeaders, buildQwenUrl, buildQwenModelsUrl, QWEN_MODELS_OAUTH, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
+import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
@@ -67,6 +68,7 @@ function serveWizard():    Response { return new Response(WIZARD_HTML    as unkn
 function serveDashboard(): Response { return new Response(DASHBOARD_HTML as unknown as string, { headers: { "Content-Type": "text/html; charset=utf-8" } }); }
 
 const MAX_RETRIES = 3;
+const SERVER_IDLE_TIMEOUT_SECONDS = 240;
 
 // ── Model cache ───────────────────────────────────────────────────────────────
 
@@ -228,6 +230,7 @@ function extractUsageFromSSE(tail: string): TokenUsage | null {
 export function startServer(port: number) {
   return Bun.serve({
     port,
+    idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
 
     routes: {
       // ── Dashboard ───────────────────────────────────────────────────────────
@@ -401,6 +404,7 @@ export function startServer(port: number) {
 export function startProviderServer(provider: string, port: number) {
   return Bun.serve({
     port,
+    idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
     routes: {
       "/health": {
         GET: () => jsonResponse({ status: "ok", provider, port }),
@@ -565,9 +569,10 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       const dec = new TextDecoder();
       const enc = new TextEncoder();
       const fmt = dispatch.format;
-      const needsTranslation = fmt === "claude" || fmt === "gemini";
+      const needsTranslation = fmt === "claude" || fmt === "gemini" || fmt === "codex";
       const claudeState = fmt === "claude" ? newClaudeStreamState() : null;
       const geminiState = fmt === "gemini" ? newGeminiStreamState() : null;
+      const codexState = fmt === "codex" ? newCodexStreamState() : null;
       let tail = "";
       let lineBuf = "";
       const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>({
@@ -585,7 +590,9 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
               if (!trimmed) continue;
               const translated = claudeState
                 ? claudeChunkToOpenAI(trimmed, claudeState)
-                : geminiChunkToOpenAI(trimmed, geminiState!);
+                : geminiState
+                  ? geminiChunkToOpenAI(trimmed, geminiState)
+                  : codexChunkToOpenAI(trimmed, codexState!);
               for (const out of translated) {
                 ctrl.enqueue(enc.encode(out));
                 tail += out;
@@ -617,6 +624,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
     // Translate non-stream responses → OpenAI format
     if (dispatch.format === "claude") data = translateClaudeNonStream(data);
     else if (dispatch.format === "gemini") data = translateGeminiNonStream(data);
+    else if (dispatch.format === "codex") data = translateCodexNonStream(data);
 
     const rawUsage = data["usage"] as Record<string, number> | undefined;
     const promptTok     = rawUsage?.prompt_tokens     ?? 0;

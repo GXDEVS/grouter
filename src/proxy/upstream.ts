@@ -22,6 +22,7 @@ import {
   buildClaudeHeaders,
   buildKimiCodingHeaders,
 } from "./claude-translator.ts";
+import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
 
 export interface UpstreamRequest {
@@ -43,6 +44,64 @@ interface BuildContext {
 function parseProviderData(raw: string | null): Record<string, unknown> | null {
   if (!raw) return null;
   try { return JSON.parse(raw) as Record<string, unknown>; } catch { return null; }
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  const payload = parts[1];
+  if (!payload) return null;
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf-8")) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function extractCodexAccountId(token: string, providerData: Record<string, unknown> | null): string | null {
+  const fromProviderData = typeof providerData?.accountId === "string" ? providerData.accountId : null;
+  if (fromProviderData) return fromProviderData;
+
+  const idToken = typeof providerData?.idToken === "string" ? providerData.idToken : null;
+  const idTokenPayload = idToken ? decodeJwtPayload(idToken) : null;
+  const idTokenAuthClaim = idTokenPayload?.["https://api.openai.com/auth"];
+  if (idTokenAuthClaim && typeof idTokenAuthClaim === "object") {
+    const rec = idTokenAuthClaim as Record<string, unknown>;
+    if (typeof rec.chatgpt_account_id === "string") return rec.chatgpt_account_id;
+    if (typeof rec.account_id === "string") return rec.account_id;
+  }
+
+  const accessPayload = decodeJwtPayload(token);
+  const accessAuthClaim = accessPayload?.["https://api.openai.com/auth"];
+  if (accessAuthClaim && typeof accessAuthClaim === "object") {
+    const rec = accessAuthClaim as Record<string, unknown>;
+    if (typeof rec.chatgpt_account_id === "string") return rec.chatgpt_account_id;
+    if (typeof rec.account_id === "string") return rec.account_id;
+  }
+
+  return null;
+}
+
+function resolveCodexResponsesUrl(baseUrl: string | null): string {
+  const base = (baseUrl && baseUrl.trim()) || "https://chatgpt.com/backend-api/codex";
+  const normalized = base.replace(/\/+$/, "");
+  if (normalized.endsWith("/codex/responses")) return normalized;
+  if (normalized.endsWith("/codex")) return `${normalized}/responses`;
+  return `${normalized}/codex/responses`;
+}
+
+function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: stream ? "text/event-stream" : "application/json",
+    Authorization: `Bearer ${token}`,
+    originator: "codex_cli_rs",
+    "User-Agent": `codex_cli_rs/0.0.1 (${platform()}; ${arch()})`,
+    Origin: "https://chatgpt.com",
+    Referer: "https://chatgpt.com/",
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
+  return headers;
 }
 
 // ── Header helpers ───────────────────────────────────────────────────────────
@@ -87,6 +146,15 @@ function openaiCompat(
   extraHeaders: Record<string, string> = {},
 ): UpstreamRequest {
   const out: Record<string, unknown> = { ...body };
+  // Some clients send Responses-style token caps to /chat/completions.
+  // Normalize to chat-completions-compatible fields before forwarding.
+  const maxOutput = out.max_output_tokens;
+  if (typeof maxOutput === "number" && Number.isFinite(maxOutput) && maxOutput > 0) {
+    if (typeof out.max_tokens !== "number" && typeof out.max_completion_tokens !== "number") {
+      out.max_tokens = Math.floor(maxOutput);
+    }
+    delete out.max_output_tokens;
+  }
   if (stream) out.stream_options = { include_usage: true };
   return {
     url,
@@ -282,8 +350,19 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       };
     }
 
-    case "codex":
-      return { kind: "unsupported", reason: "Codex OAuth uses OpenAI's /responses endpoint. The translator is not yet implemented." };
+    case "codex": {
+      const pd = parseProviderData(ctx.account.provider_data);
+      const accountId = extractCodexAccountId(token, pd);
+      return {
+        kind: "ok",
+        req: {
+          url: resolveCodexResponsesUrl(getProvider("codex")?.baseUrl ?? null),
+          headers: buildCodexHeaders(token, accountId, ctx.stream),
+          body: openaiToCodexResponses(ctx.body, ctx.stream),
+        },
+        format: "codex",
+      };
+    }
     case "kiro":
       return { kind: "unsupported", reason: "Kiro uses AWS CodeWhisperer's event-stream format. The translator is not yet implemented." };
     case "cursor":

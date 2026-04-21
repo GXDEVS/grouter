@@ -100,4 +100,5 @@ export interface OAuthAdapter {
   // Fixed local callback port (e.g. codex = 1455). If unset, an ephemeral port is chosen.
   fixedPort?: number;
   callbackPath?: string;
+  callbackHost?: string;
 }
