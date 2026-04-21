@@ -4,14 +4,15 @@ import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
+import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { getSetting } from "../db/index.ts";
 import { CURRENT_VERSION, fetchAndCacheVersion } from "../update/checker.ts";
 import { selectAccount, markAccountUnavailable, clearAccountError } from "../rotator/index.ts";
 import { checkAndRefreshAccount } from "../token/refresh.ts";
-import { isRateLimitedResult } from "../types.ts";
+import { isRateLimitedResult, isTemporarilyUnavailableResult } from "../types.ts";
 import { listAccounts } from "../db/accounts.ts";
 import { recordUsage } from "../db/usage.ts";
-import { getProvider, PROVIDERS } from "../providers/registry.ts";
+import { PROVIDERS } from "../providers/registry.ts";
 import { getModelsForProvider } from "../providers/model-fetcher.ts";
 import { getConnectionCountByProvider } from "../db/accounts.ts";
 import { getClientKey, updateClientKeyUsage } from "../db/client_keys.ts";
@@ -45,12 +46,14 @@ import {
   handleProviderConfig,
   handleListClientKeys,
   handleCreateClientKey,
+  handleUpdateClientKey,
   handleDeleteClientKey,
+  handleRefreshProviderModelsBatch,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
-import { listProviderPorts } from "../db/ports.ts";
+import { getProviderPort, listProviderPorts } from "../db/ports.ts";
 
-// ── HTML pages + static assets — embedded at build time ──────────────────────
+// â”€â”€ HTML pages + static assets â€” embedded at build time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // @ts-ignore
 import WIZARD_HTML    from "../web/wizard.html"       with { type: "text" };
 // @ts-ignore
@@ -59,7 +62,7 @@ import DASHBOARD_HTML from "../web/dashboard.html"    with { type: "text" };
 import ANIMATION_JS   from "../public/animation.js"  with { type: "text" };
 import { serveLogo } from "../web/logos.ts";
 
-// Bun route params — not in the standard Request type
+// Bun route params â€” not in the standard Request type
 interface BunRequest extends Request {
   params: Record<string, string>;
 }
@@ -70,7 +73,7 @@ function serveDashboard(): Response { return new Response(DASHBOARD_HTML as unkn
 const MAX_RETRIES = 3;
 const SERVER_IDLE_TIMEOUT_SECONDS = 240;
 
-// ── Model cache ───────────────────────────────────────────────────────────────
+// â”€â”€ Model cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 let modelsCache: { data: unknown[]; at: number } | null = null;
 const MODELS_TTL = 10 * 60 * 1000;
@@ -157,7 +160,7 @@ async function fetchModels(req?: Request) {
   return baseData;
 }
 
-// ── Logger ────────────────────────────────────────────────────────────────────
+// â”€â”€ Logger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function logReq(method: string, path: string, status: number, ms: number,
   meta?: { model?: string | null; account?: string; rotated?: number; tokens?: number }) {
@@ -166,20 +169,27 @@ function logReq(method: string, path: string, status: number, ms: number,
   const lat = ms < 1000 ? chalk.gray(`${ms}ms`) : chalk.yellow(`${(ms / 1000).toFixed(1)}s`);
   let extras = "";
   if (meta?.model) extras += chalk.magenta(` ${meta.model}`);
-  if (meta?.account) extras += chalk.gray(` → ${meta.account}`);
-  if (meta?.rotated && meta.rotated > 0) extras += chalk.yellow(` ↻×${meta.rotated}`);
+  if (meta?.account) extras += chalk.gray(` â†’ ${meta.account}`);
+  if (meta?.rotated && meta.rotated > 0) extras += chalk.yellow(` â†»Ã—${meta.rotated}`);
   if (meta?.tokens) extras += chalk.gray(` [${meta.tokens}t]`);
   console.log(`  ${time} ${chalk.bold(method.padEnd(4))} ${path}${extras} ${sc(String(status))} ${lat}`);
 }
 
-// ── Provider/model parsing ────────────────────────────────────────────────────
+// â”€â”€ Provider/model parsing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function parseProviderModel(raw: string | null, pinnedProvider?: string): { provider: string | null; model: string } {
   if (pinnedProvider) {
     if (!raw) return { provider: pinnedProvider, model: "" };
     const slash = raw.indexOf("/");
-    // If the model already carries a provider prefix, strip it — the port pins the provider.
-    return { provider: pinnedProvider, model: slash === -1 ? raw : raw.slice(slash + 1) };
+    // On provider-pinned ports, keep model IDs exactly as provided because
+    // many providers use namespaced models (e.g. "Qwen/Qwen3-...").
+    // Only strip when the prefix matches the pinned provider itself.
+    if (slash === -1) return { provider: pinnedProvider, model: raw };
+    const maybeProvider = raw.slice(0, slash).toLowerCase();
+    if (maybeProvider === pinnedProvider.toLowerCase()) {
+      return { provider: pinnedProvider, model: raw.slice(slash + 1) };
+    }
+    return { provider: pinnedProvider, model: raw };
   }
   // Without a pinned provider the format "provider/model" is required.
   if (!raw) return { provider: null, model: "" };
@@ -188,7 +198,7 @@ function parseProviderModel(raw: string | null, pinnedProvider?: string): { prov
   return { provider: raw.slice(0, slash), model: raw.slice(slash + 1) };
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function corsHeaders(): Record<string, string> {
   return {
@@ -225,7 +235,7 @@ function extractUsageFromSSE(tail: string): TokenUsage | null {
   return { prompt, completion, total };
 }
 
-// ── Server ────────────────────────────────────────────────────────────────────
+// â”€â”€ Server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function startServer(port: number) {
   return Bun.serve({
@@ -233,7 +243,7 @@ export function startServer(port: number) {
     idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
 
     routes: {
-      // ── Dashboard ───────────────────────────────────────────────────────────
+      // â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       "/": {
         GET: () => {
           if (getSetting("setup_done") === "1") {
@@ -251,7 +261,7 @@ export function startServer(port: number) {
       },
       "/dashboard": { GET: () => serveDashboard() },
 
-      // ── Dashboard API ───────────────────────────────────────────────────────
+      // â”€â”€ Dashboard API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       "/api/status": {
         GET: () => handleStatus(),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
@@ -298,6 +308,7 @@ export function startServer(port: number) {
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/client-keys/:key": {
+        PATCH:   (req: BunRequest) => handleUpdateClientKey(req, req.params.key!),
         DELETE:  (req: BunRequest) => handleDeleteClientKey(req.params.key!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
@@ -330,8 +341,21 @@ export function startServer(port: number) {
         POST:    (req: BunRequest) => handleRefreshProviderModels(req.params.id!),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
+      "/api/providers/refresh-models": {
+        POST:    (req: Request) => handleRefreshProviderModelsBatch(req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
       "/api/providers/:id/config": {
         POST:    (req: BunRequest) => handleProviderConfig(req.params.id!, req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/providers/:id/wake": {
+        POST:    (req: BunRequest) => {
+          const id = req.params.id!;
+          ensureProviderServer(id);
+          const port = getProviderPort(id);
+          return jsonResponse({ ok: true, provider: id, port });
+        },
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/connections": {
@@ -361,7 +385,7 @@ export function startServer(port: number) {
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
 
-      // ── Proxy ───────────────────────────────────────────────────────────────
+      // â”€â”€ Proxy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       "/health": {
         GET: async () => {
           const accounts = listAccounts();
@@ -371,7 +395,7 @@ export function startServer(port: number) {
       },
 
       "/v1/models": {
-        GET: async () => jsonResponse({ object: "list", data: await fetchModels() }),
+        GET: async (req: Request) => jsonResponse({ object: "list", data: await fetchModels(req) }),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
 
@@ -411,8 +435,11 @@ export function startProviderServer(provider: string, port: number) {
       },
       "/v1/models": {
         GET: () => {
-          const def = getProvider(provider);
-          const data = (def?.models ?? []).map(m => ({ id: m.id, object: "model", created: 1720000000, owned_by: provider }));
+          const models = getModelsForProvider(provider);
+          const freeOnly = getSetting(`provider_free_only_${provider}`) === "true";
+          const data = models
+            .filter((m) => (freeOnly ? m.is_free : true))
+            .map((m) => ({ id: m.id, object: "model", created: 1720000000, owned_by: provider }));
           return jsonResponse({ object: "list", data });
         },
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
@@ -429,6 +456,25 @@ export function startProviderServer(provider: string, port: number) {
   });
 }
 
+// Track which providers already have a running dedicated server
+const _runningProviderServers = new Set<string>();
+
+/**
+ * Start a provider server only if one isn't already running.
+ * Safe to call at any time â€” e.g. right after a new connection is added.
+ */
+export function ensureProviderServer(provider: string): void {
+  if (_runningProviderServers.has(provider)) return;
+  const port = getProviderPort(provider);
+  if (!port) return;
+  try {
+    startProviderServer(provider, port);
+    _runningProviderServers.add(provider);
+  } catch (err) {
+    console.error(`  ${chalk.yellow("âš ")} Failed to bind ${provider} on :${port} â€” ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 /** Starts the main server plus one dedicated listener per configured provider port. */
 export function startAllServers(mainPort: number) {
   const main = startServer(mainPort);
@@ -436,9 +482,10 @@ export function startAllServers(mainPort: number) {
   for (const row of listProviderPorts()) {
     try {
       startProviderServer(row.provider, row.port);
+      _runningProviderServers.add(row.provider);
       providerServers.push({ provider: row.provider, port: row.port });
     } catch (err) {
-      console.error(`  ${chalk.yellow("⚠")} Failed to bind ${row.provider} on :${row.port} — ${err instanceof Error ? err.message : String(err)}`);
+      console.error(`  ${chalk.yellow("âš ")} Failed to bind ${row.provider} on :${row.port} â€” ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   return { main, providerServers };
@@ -481,7 +528,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
   const excludeIds = new Set<string>();
   let rotations = 0;
 
-  // Normalise model in body — strip provider prefix before sending upstream
+  // Normalise model in body â€” strip provider prefix before sending upstream
   const normalizedBody = { ...body, model };
 
   let lastFetchError: { provider: string; url: string; message: string } | null = null;
@@ -500,10 +547,17 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
         429, { "Retry-After": selected.retryAfter },
       );
     }
+    if (isTemporarilyUnavailableResult(selected)) {
+      logReq("POST", "/v1/chat/completions", 503, Date.now() - start, { model: rawModel, rotated: rotations });
+      return jsonResponse(
+        { error: { message: `All accounts temporarily unavailable. ${selected.retryAfterHuman}`, type: "grouter_error", code: 503 } },
+        503, { "Retry-After": selected.retryAfter },
+      );
+    }
 
     const label = selected.email?.split("@")[0] ?? selected.display_name ?? selected.id.slice(0, 8);
 
-    // ── Build upstream request via per-provider dispatcher ──────────────────
+    // â”€â”€ Build upstream request via per-provider dispatcher â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const account = selected.auth_type === "oauth"
       ? await checkAndRefreshAccount(selected)
       : selected;
@@ -532,7 +586,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       body: JSON.stringify(upstreamBody),
     };
     if (proxyPool?.proxy_url) {
-      // @ts-ignore — Bun-specific proxy option
+      // @ts-ignore â€” Bun-specific proxy option
       fetchOptions.proxy = proxyPool.proxy_url;
     }
 
@@ -542,7 +596,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       lastFetchError = { provider, url: upstreamUrl, message: msg };
-      console.log(`  ${chalk.red("✖")} fetch failed → ${chalk.cyan(label)} ${chalk.gray(upstreamUrl)} ${chalk.red(msg)}`);
+      console.log(`  ${chalk.red("âœ–")} fetch failed â†’ ${chalk.cyan(label)} ${chalk.gray(upstreamUrl)} ${chalk.red(msg)}`);
       excludeIds.add(selected.id); rotations++;
       markAccountUnavailable(selected.id, 503, msg, model || null);
       continue;
@@ -552,7 +606,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       const errText = await upstreamResp.text();
       const { shouldFallback } = markAccountUnavailable(selected.id, upstreamResp.status, errText, model || null);
       if (shouldFallback && attempt < MAX_RETRIES - 1) {
-        console.log(`  ${chalk.yellow("↻")} rotating away from ${chalk.cyan(label)} (${upstreamResp.status})`);
+        console.log(`  ${chalk.yellow("â†»")} rotating away from ${chalk.cyan(label)} (${upstreamResp.status})`);
         excludeIds.add(selected.id); rotations++;
         continue;
       }
@@ -602,7 +656,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
           }
         },
         flush() {
-          const stateUsage = claudeState?.usage ?? geminiState?.usage;
+          const stateUsage = claudeState?.usage ?? geminiState?.usage ?? null;
           const usage = needsTranslation && stateUsage
             ? { prompt: (stateUsage.prompt_tokens as number) ?? 0, completion: (stateUsage.completion_tokens as number) ?? 0, total: (stateUsage.total_tokens as number) ?? 0 }
             : extractUsageFromSSE(tail);
@@ -621,7 +675,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
 
     let data = (await upstreamResp.json()) as Record<string, unknown>;
 
-    // Translate non-stream responses → OpenAI format
+    // Translate non-stream responses â†’ OpenAI format
     if (dispatch.format === "claude") data = translateClaudeNonStream(data);
     else if (dispatch.format === "gemini") data = translateGeminiNonStream(data);
     else if (dispatch.format === "codex") data = translateCodexNonStream(data);

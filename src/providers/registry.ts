@@ -1,6 +1,11 @@
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import {
+  getModelFreeOverride,
+  getProviderFreeOverride,
+  getTopFreeProviderRankMap,
+} from "./free-overrides.ts";
 
 export type AuthType = "oauth" | "apikey" | "free";
 export type ProviderCategory = "oauth" | "free" | "apikey";
@@ -45,6 +50,7 @@ function loadCustomProviders(): Record<string, Provider> {
 export interface ProviderModel {
   id: string;
   name: string;
+  isFree?: boolean;
 }
 
 export interface Provider {
@@ -62,16 +68,18 @@ export interface Provider {
   logo?: string;
   requiresMeta?: { key: string; label: string; placeholder?: string; required?: boolean }[];
   freeTier?: { notice: string; url?: string };
+  hasFreeModels?: boolean;
+  allModelsFree?: boolean;
 }
 
 export const PROVIDERS: Record<string, Provider> = {
 
-  // ── OAuth Providers ───────────────────────────────────────────────────────────
+  // â”€â”€ OAuth Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   qwen: {
     id: "qwen",
     name: "Qwen Code",
-    description: "Alibaba Qwen accounts — free via OAuth device flow",
+    description: "Alibaba Qwen accounts â€” free via OAuth device flow",
     category: "oauth",
     authType: "oauth",
     color: "#0AB9DC",
@@ -79,7 +87,7 @@ export const PROVIDERS: Record<string, Provider> = {
     deprecated: true,
     deprecationReason: "Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.",
     logo: "/public/logos/qwen-code.png",
-    freeTier: { notice: "Free OAuth device flow — no credit card." },
+    freeTier: { notice: "Free OAuth device flow â€” no credit card." },
     models: [
       { id: "qwen3-coder-plus",  name: "Qwen3 Coder Plus"  },
       { id: "qwen3-coder-flash", name: "Qwen3 Coder Flash" },
@@ -115,13 +123,14 @@ export const PROVIDERS: Record<string, Provider> = {
   "kimi-coding": {
     id: "kimi-coding",
     name: "Kimi Coding",
-    description: "Moonshot Kimi K2 coding assistant — free via OAuth",
+    description: "Moonshot Kimi K2 coding assistant â€” free via OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#6366f1",
     baseUrl: "https://api.kimi.com/v1",
     logo: "/public/logos/kimi-ai.png",
-    freeTier: { notice: "Free OAuth — no credit card." },
+    allModelsFree: true,
+    freeTier: { notice: "Free OAuth â€” no credit card." },
     models: [
       { id: "kimi-k2.5",          name: "Kimi K2.5"          },
       { id: "kimi-k2.5-thinking", name: "Kimi K2.5 Thinking" },
@@ -132,12 +141,13 @@ export const PROVIDERS: Record<string, Provider> = {
   kilocode: {
     id: "kilocode",
     name: "KiloCode",
-    description: "KiloCode cloud inference — free tier via OAuth",
+    description: "KiloCode cloud inference â€” free tier via OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#10b981",
     baseUrl: "https://api.kilo.ai/v1",
     logo: "/public/logos/kilo-code.png",
+    allModelsFree: true,
     freeTier: { notice: "Free OAuth sign-up." },
     models: [
       { id: "anthropic/claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
@@ -154,7 +164,7 @@ export const PROVIDERS: Record<string, Provider> = {
   claude: {
     id: "claude",
     name: "Claude (OAuth)",
-    description: "Claude.ai subscription via OAuth — no API key required",
+    description: "Claude.ai subscription via OAuth â€” no API key required",
     category: "oauth",
     authType: "oauth",
     color: "#d97706",
@@ -195,13 +205,14 @@ export const PROVIDERS: Record<string, Provider> = {
   kiro: {
     id: "kiro",
     name: "Kiro",
-    description: "AWS CodeWhisperer via Kiro IDE — AWS Builder ID OAuth",
+    description: "AWS CodeWhisperer via Kiro IDE â€” AWS Builder ID OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#ff9900",
     baseUrl: "https://codewhisperer.us-east-1.amazonaws.com",
     logo: "/public/logos/Kiro.png",
-    freeTier: { notice: "Free AWS Builder ID — no AWS account required." },
+    allModelsFree: true,
+    freeTier: { notice: "Free AWS Builder ID â€” no AWS account required." },
     models: [
       { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5" },
       { id: "claude-haiku-4.5",  name: "Claude Haiku 4.5"  },
@@ -214,12 +225,13 @@ export const PROVIDERS: Record<string, Provider> = {
   iflow: {
     id: "iflow",
     name: "iFlow",
-    description: "iFlow OAuth — returns a long-lived API key",
+    description: "iFlow OAuth â€” returns a long-lived API key",
     category: "oauth",
     authType: "oauth",
     color: "#7c3aed",
     baseUrl: "https://api.iflow.cn/v1",
     logo: "/public/logos/iflow.png",
+    allModelsFree: true,
     freeTier: { notice: "Free OAuth sign-up." },
     models: [
       { id: "qwen3-coder-plus",          name: "Qwen3 Coder Plus"         },
@@ -238,7 +250,7 @@ export const PROVIDERS: Record<string, Provider> = {
   qoder: {
     id: "qoder",
     name: "Qoder",
-    description: "Qoder device-token OAuth — returns a long-lived API key",
+    description: "Qoder device-token OAuth â€” returns a long-lived API key",
     category: "oauth",
     authType: "oauth",
     color: "#ec4899",
@@ -252,7 +264,7 @@ export const PROVIDERS: Record<string, Provider> = {
   cline: {
     id: "cline",
     name: "Cline",
-    description: "Cline extension OAuth — browser redirect flow",
+    description: "Cline extension OAuth â€” browser redirect flow",
     category: "oauth",
     authType: "oauth",
     color: "#0ea5e9",
@@ -272,7 +284,7 @@ export const PROVIDERS: Record<string, Provider> = {
   cursor: {
     id: "cursor",
     name: "Cursor",
-    description: "Paste your Cursor access token (Settings → General → Access Token)",
+    description: "Paste your Cursor access token (Settings â†’ General â†’ Access Token)",
     category: "oauth",
     authType: "oauth",
     color: "#000000",
@@ -302,6 +314,7 @@ export const PROVIDERS: Record<string, Provider> = {
     color: "#14b8a6",
     baseUrl: "https://opencode.ai/zen/v1",
     logo: "/public/logos/opencode.png",
+    allModelsFree: true,
     models: [
       { id: "default",              name: "OpenCode Default"   },
       { id: "nemotron-3-super-free",name: "Nemotron 3 Super"   },
@@ -309,13 +322,13 @@ export const PROVIDERS: Record<string, Provider> = {
       { id: "minimax-m2.5-free",    name: "MiniMax M2.5"       },
       { id: "big-pickle",           name: "Big Pickle"         },
     ],
-    freeTier: { notice: "No sign-up required — routes to a shared free pool." },
+    freeTier: { notice: "No sign-up required â€” routes to a shared free pool." },
   },
 
   "gemini-cli": {
     id: "gemini-cli",
     name: "Gemini CLI (OAuth)",
-    description: "Google Gemini subscription via Gemini CLI OAuth — no API key required",
+    description: "Google Gemini subscription via Gemini CLI OAuth â€” no API key required",
     category: "oauth",
     authType: "oauth",
     color: "#4285f4",
@@ -334,7 +347,7 @@ export const PROVIDERS: Record<string, Provider> = {
   gitlab: {
     id: "gitlab",
     name: "GitLab Duo",
-    description: "GitLab Duo OAuth — bring your own GitLab OAuth app",
+    description: "GitLab Duo OAuth â€” bring your own GitLab OAuth app",
     category: "oauth",
     authType: "oauth",
     color: "#fc6d26",
@@ -350,7 +363,7 @@ export const PROVIDERS: Record<string, Provider> = {
     ],
   },
 
-  // ── API Key Providers ─────────────────────────────────────────────────────────
+  // â”€â”€ API Key Providers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   openrouter: {
     id: "openrouter",
@@ -360,16 +373,17 @@ export const PROVIDERS: Record<string, Provider> = {
     authType: "apikey",
     color: "#6366f1",
     baseUrl: "https://openrouter.ai/api/v1",
-    apiKeyUrl: "https://openrouter.ai/keys",
+    apiKeyUrl: "https://openrouter.ai/settings/keys",
     logo: "/public/logos/openrouter.png",
+    hasFreeModels: true,
     freeTier: { notice: "27+ free models, ~200 req/day on the free tier.", url: "https://openrouter.ai/models?q=free" },
     models: [
       { id: "anthropic/claude-opus-4-5",          name: "Claude Opus 4.5"     },
       { id: "anthropic/claude-sonnet-4-5",         name: "Claude Sonnet 4.5"   },
       { id: "openai/gpt-4o",                       name: "GPT-4o"              },
       { id: "google/gemini-2.5-pro",               name: "Gemini 2.5 Pro"      },
-      { id: "deepseek/deepseek-r1",                name: "DeepSeek R1"         },
-      { id: "meta-llama/llama-3.3-70b-instruct",   name: "Llama 3.3 70B"       },
+      { id: "deepseek/deepseek-r1",                name: "DeepSeek R1",         isFree: true },
+      { id: "meta-llama/llama-3.3-70b-instruct",   name: "Llama 3.3 70B",       isFree: true },
     ],
   },
 
@@ -383,11 +397,13 @@ export const PROVIDERS: Record<string, Provider> = {
     baseUrl: "https://api.groq.com/openai/v1",
     apiKeyUrl: "https://console.groq.com/keys",
     logo: "/public/logos/groq.png",
+    hasFreeModels: true,
+    freeTier: { notice: "Free tier with rate limits — no billing required.", url: "https://console.groq.com/keys" },
     models: [
-      { id: "llama-3.3-70b-versatile",                       name: "Llama 3.3 70B"   },
-      { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick"},
-      { id: "qwen/qwen3-32b",                                name: "Qwen3 32B"       },
-      { id: "openai/gpt-oss-120b",                           name: "GPT-OSS 120B"    },
+      { id: "llama-3.3-70b-versatile",                       name: "Llama 3.3 70B",    isFree: true },
+      { id: "meta-llama/llama-4-maverick-17b-128e-instruct", name: "Llama 4 Maverick",  isFree: true },
+      { id: "qwen-qwq-32b",                                  name: "Qwen QwQ 32B",      isFree: true },
+      { id: "deepseek-r1-distill-llama-70b",                 name: "DeepSeek R1 70B",   isFree: true },
     ],
   },
 
@@ -439,7 +455,7 @@ export const PROVIDERS: Record<string, Provider> = {
     authType: "apikey",
     color: "#d97706",
     baseUrl: "https://api.anthropic.com/v1",
-    apiKeyUrl: "https://console.anthropic.com/settings/keys",
+    apiKeyUrl: "https://platform.claude.com/settings/keys",
     logo: "/public/logos/claude-code-antrophic.png",
     models: [
       { id: "claude-opus-4-6",            name: "Claude Opus 4.6"   },
@@ -460,14 +476,15 @@ export const PROVIDERS: Record<string, Provider> = {
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
     apiKeyUrl: "https://aistudio.google.com/app/apikey",
     logo: "/public/logos/Gemini-CLI.png",
-    freeTier: { notice: "Free tier via AI Studio key — Gemini 2.5 Pro/Flash rate-limited but usable.", url: "https://aistudio.google.com/app/apikey" },
+    hasFreeModels: true,
+    freeTier: { notice: "Free tier via AI Studio key â€” Gemini 2.5 Pro/Flash rate-limited but usable.", url: "https://aistudio.google.com/app/apikey" },
     models: [
       { id: "gemini-3.1-pro-preview",         name: "Gemini 3.1 Pro Preview" },
       { id: "gemini-3.1-flash-lite-preview",  name: "Gemini 3.1 Flash Lite"  },
       { id: "gemini-3-flash-preview",         name: "Gemini 3 Flash Preview" },
       { id: "gemini-2.5-pro",                 name: "Gemini 2.5 Pro"         },
       { id: "gemini-2.5-flash",               name: "Gemini 2.5 Flash"       },
-      { id: "gemini-2.0-flash",               name: "Gemini 2.0 Flash"       },
+      { id: "gemini-2.0-flash",               name: "Gemini 2.0 Flash",       isFree: true },
     ],
   },
 
@@ -479,25 +496,27 @@ export const PROVIDERS: Record<string, Provider> = {
     authType: "apikey",
     color: "#76b900",
     baseUrl: "https://integrate.api.nvidia.com/v1",
-    apiKeyUrl: "https://build.nvidia.com/",
+    apiKeyUrl: "https://build.nvidia.com/settings/api-keys",
     logo: "/public/logos/nvidia-nim.png",
-    freeTier: { notice: "Free for NVIDIA Developer Program members.", url: "https://build.nvidia.com/" },
+    hasFreeModels: true,
+    freeTier: { notice: "Free for NVIDIA Developer Program members.", url: "https://build.nvidia.com/settings/api-keys" },
     models: [
-      { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5" },
-      { id: "z-ai/glm4.7",          name: "GLM 4.7"   },
+      { id: "moonshotai/kimi-k2.5", name: "Kimi K2.5", isFree: true },
+      { id: "z-ai/glm4.7",          name: "GLM 4.7",   isFree: true },
     ],
   },
 
   ollama: {
     id: "ollama",
     name: "Ollama Cloud",
-    description: "Ollama-hosted cloud inference — free tier via API key",
+    description: "Ollama-hosted cloud inference â€” free tier via API key",
     category: "apikey",
     authType: "apikey",
     color: "#ffffff",
     baseUrl: "https://ollama.com/v1",
     apiKeyUrl: "https://ollama.com/settings/keys",
     logo: "/public/logos/ollama-cloud.png",
+    hasFreeModels: true,
     freeTier: { notice: "Free tier: light usage, 1 cloud model at a time (limits reset every 5h & 7d).", url: "https://ollama.com/settings/keys" },
     models: [
       { id: "cogito-2.1:671b",           name: "Cogito 2.1 671B"              },
@@ -513,7 +532,7 @@ export const PROVIDERS: Record<string, Provider> = {
       { id: "glm-4.6",                   name: "GLM 4.6"                      },
       { id: "glm-5",                     name: "GLM 5"                        },
       { id: "gpt-oss:120b",              name: "GPT-OSS 120B"                 },
-      { id: "gpt-oss:20b",               name: "GPT-OSS 20B"                  },
+      { id: "gpt-oss:20b",               name: "GPT-OSS 20B",                  isFree: true },
       { id: "kimi-k2-thinking",          name: "Kimi K2 Thinking"             },
       { id: "kimi-k2.5",                 name: "Kimi K2.5"                    },
       { id: "kimi-k2:1t",                name: "Kimi K2 1T"                   },
@@ -538,19 +557,159 @@ export const PROVIDERS: Record<string, Provider> = {
     ],
   },
 
+  cerebras: {
+    id: "cerebras",
+    name: "Cerebras",
+    description: "Ultra-fast LPU inference â€” generous free daily quota",
+    category: "apikey",
+    authType: "apikey",
+    color: "#ef4444",
+    baseUrl: "https://api.cerebras.ai/v1",
+    apiKeyUrl: "https://cloud.cerebras.ai",
+    logo: "/public/logos/cerebras.png",
+    hasFreeModels: true,
+    freeTier: { notice: "Free tier with generous daily limits â€” no credit card required.", url: "https://cloud.cerebras.ai" },
+    models: [
+      { id: "llama3.1-8b",                      name: "Llama 3.1 8B",   isFree: true },
+      { id: "gpt-oss-120b",                     name: "GPT-OSS 120B"   },
+      { id: "qwen-3-235b-a22b-instruct-2507",   name: "Qwen3 235B"     },
+      { id: "zai-glm-4.7",                      name: "GLM 4.7"        },
+    ],
+  },
+
+  mistral: {
+    id: "mistral",
+    name: "Mistral",
+    description: "European frontier models â€” free tier via La Plateforme",
+    category: "apikey",
+    authType: "apikey",
+    color: "#ff7000",
+    baseUrl: "https://api.mistral.ai/v1",
+    apiKeyUrl: "https://console.mistral.ai/api-keys",
+    logo: "/public/logos/mistral.png",
+    hasFreeModels: true,
+    freeTier: { notice: "Free tier available on La Plateforme â€” rate-limited but no billing required.", url: "https://console.mistral.ai/api-keys" },
+    models: [
+      { id: "mistral-small-latest",   name: "Mistral Small",   isFree: true },
+      { id: "mistral-large-latest",   name: "Mistral Large"               },
+      { id: "codestral-latest",       name: "Codestral"                   },
+      { id: "devstral-latest",        name: "Devstral"                    },
+      { id: "ministral-8b-latest",    name: "Ministral 8B",    isFree: true },
+      { id: "ministral-3b-latest",    name: "Ministral 3B",    isFree: true },
+    ],
+  },
+
+  together: {
+    id: "together",
+    name: "Together AI",
+    description: "Open-source model hosting with pay-as-you-go billing",
+    category: "apikey",
+    authType: "apikey",
+    color: "#8b5cf6",
+    baseUrl: "https://api.together.xyz/v1",
+    apiKeyUrl: "https://api.together.ai/settings/projects/~current/api-keys",
+    logo: "/public/logos/together.png",
+    models: [
+      { id: "meta-llama/Llama-3.3-70B-Instruct-Turbo",           name: "Llama 3.3 70B Turbo"  },
+      { id: "meta-llama/Meta-Llama-3-8B-Instruct-Lite",          name: "Llama 3 8B Lite"      },
+      { id: "Qwen/Qwen3-235B-A22B-Instruct-2507-tput",           name: "Qwen3 235B"           },
+      { id: "Qwen/Qwen3.5-397B-A17B",                            name: "Qwen3.5 397B"         },
+      { id: "moonshotai/Kimi-K2.5",                              name: "Kimi K2.5"            },
+      { id: "deepseek-ai/DeepSeek-V3.1",                         name: "DeepSeek V3.1"        },
+      { id: "deepseek-ai/DeepSeek-R1",                           name: "DeepSeek R1"          },
+      { id: "openai/gpt-oss-120b",                               name: "GPT-OSS 120B"         },
+      { id: "zai-org/GLM-5",                                     name: "GLM 5"                },
+      { id: "google/gemma-4-31B-it",                             name: "Gemma 4 31B"          },
+    ],
+  },
+
+  huggingface: {
+    id: "huggingface",
+    name: "Hugging Face",
+    description: "Inference API â€” hundreds of open-source models, free rate-limited tier",
+    category: "apikey",
+    authType: "apikey",
+    color: "#ffd21e",
+    baseUrl: "https://router.huggingface.co/v1",
+    apiKeyUrl: "https://huggingface.co/settings/tokens",
+    logo: "/public/logos/huggingface.png",
+    hasFreeModels: true,
+    freeTier: { notice: "Free Inference API tier â€” rate-limited, no billing required.", url: "https://huggingface.co/inference-api" },
+    models: [
+      { id: "meta-llama/Llama-3.1-8B-Instruct",          name: "Llama 3.1 8B",       isFree: true },
+      { id: "meta-llama/Llama-3.3-70B-Instruct",         name: "Llama 3.3 70B",      isFree: true },
+      { id: "Qwen/Qwen2.5-72B-Instruct",                 name: "Qwen2.5 72B",        isFree: true },
+      { id: "Qwen/Qwen3.5-27B",                          name: "Qwen3.5 27B",        isFree: true },
+      { id: "Qwen/Qwen3.6-35B-A3B",                      name: "Qwen3.6 35B A3B"                  },
+      { id: "mistralai/Mistral-Nemo-Instruct-2407",       name: "Mistral Nemo",       isFree: true },
+      { id: "google/gemma-2-27b-it",                     name: "Gemma 2 27B",        isFree: true },
+      { id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",  name: "DeepSeek R1 32B",    isFree: true },
+      { id: "microsoft/Phi-3.5-mini-instruct",           name: "Phi-3.5 Mini",       isFree: true },
+    ],
+  },
+
   modal: {
     id: "modal",
     name: "Modal",
-    logo: "data:image/svg+xml,%3csvg%20width='368'%20height='192'%20viewBox='0%200%20368%20192'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3cpath%20d='M148.873%204L183.513%2064L111.922%20188C110.492%20190.47%20107.853%20192%20104.993%20192H40.3325C38.9025%20192%2037.5325%20191.62%2036.3325%20190.93C35.1325%20190.24%2034.1226%20189.24%2033.4026%20188L1.0725%20132C-0.3575%20129.53%20-0.3575%20126.48%201.0725%20124L70.3625%204C71.0725%202.76%2072.0925%201.76001%2073.2925%201.07001C74.4925%200.380007%2075.8625%200%2077.2925%200H141.952C144.812%200%20147.453%201.53%20148.883%204H148.873ZM365.963%20124L296.672%204C295.962%202.76%20294.943%201.76001%20293.743%201.07001C292.543%200.380007%20291.173%200%20289.743%200H225.083C222.223%200%20219.583%201.53%20218.153%204L183.513%2064L255.103%20188C256.533%20190.47%20259.173%20192%20262.033%20192H326.693C328.122%20192%20329.492%20191.62%20330.693%20190.93C331.893%20190.24%20332.902%20189.24%20333.622%20188L365.953%20132C367.383%20129.53%20367.383%20126.48%20365.953%20124H365.963Z'%20fill='%2362DE61'/%3e%3cpath%20d='M109.623%2064H183.523L148.883%204C147.453%201.53%20144.813%200%20141.953%200H77.2925C75.8625%200%2074.4925%200.380007%2073.2925%201.07001L109.623%2064Z'%20fill='url(%23paint0_linear_342_139)'/%3e%3cpath%20d='M109.623%2064L73.2925%201.07001C72.0925%201.76001%2071.0825%202.76%2070.3625%204L1.0725%20124C-0.3575%20126.48%20-0.3575%20129.52%201.0725%20132L33.4026%20188C34.1126%20189.24%2035.1325%20190.24%2036.3325%20190.93L109.613%2064H109.623Z'%20fill='url(%23paint1_linear_342_139)'/%3e%3cpath%20d='M183.513%2064H109.613L36.3325%20190.93C37.5325%20191.62%2038.9025%20192%2040.3325%20192H104.993C107.853%20192%20110.492%20190.47%20111.922%20188L183.513%2064Z'%20fill='%2309AF58'/%3e%3cpath%20d='M365.963%20132C366.673%20130.76%20367.033%20129.38%20367.033%20128H294.372L258.042%20190.93C259.242%20191.62%20260.612%20192%20262.042%20192H326.703C329.563%20192%20332.202%20190.47%20333.632%20188L365.963%20132Z'%20fill='%2309AF58'/%3e%3cpath%20d='M225.083%200C223.653%200%20222.283%200.380007%20221.083%201.07001L294.362%20128H367.023C367.023%20126.62%20366.663%20125.24%20365.953%20124L296.672%204C295.242%201.53%20292.603%200%20289.743%200H225.073H225.083Z'%20fill='url(%23paint2_linear_342_139)'/%3e%3cpath%20d='M258.033%20190.93L294.362%20128L221.083%201.07001C219.883%201.76001%20218.873%202.76%20218.153%204L183.513%2064L255.103%20188C255.813%20189.24%20256.833%20190.24%20258.033%20190.93Z'%20fill='url(%23paint3_linear_342_139)'/%3e%3cdefs%3e%3clinearGradient%20id='paint0_linear_342_139'%20x1='155.803'%20y1='80'%20x2='101.003'%20y2='-14.93'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23BFF9B4'/%3e%3cstop%20offset='1'%20stop-color='%2380EE64'/%3e%3c/linearGradient%3e%3clinearGradient%20id='paint1_linear_342_139'%20x1='8.62251'%20y1='174.93'%20x2='100.072'%20y2='16.54'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%2380EE64'/%3e%3cstop%20offset='0.18'%20stop-color='%237BEB63'/%3e%3cstop%20offset='0.36'%20stop-color='%236FE562'/%3e%3cstop%20offset='0.55'%20stop-color='%235ADA60'/%3e%3cstop%20offset='0.74'%20stop-color='%233DCA5D'/%3e%3cstop%20offset='0.93'%20stop-color='%2318B759'/%3e%3cstop%20offset='1'%20stop-color='%2309AF58'/%3e%3c/linearGradient%3e%3clinearGradient%20id='paint2_linear_342_139'%20x1='340.243'%20y1='143.46'%20x2='248.793'%20y2='-14.93'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%23BFF9B4'/%3e%3cstop%20offset='1'%20stop-color='%2380EE64'/%3e%3c/linearGradient%3e%3clinearGradient%20id='paint3_linear_342_139'%20x1='284.822'%20y1='175.47'%20x2='193.372'%20y2='17.0701'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20stop-color='%2380EE64'/%3e%3cstop%20offset='0.18'%20stop-color='%237BEB63'/%3e%3cstop%20offset='0.36'%20stop-color='%236FE562'/%3e%3cstop%20offset='0.55'%20stop-color='%235ADA60'/%3e%3cstop%20offset='0.74'%20stop-color='%233DCA5D'/%3e%3cstop%20offset='0.93'%20stop-color='%2318B759'/%3e%3cstop%20offset='1'%20stop-color='%2309AF58'/%3e%3c/linearGradient%3e%3c/defs%3e%3c/svg%3e",
-    description: "Modal serverless GPU inference — OpenAI-compatible API",
+    logo: "/public/logos/modal.png",
+    description: "Modal serverless GPU inference â€” OpenAI-compatible API",
     category: "free",
     authType: "apikey",
     color: "#06b6d4",
     baseUrl: "https://api.us-west-2.modal.direct/v1",
-    apiKeyUrl: "",
-    freeTier: { notice: "Free tier available — GPU-accelerated serverless inference." },
+    apiKeyUrl: "https://modal.com/settings/tokens",
+    allModelsFree: true,
+    freeTier: { notice: "Free tier available â€” GPU-accelerated serverless inference." },
     models: [
-      { id: "glm-5", name: "GLM-5" }
+      { id: "glm-5", name: "GLM-5", isFree: true }
+    ],
+  },
+
+  "github-models": {
+    id: "github-models",
+    name: "GitHub Models",
+    description: "GitHub inference API using a PAT with models:read scope",
+    category: "apikey",
+    authType: "apikey",
+    color: "#24292f",
+    baseUrl: "https://models.github.ai/inference",
+    apiKeyUrl: "https://github.com/settings/tokens",
+    logo: "/public/logos/github-copilot.png",
+    hasFreeModels: true,
+    freeTier: {
+      notice: "Free API usage is available for prototyping (rate-limited).",
+      url: "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models",
+    },
+    models: [
+      { id: "openai/gpt-4.1",      name: "OpenAI GPT-4.1",      isFree: true },
+      { id: "openai/gpt-4o",       name: "OpenAI GPT-4o",       isFree: true },
+      { id: "openai/gpt-4o-mini",  name: "OpenAI GPT-4o Mini",  isFree: true },
+      { id: "meta/Llama-3.3-70B-Instruct", name: "Meta Llama 3.3 70B", isFree: true },
+      { id: "deepseek/DeepSeek-R1", name: "DeepSeek R1", isFree: true },
+    ],
+  },
+
+  sambanova: {
+    id: "sambanova",
+    name: "SambaNova",
+    description: "SambaNova Cloud OpenAI-compatible API with free starter credits",
+    category: "apikey",
+    authType: "apikey",
+    color: "#0ea5e9",
+    baseUrl: "https://api.sambanova.ai/v1",
+    apiKeyUrl: "https://cloud.sambanova.ai",
+    hasFreeModels: true,
+    freeTier: {
+      notice: "Free starter credits available (no credit card required to start).",
+      url: "https://cloud.sambanova.ai/plans",
+    },
+    models: [
+      { id: "MiniMax-M2.5",                     name: "MiniMax M2.5",                     isFree: true },
+      { id: "DeepSeek-V3.1",                    name: "DeepSeek V3.1",                    isFree: true },
+      { id: "Meta-Llama-3.3-70B-Instruct",      name: "Meta Llama 3.3 70B",               isFree: true },
+      { id: "gpt-oss-120b",                     name: "GPT-OSS 120B",                     isFree: true },
+      { id: "DeepSeek-V3.2",                    name: "DeepSeek V3.2 (Preview)",          isFree: true },
+      { id: "Llama-4-Maverick-17B-128E-Instruct", name: "Llama 4 Maverick 17B",           isFree: true },
     ],
   },
 
@@ -574,7 +733,71 @@ Object.assign(PROVIDERS, loadCustomProviders());
 export const OAUTH_PROVIDERS  = Object.values(PROVIDERS).filter(p => p.category === "oauth");
 export const FREE_PROVIDERS   = Object.values(PROVIDERS).filter(p => p.category === "free");
 export const APIKEY_PROVIDERS = Object.values(PROVIDERS).filter(p => p.category === "apikey");
+export const TOP_FREE_PROVIDER_RANK = getTopFreeProviderRankMap(10);
+
+const FREE_MODEL_ID_PATTERN = /(^|[/:._-])free([/:._-]|$)/i;
+
+function normalizeModelId(raw: string): string {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+function dropProviderPrefix(modelId: string): string {
+  const idx = modelId.indexOf("/");
+  return idx === -1 ? modelId : modelId.slice(idx + 1);
+}
+
+export function looksLikeFreeModelId(modelId: string): boolean {
+  return FREE_MODEL_ID_PATTERN.test(modelId);
+}
+
+export function modelIdsMatch(left: string, right: string): boolean {
+  const a = normalizeModelId(left);
+  const b = normalizeModelId(right);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const aNoPrefix = dropProviderPrefix(a);
+  const bNoPrefix = dropProviderPrefix(b);
+  if (aNoPrefix === bNoPrefix) return true;
+  return a.endsWith("/" + bNoPrefix) || b.endsWith("/" + aNoPrefix);
+}
+
+export function findProviderModelById(provider: Provider, modelId: string): ProviderModel | null {
+  return provider.models.find((m) => modelIdsMatch(m.id, modelId)) ?? null;
+}
+
+export function isProviderModelFree(model: ProviderModel, provider: Provider): boolean {
+  const modelOverride = getModelFreeOverride(provider.id, model.id);
+  if (modelOverride) return modelOverride.isFree;
+
+  const providerOverride = getProviderFreeOverride(provider.id);
+  if (providerOverride?.allModelsFree?.isFree) return true;
+
+  if (provider.category === "free" || provider.allModelsFree) return true;
+  return !!model.isFree;
+}
+
+export function providerHasFreeModels(provider: Provider): boolean {
+  const providerOverride = getProviderFreeOverride(provider.id);
+  if (providerOverride?.allModelsFree?.isFree) return true;
+  if (provider.category === "free" || provider.allModelsFree) return true;
+  if (providerOverride?.models) {
+    if (Object.values(providerOverride.models).some((m) => m.isFree)) return true;
+  }
+  return provider.models.some((m) => isProviderModelFree(m, provider));
+}
+
+export function providerHasFreeModelsById(providerId: string): boolean {
+  const provider = PROVIDERS[providerId];
+  return provider ? providerHasFreeModels(provider) : false;
+}
 
 export function getProvider(id: string): Provider | undefined {
   return PROVIDERS[id];
 }
+
+export function getTopFreeProviderRank(providerId: string): number | null {
+  return TOP_FREE_PROVIDER_RANK.get(providerId) ?? null;
+}
+

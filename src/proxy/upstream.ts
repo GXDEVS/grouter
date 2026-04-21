@@ -6,7 +6,8 @@
 // Coverage:
 //   ✅ openai-compat  — qwen, iflow, qoder, github (Copilot), kilocode, opencode,
 //                       cline, openrouter, openai (apikey), groq, deepseek, nvidia, ollama,
-//                       gemini (apikey via /v1beta/openai/), gitlab (apikey or OAuth Bearer).
+//                       gemini (apikey via /v1beta/openai/), gitlab (apikey or OAuth Bearer),
+//                       github-models, sambanova.
 //   ⚠️ claude-format   — claude (OAuth), anthropic (apikey), kimi-coding.
 //                       Needs OpenAI→Anthropic translator. Returns 501 for now.
 //   ⚠️ codex-responses — codex. Uses /responses endpoint, needs translator.
@@ -24,6 +25,8 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
+import { openaiToCodexResponses } from "./codex-translator.ts";
+import { extractCodexAccountId } from "../auth/providers/codex.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -138,14 +141,27 @@ function buildCopilotHeaders(copilotToken: string, stream: boolean): Record<stri
   };
 }
 
+// Fields that some stricter OpenAI-compat providers reject
+const OPENAI_EXTRA_FIELDS = ["store", "metadata", "service_tier", "logprobs", "top_logprobs", "logit_bias"];
+
+// Providers that don't accept OpenAI-specific extra fields
+const STRICT_COMPAT_PROVIDERS = new Set(["cerebras", "mistral", "together", "chutes", "huggingface", "sambanova"]);
+
+function stripExtraFields(body: Record<string, unknown>): Record<string, unknown> {
+  const out = { ...body };
+  for (const field of OPENAI_EXTRA_FIELDS) delete out[field];
+  return out;
+}
+
 function openaiCompat(
   url: string,
   token: string,
   body: Record<string, unknown>,
   stream: boolean,
   extraHeaders: Record<string, string> = {},
+  strict = false,
 ): UpstreamRequest {
-  const out: Record<string, unknown> = { ...body };
+  const out: Record<string, unknown> = strict ? stripExtraFields(body) : { ...body };
   // Some clients send Responses-style token caps to /chat/completions.
   // Normalize to chat-completions-compatible fields before forwarding.
   const maxOutput = out.max_output_tokens;
@@ -180,6 +196,23 @@ function buildQwen(ctx: BuildContext): UpstreamRequest {
   };
 }
 
+function resolveCodexResponsesUrl(baseUrl: string | null | undefined): string {
+  const base = (baseUrl ?? "https://chatgpt.com/backend-api/codex").replace(/\/$/, "");
+  return base.endsWith("/responses") ? base : `${base}/responses`;
+}
+
+function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "Accept": stream ? "text/event-stream" : "application/json",
+    "originator": "codex_cli_rs",
+    "User-Agent": `codex_cli_rs/0.0.1 (${mapStainlessOs()}; ${arch()})`,
+  };
+  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
+  return headers;
+}
+
 function buildGithub(ctx: BuildContext): UpstreamResult {
   // GitHub Copilot uses a short-lived copilotToken fetched from copilot_internal/v2/token.
   // We stored it in provider_data on the first exchange; if missing, refresh via /copilot_internal.
@@ -208,6 +241,21 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
   // API key providers → plain OpenAI-compat
   if (ctx.account.auth_type === "apikey") {
     const apiKey = ctx.account.api_key ?? "";
+    if (provider === "github-models") {
+      return {
+        kind: "ok",
+        req: openaiCompat(
+          "https://models.github.ai/inference/chat/completions",
+          apiKey,
+          ctx.body,
+          ctx.stream,
+          {
+            "X-GitHub-Api-Version": "2022-11-28",
+            Accept: ctx.stream ? "text/event-stream" : "application/vnd.github+json",
+          },
+        ),
+      };
+    }
     const urls: Record<string, string> = {
       openrouter: "https://openrouter.ai/api/v1/chat/completions",
       openai:     "https://api.openai.com/v1/chat/completions",
@@ -217,6 +265,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       ollama:     "https://ollama.com/v1/chat/completions",
       gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       modal:      "https://api.us-west-2.modal.direct/v1/chat/completions",
+      sambanova:  "https://api.sambanova.ai/v1/chat/completions",
     };
     const url = urls[provider];
     if (url) {
@@ -240,7 +289,8 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
     if (def?.baseUrl) {
       const base = def.baseUrl.replace(/\/$/, "");
       const dynamicUrl = base.endsWith("/chat/completions") ? base : `${base}/chat/completions`;
-      return { kind: "ok", req: openaiCompat(dynamicUrl, apiKey, ctx.body, ctx.stream) };
+      const strict = STRICT_COMPAT_PROVIDERS.has(provider);
+      return { kind: "ok", req: openaiCompat(dynamicUrl, apiKey, ctx.body, ctx.stream, {}, strict) };
     }
     return { kind: "unsupported", reason: `No upstream mapping for provider ${provider}` };
   }

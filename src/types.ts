@@ -77,6 +77,16 @@ export function isRateLimitedResult(v: unknown): v is RateLimitedResult {
   return typeof v === "object" && v !== null && "allRateLimited" in v;
 }
 
+export interface TemporarilyUnavailableResult {
+  allTemporarilyUnavailable: true;
+  retryAfter: string;
+  retryAfterHuman: string;
+}
+
+export function isTemporarilyUnavailableResult(v: unknown): v is TemporarilyUnavailableResult {
+  return typeof v === "object" && v !== null && "allTemporarilyUnavailable" in v;
+}
+
 export interface FallbackDecision {
   shouldFallback: boolean;
   cooldownMs: number;
