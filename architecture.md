@@ -19,6 +19,9 @@ This document describes the runtime boundaries and extension points of `grouter`
 - `src/proxy/*`: upstream request building, translators, and Bun server entrypoints.
 - `src/db/*`: SQLite schema, migrations, settings, account/pool persistence, and usage logging.
 - `src/web/*`: dashboard pages plus `/api/*` handlers for management flows.
+  - `api-providers-catalog.ts`: provider catalog/connections/models/config handlers.
+  - `api-proxy-pools.ts`: proxy-pool CRUD/test handlers.
+  - `api-providers.ts`: stable facade that re-exports provider-domain handlers.
 
 ## Request flow (`/v1/chat/completions`)
 

@@ -96,6 +96,7 @@ Recent hardening updates shipped on **April 21, 2026**:
 - Added safe static asset delivery optimization for dashboard assets (`ETag`/`304` and gzip for `/public/animation.js` when supported).
 - Hardened CORS defaults for dashboard/API responses: allow-origin is now opt-in via `GROUTER_CORS_ALLOW_ALL=true` or `GROUTER_CORS_ALLOW_ORIGIN=https://your-origin`.
 - Standardized dashboard API parsing/error helpers (`src/web/api-http.ts`) to reduce handler duplication and keep response behavior consistent.
+- Split provider-domain web handlers into focused modules (`api-providers-catalog.ts` and `api-proxy-pools.ts`) while keeping `api-providers.ts` as a stable facade.
 - Added API HTTP helper tests and smoke E2E coverage (`tests/api-http.test.ts`, `tests/e2e-smoke.test.ts`) for startup/health/status/CORS.
 - Fixed OAuth callback-listener sweeper timer to `unref()` so short-lived test/runtime processes can exit cleanly.
 - Tightened CI gate to fail on TypeScript errors and always execute `bun test`.
