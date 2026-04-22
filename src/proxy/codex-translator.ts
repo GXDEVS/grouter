@@ -430,6 +430,35 @@ export function codexChunkToOpenAI(rawLine: string, state: CodexStreamState): st
       );
     }
 
+    // Fallback: some upstream responses only include function calls on completion.
+    if (!state.sawToolDelta && toolCalls.length) {
+      if (!state.roleSent) {
+        state.roleSent = true;
+        out.push(roleChunk(state));
+      }
+      for (const rawToolCall of toolCalls) {
+        const tc = toRecord(rawToolCall);
+        const fn = toRecord(tc?.function);
+        if (!tc || !fn) continue;
+        const callId = typeof tc.id === "string" ? tc.id : "";
+        const name = typeof fn.name === "string" ? fn.name : "tool";
+        const args = typeof fn.arguments === "string" ? fn.arguments : "";
+        const toolIndex = typeof tc.index === "number" ? tc.index : getToolIndex(state, callId);
+
+        out.push(
+          toolCallDeltaChunk(state, {
+            index: toolIndex,
+            id: callId,
+            type: "function",
+            function: { name, arguments: args },
+          }),
+        );
+        state.sawToolDelta = true;
+        if (callId) state.toolCallIndexById.set(callId, toolIndex);
+        if (callId && args) state.toolArgsSeenById.add(callId);
+      }
+    }
+
     const doneChunk: Record<string, unknown> = {
       ...chunkBase(state),
       choices: [{ index: 0, delta: {}, finish_reason: finishReason }],

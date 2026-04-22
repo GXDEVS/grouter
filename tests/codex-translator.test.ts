@@ -176,4 +176,25 @@ describe("codexChunkToOpenAI", () => {
     expect(doneChunks[0]).toContain('"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5}');
     expect(doneChunks[1]).toBe("data: [DONE]\n\n");
   });
+
+  test("emits fallback tool_call delta when function_call is only present on completion", () => {
+    const state = newCodexStreamState();
+
+    codexChunkToOpenAI(
+      'data: {"type":"response.created","response":{"id":"resp_tool","model":"gpt-5.4"}}',
+      state,
+    );
+
+    const doneChunks = codexChunkToOpenAI(
+      'data: {"type":"response.completed","response":{"id":"resp_tool","model":"gpt-5.4","status":"completed","output":[{"type":"function_call","call_id":"call_42","name":"write_file","arguments":"{\\"path\\":\\"calculadora.html\\"}"}]}}',
+      state,
+    );
+
+    const joined = doneChunks.join("");
+    expect(joined).toContain('"tool_calls"');
+    expect(joined).toContain('"id":"call_42"');
+    expect(joined).toContain('"name":"write_file"');
+    expect(joined).toContain('"arguments":"{\\\"path\\\":\\\"calculadora.html\\\"}"');
+    expect(doneChunks[doneChunks.length - 1]).toBe("data: [DONE]\n\n");
+  });
 });
