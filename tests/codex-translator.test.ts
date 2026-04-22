@@ -47,6 +47,25 @@ describe("openaiToCodexResponses", () => {
     expect(mapped.parallel_tool_calls).toBe(true);
   });
 
+  test("includes developer messages in instructions and excludes them from input user turns", () => {
+    const mapped = openaiToCodexResponses(
+      {
+        model: "gpt-5.4",
+        messages: [
+          { role: "system", content: "System policy." },
+          { role: "developer", content: "Use tools to edit files; do not just promise." },
+          { role: "user", content: "Create calculadora.html" },
+        ],
+      },
+      true,
+    );
+
+    expect(mapped.instructions).toBe("System policy.\nUse tools to edit files; do not just promise.");
+    expect(mapped.input).toEqual([
+      { role: "user", content: "Create calculadora.html" },
+    ]);
+  });
+
   test("preserves explicit tool_choice and parallel_tool_calls from OpenAI payload", () => {
     const mapped = openaiToCodexResponses(
       {

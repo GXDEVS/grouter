@@ -69,7 +69,7 @@ function mapInputMessages(messages: unknown): unknown[] {
     if (!msg) continue;
     const role = typeof msg.role === "string" ? msg.role : "user";
 
-    if (role === "system") continue;
+    if (role === "system" || role === "developer") continue;
 
     if (role === "tool") {
       const callId =
@@ -109,9 +109,9 @@ function mapInputMessages(messages: unknown): unknown[] {
 
 export function openaiToCodexResponses(body: Record<string, unknown>, stream: boolean): Record<string, unknown> {
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const systemParts = messages
+  const instructionParts = messages
     .map((m) => toRecord(m))
-    .filter((m): m is Record<string, unknown> => !!m && m.role === "system")
+    .filter((m): m is Record<string, unknown> => !!m && (m.role === "system" || m.role === "developer"))
     .map((m) => normalizeTextContent(m.content))
     .filter(Boolean);
 
@@ -130,7 +130,7 @@ export function openaiToCodexResponses(body: Record<string, unknown>, stream: bo
     input: mappedInput,
   };
 
-  if (systemParts.length) out.instructions = systemParts.join("\n");
+  if (instructionParts.length) out.instructions = instructionParts.join("\n");
   if (mappedTools) {
     out.tools = mappedTools;
     out.tool_choice = mappedToolChoice ?? "auto";
