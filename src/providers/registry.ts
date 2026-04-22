@@ -100,7 +100,7 @@ export const PROVIDERS: Record<string, Provider> = {
   qwen: {
     id: "qwen",
     name: "Qwen Code",
-    description: "Alibaba Qwen accounts â€” free via OAuth device flow",
+    description: "Alibaba Qwen accounts - free via OAuth device flow",
     category: "oauth",
     authType: "oauth",
     color: "#0AB9DC",
@@ -108,7 +108,7 @@ export const PROVIDERS: Record<string, Provider> = {
     deprecated: true,
     deprecationReason: "Qwen Code Free has been discontinued. Existing accounts continue to work, but new OAuth sign-ups are no longer accepted.",
     logo: "/public/logos/qwen-code.png",
-    freeTier: { notice: "Free OAuth device flow â€” no credit card." },
+    freeTier: { notice: "Free OAuth device flow - no credit card." },
     models: [
       { id: "qwen3-coder-plus",  name: "Qwen3 Coder Plus"  },
       { id: "qwen3-coder-flash", name: "Qwen3 Coder Flash" },
@@ -144,14 +144,14 @@ export const PROVIDERS: Record<string, Provider> = {
   "kimi-coding": {
     id: "kimi-coding",
     name: "Kimi Coding",
-    description: "Moonshot Kimi K2 coding assistant â€” free via OAuth",
+    description: "Moonshot Kimi K2 coding assistant - free via OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#6366f1",
     baseUrl: "https://api.kimi.com/v1",
     logo: "/public/logos/kimi-ai.png",
     allModelsFree: true,
-    freeTier: { notice: "Free OAuth â€” no credit card." },
+    freeTier: { notice: "Free OAuth - no credit card." },
     models: [
       { id: "kimi-k2.5",          name: "Kimi K2.5"          },
       { id: "kimi-k2.5-thinking", name: "Kimi K2.5 Thinking" },
@@ -162,7 +162,7 @@ export const PROVIDERS: Record<string, Provider> = {
   kilocode: {
     id: "kilocode",
     name: "KiloCode",
-    description: "KiloCode cloud inference â€” free tier via OAuth",
+    description: "KiloCode cloud inference - free tier via OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#10b981",
@@ -185,7 +185,7 @@ export const PROVIDERS: Record<string, Provider> = {
   claude: {
     id: "claude",
     name: "Claude (OAuth)",
-    description: "Claude.ai subscription via OAuth â€” no API key required",
+    description: "Claude.ai subscription via OAuth - no API key required",
     category: "oauth",
     authType: "oauth",
     color: "#d97706",
@@ -226,14 +226,14 @@ export const PROVIDERS: Record<string, Provider> = {
   kiro: {
     id: "kiro",
     name: "Kiro",
-    description: "AWS CodeWhisperer via Kiro IDE â€” AWS Builder ID OAuth",
+    description: "AWS CodeWhisperer via Kiro IDE - AWS Builder ID OAuth",
     category: "oauth",
     authType: "oauth",
     color: "#ff9900",
     baseUrl: "https://codewhisperer.us-east-1.amazonaws.com",
     logo: "/public/logos/Kiro.png",
     allModelsFree: true,
-    freeTier: { notice: "Free AWS Builder ID â€” no AWS account required." },
+    freeTier: { notice: "Free AWS Builder ID - no AWS account required." },
     models: [
       { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5" },
       { id: "claude-haiku-4.5",  name: "Claude Haiku 4.5"  },
@@ -246,7 +246,7 @@ export const PROVIDERS: Record<string, Provider> = {
   iflow: {
     id: "iflow",
     name: "iFlow",
-    description: "iFlow OAuth â€” returns a long-lived API key",
+    description: "iFlow OAuth - returns a long-lived API key",
     category: "oauth",
     authType: "oauth",
     color: "#7c3aed",
@@ -271,7 +271,7 @@ export const PROVIDERS: Record<string, Provider> = {
   qoder: {
     id: "qoder",
     name: "Qoder",
-    description: "Qoder device-token OAuth â€” returns a long-lived API key",
+    description: "Qoder device-token OAuth - returns a long-lived API key",
     category: "oauth",
     authType: "oauth",
     color: "#ec4899",
@@ -285,7 +285,7 @@ export const PROVIDERS: Record<string, Provider> = {
   cline: {
     id: "cline",
     name: "Cline",
-    description: "Cline extension OAuth â€” browser redirect flow",
+    description: "Cline extension OAuth - browser redirect flow",
     category: "oauth",
     authType: "oauth",
     color: "#0ea5e9",
@@ -343,13 +343,13 @@ export const PROVIDERS: Record<string, Provider> = {
       { id: "minimax-m2.5-free",    name: "MiniMax M2.5"       },
       { id: "big-pickle",           name: "Big Pickle"         },
     ],
-    freeTier: { notice: "No sign-up required â€” routes to a shared free pool." },
+    freeTier: { notice: "No sign-up required - routes to a shared free pool." },
   },
 
   "gemini-cli": {
     id: "gemini-cli",
     name: "Gemini CLI (OAuth)",
-    description: "Google Gemini subscription via Gemini CLI OAuth â€” no API key required",
+    description: "Google Gemini subscription via Gemini CLI OAuth - no API key required",
     category: "oauth",
     authType: "oauth",
     color: "#4285f4",
@@ -368,7 +368,7 @@ export const PROVIDERS: Record<string, Provider> = {
   gitlab: {
     id: "gitlab",
     name: "GitLab Duo",
-    description: "GitLab Duo OAuth â€” bring your own GitLab OAuth app",
+    description: "GitLab Duo OAuth - bring your own GitLab OAuth app",
     category: "oauth",
     authType: "oauth",
     color: "#fc6d26",
@@ -498,7 +498,7 @@ export const PROVIDERS: Record<string, Provider> = {
     apiKeyUrl: "https://aistudio.google.com/app/apikey",
     logo: "/public/logos/Gemini-CLI.png",
     hasFreeModels: true,
-    freeTier: { notice: "Free tier via AI Studio key â€” Gemini 2.5 Pro/Flash rate-limited but usable.", url: "https://aistudio.google.com/app/apikey" },
+    freeTier: { notice: "Free tier via AI Studio key - Gemini 2.5 Pro/Flash rate-limited but usable.", url: "https://aistudio.google.com/app/apikey" },
     models: [
       { id: "gemini-3.1-pro-preview",         name: "Gemini 3.1 Pro Preview" },
       { id: "gemini-3.1-flash-lite-preview",  name: "Gemini 3.1 Flash Lite"  },
@@ -530,7 +530,7 @@ export const PROVIDERS: Record<string, Provider> = {
   ollama: {
     id: "ollama",
     name: "Ollama Cloud",
-    description: "Ollama-hosted cloud inference â€” free tier via API key",
+    description: "Ollama-hosted cloud inference - free tier via API key",
     category: "apikey",
     authType: "apikey",
     color: "#ffffff",
@@ -581,7 +581,7 @@ export const PROVIDERS: Record<string, Provider> = {
   cerebras: {
     id: "cerebras",
     name: "Cerebras",
-    description: "Ultra-fast LPU inference â€” generous free daily quota",
+    description: "Ultra-fast LPU inference - generous free daily quota",
     category: "apikey",
     authType: "apikey",
     color: "#ef4444",
@@ -589,7 +589,7 @@ export const PROVIDERS: Record<string, Provider> = {
     apiKeyUrl: "https://cloud.cerebras.ai",
     logo: "/public/logos/cerebras.png",
     hasFreeModels: true,
-    freeTier: { notice: "Free tier with generous daily limits â€” no credit card required.", url: "https://cloud.cerebras.ai" },
+    freeTier: { notice: "Free tier with generous daily limits - no credit card required.", url: "https://cloud.cerebras.ai" },
     models: [
       { id: "llama3.1-8b",                      name: "Llama 3.1 8B",   isFree: true },
       { id: "gpt-oss-120b",                     name: "GPT-OSS 120B"   },
@@ -601,7 +601,7 @@ export const PROVIDERS: Record<string, Provider> = {
   mistral: {
     id: "mistral",
     name: "Mistral",
-    description: "European frontier models â€” free tier via La Plateforme",
+    description: "European frontier models - free tier via La Plateforme",
     category: "apikey",
     authType: "apikey",
     color: "#ff7000",
@@ -609,7 +609,7 @@ export const PROVIDERS: Record<string, Provider> = {
     apiKeyUrl: "https://console.mistral.ai/api-keys",
     logo: "/public/logos/mistral.png",
     hasFreeModels: true,
-    freeTier: { notice: "Free tier available on La Plateforme â€” rate-limited but no billing required.", url: "https://console.mistral.ai/api-keys" },
+    freeTier: { notice: "Free tier available on La Plateforme - rate-limited but no billing required.", url: "https://console.mistral.ai/api-keys" },
     models: [
       { id: "mistral-small-latest",   name: "Mistral Small",   isFree: true },
       { id: "mistral-large-latest",   name: "Mistral Large"               },
@@ -647,7 +647,7 @@ export const PROVIDERS: Record<string, Provider> = {
   huggingface: {
     id: "huggingface",
     name: "Hugging Face",
-    description: "Inference API â€” hundreds of open-source models, free rate-limited tier",
+    description: "Inference API - hundreds of open-source models, free rate-limited tier",
     category: "apikey",
     authType: "apikey",
     color: "#ffd21e",
@@ -655,7 +655,7 @@ export const PROVIDERS: Record<string, Provider> = {
     apiKeyUrl: "https://huggingface.co/settings/tokens",
     logo: "/public/logos/huggingface.png",
     hasFreeModels: true,
-    freeTier: { notice: "Free Inference API tier â€” rate-limited, no billing required.", url: "https://huggingface.co/inference-api" },
+    freeTier: { notice: "Free Inference API tier - rate-limited, no billing required.", url: "https://huggingface.co/inference-api" },
     models: [
       { id: "meta-llama/Llama-3.1-8B-Instruct",          name: "Llama 3.1 8B",       isFree: true },
       { id: "meta-llama/Llama-3.3-70B-Instruct",         name: "Llama 3.3 70B",      isFree: true },
@@ -673,14 +673,14 @@ export const PROVIDERS: Record<string, Provider> = {
     id: "modal",
     name: "Modal",
     logo: "/public/logos/modal.png",
-    description: "Modal serverless GPU inference â€” OpenAI-compatible API",
+    description: "Modal serverless GPU inference - OpenAI-compatible API",
     category: "free",
     authType: "apikey",
     color: "#06b6d4",
     baseUrl: "https://api.us-west-2.modal.direct/v1",
     apiKeyUrl: "https://modal.com/settings/tokens",
     allModelsFree: true,
-    freeTier: { notice: "Free tier available â€” GPU-accelerated serverless inference." },
+    freeTier: { notice: "Free tier available - GPU-accelerated serverless inference." },
     models: [
       { id: "glm-5", name: "GLM-5", isFree: true }
     ],
@@ -720,7 +720,7 @@ export const PROVIDERS: Record<string, Provider> = {
     baseUrl: "https://api.sambanova.ai/v1",
     apiKeyUrl: "https://cloud.sambanova.ai",
     underConstruction: true,
-    underConstructionReason: "Integração do SambaNova ainda está em construção — ela ficará disponível em uma próxima release.",
+    underConstructionReason: "SambaNova integration is under construction — it will be available in an upcoming release.",
     hasFreeModels: true,
     freeTier: {
       notice: "Free starter credits available (no credit card required to start).",

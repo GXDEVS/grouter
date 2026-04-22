@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { getSetting, setSetting, getStrategy, getStickyLimit, getProxyPort } from "../db/index.ts";
+import { setSetting, getStrategy, getStickyLimit, getProxyPort } from "../db/index.ts";
 
 export function configCommand(options: { strategy?: "fill-first" | "round-robin"; port?: number; stickyLimit?: number }): void {
   if (!options.strategy && options.port === undefined && options.stickyLimit === undefined) {

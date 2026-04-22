@@ -102,10 +102,8 @@ export async function setupCommand(): Promise<void> {
 
   const a3 = await prompt(chalk.gray("    Start proxy in background? ") + chalk.white("[Y/n] "));
 
-  let proxyStarted = false;
   if (a3.trim().toLowerCase() !== "n") {
     serveOnCommand({});
-    proxyStarted = true;
   }
 
   // ── Step 4: Claude Code integration ───────────────────────────────────────

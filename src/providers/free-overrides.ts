@@ -194,6 +194,9 @@ export function getTopFreeProviderIds(limit = 10): string[] {
 export function getTopFreeProviderRankMap(limit = 10): Map<string, number> {
   const ranked = getTopFreeProviderIds(limit);
   const map = new Map<string, number>();
-  for (let i = 0; i < ranked.length; i++) map.set(ranked[i], i + 1);
+  for (let i = 0; i < ranked.length; i++) {
+    const providerId = ranked[i];
+    if (providerId) map.set(providerId, i + 1);
+  }
   return map;
 }

@@ -1,6 +1,28 @@
 import { db } from "./index.ts";
 import { allocateProviderPort, releaseProviderPortIfEmpty } from "./ports.ts";
-import type { Connection, QwenAccount } from "../types.ts";
+import type { Connection } from "../types.ts";
+
+const ACCOUNT_PATCH_COLUMNS = {
+  display_name: "display_name",
+  access_token: "access_token",
+  refresh_token: "refresh_token",
+  expires_at: "expires_at",
+  resource_url: "resource_url",
+  api_key: "api_key",
+  provider_data: "provider_data",
+  proxy_pool_id: "proxy_pool_id",
+  priority: "priority",
+  is_active: "is_active",
+  test_status: "test_status",
+  last_error: "last_error",
+  error_code: "error_code",
+  last_error_at: "last_error_at",
+  backoff_level: "backoff_level",
+  consecutive_use_count: "consecutive_use_count",
+  last_used_at: "last_used_at",
+} as const;
+
+export type AccountPatch = Partial<Pick<Connection, keyof typeof ACCOUNT_PATCH_COLUMNS>>;
 
 export function listAccounts(): Connection[] {
   return db()
@@ -43,27 +65,7 @@ export function getConnectionCountByProvider(): Record<string, number> {
   return Object.fromEntries(rows.map(r => [r.provider, r.count]));
 }
 
-export function addAccount(data: {
-  email: string | null;
-  display_name: string | null;
-  access_token: string;
-  refresh_token: string;
-  expires_at: string;
-  resource_url: string | null;
-}): Connection {
-  // Back-compat shim → addOAuthConnection with provider='qwen'
-  return addOAuthConnection({
-    provider: "qwen",
-    email: data.email,
-    display_name: data.display_name,
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: data.expires_at,
-    resource_url: data.resource_url,
-    api_key: null,
-    provider_data: null,
-  });
-}
+
 
 export function addOAuthConnection(data: {
   provider: string;
@@ -82,7 +84,7 @@ export function addOAuthConnection(data: {
   // Upsert by (provider, email)
   if (data.email) {
     const existing = db()
-      .query<QwenAccount, [string, string]>(
+      .query<Connection, [string, string]>(
         "SELECT * FROM accounts WHERE provider = ? AND email = ?"
       )
       .get(data.provider, data.email);
@@ -164,12 +166,20 @@ export function addApiKeyConnection(data: {
   return getAccountById(id)!;
 }
 
-export function updateAccount(id: string, patch: Partial<Connection>): void {
-  const entries = Object.entries(patch).filter(([k]) => k !== "id");
-  if (entries.length === 0) return;
+export function updateAccount(id: string, patch: AccountPatch): void {
+  const rawEntries = Object.entries(patch).filter(([, v]) => v !== undefined);
+  if (rawEntries.length === 0) return;
 
-  const sets = entries.map(([k]) => `${k} = ?`).join(", ");
-  const values = entries.map(([, v]) => v as string | number | null);
+  const invalidKeys = rawEntries
+    .map(([k]) => k)
+    .filter((k) => !(k in ACCOUNT_PATCH_COLUMNS));
+  if (invalidKeys.length > 0) {
+    throw new Error(`Invalid account patch field(s): ${invalidKeys.join(", ")}`);
+  }
+
+  const entries = rawEntries as Array<[keyof typeof ACCOUNT_PATCH_COLUMNS, string | number | null]>;
+  const sets = entries.map(([k]) => `${ACCOUNT_PATCH_COLUMNS[k]} = ?`).join(", ");
+  const values = entries.map(([, v]) => v);
   const now = new Date().toISOString();
 
   db().query(`UPDATE accounts SET ${sets}, updated_at = ? WHERE id = ?`)

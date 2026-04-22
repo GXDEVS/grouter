@@ -1,146 +1,106 @@
-# grouter — Docker Tutorial
+# grouter - Docker Tutorial
 
-Fluxo Docker completo para rodar o `grouter` (proxy OpenAI-compatible multi-provider) em container, com instalação fácil e dados persistentes.
+Guia completo para rodar o `grouter` em container, com dados persistentes e fluxo de operacao diario.
 
-## Arquivos criados
+## Arquivos principais
 
-| Arquivo | Propósito |
+| Arquivo | Funcao |
 |---|---|
-| `Dockerfile` | Multi-stage (builder + runtime Alpine). Usuário não-root `grouter`, `HOME=/data` → SQLite persiste em `/data/.grouter`. `tini` como PID 1, healthcheck em `/health`, `ENTRYPOINT grouter` (passa subcomandos), `CMD serve fg`. |
-| `.dockerignore` | Mantém o contexto de build enxuto (ignora `node_modules`, `dist`, `.git`, etc). |
-| `docker-compose.yml` | Expõe `3099` (router + dashboard) + range `3100-3110` (per-provider), volume `./data:/data`, restart automático, TTY ligado para `grouter add`. |
-| `scripts/docker-install.sh` | Instalador one-shot: valida docker, builda, sobe, espera `/health` e imprime os próximos passos. |
-| `package.json` | Novos scripts: `docker:install`, `docker:up`, `docker:down`, `docker:logs`, `docker:add`, `docker:shell`, `docker:rebuild`. |
+| `Dockerfile` | Build multi-stage (builder + runtime Alpine), usuario nao-root e `HOME=/data` para persistir SQLite |
+| `.dockerignore` | Reduz contexto de build |
+| `docker-compose.yml` | Expoe `3099` (router/dashboard) e `3100-3110` (ports por provider), com volume `./data:/data` |
+| `scripts/docker-install.sh` | Instalacao one-shot (build + up + healthcheck) |
+| `package.json` | Scripts `docker:*` para uso diario |
 
-## Instalação rápida
+## Instalacao rapida
 
 ```bash
-# opção 1 — via script npm/bun
+# opcao 1
 bun run docker:install
 
-# opção 2 — direto
+# opcao 2
 bash scripts/docker-install.sh
 ```
-
-O script faz build + up + aguarda `/health` ficar OK e imprime os endpoints.
 
 ## Comandos do dia a dia
 
 ```bash
-# sobe / desce
-bun run docker:up            # docker compose up -d
-bun run docker:down          # docker compose down   (dados persistem em ./data)
-
-# adicionar provider (interativo)
-bun run docker:add           # docker compose exec grouter grouter add
-
-# outros comandos do CLI dentro do container
-docker compose exec grouter grouter list
-docker compose exec grouter grouter models
-docker compose exec grouter grouter status
-docker compose exec grouter grouter test
+# subir / descer
+bun run docker:up
+bun run docker:down
 
 # logs
-bun run docker:logs          # docker compose logs -f grouter
+bun run docker:logs
 
-# shell dentro do container
-bun run docker:shell         # docker compose exec grouter sh
+# shell no container
+bun run docker:shell
 
-# rebuild após mudanças no código
+# adicionar conexao (interativo)
+bun run docker:add
+
+# rebuild
 bun run docker:rebuild
 ```
 
-## Endpoints expostos
+## Endpoints
 
-| URL | Descrição |
+| URL | Descricao |
 |---|---|
-| `http://localhost:3099/dashboard` | Dashboard web (adicionar/gerenciar contas) |
-| `http://localhost:3099/v1` | API OpenAI-compatible (`/v1/chat/completions`, `/v1/models`) |
+| `http://localhost:3099/dashboard` | Dashboard web |
+| `http://localhost:3099/v1` | API OpenAI-compatible |
 | `http://localhost:3099/health` | Healthcheck |
-| `http://localhost:3100-3110` | Listeners per-provider (pin de provider por porta) |
+| `http://localhost:3100-3110` | Listeners por provider |
 
-Exemplo com qualquer SDK OpenAI:
+Exemplo com SDK OpenAI:
 
 ```bash
 export OPENAI_BASE_URL="http://localhost:3099/v1"
-export OPENAI_API_KEY="anything"   # o proxy ignora; rota pelas contas armazenadas
+export OPENAI_API_KEY="anything"
 ```
 
-## Persistência
+## Persistencia
 
 Tudo fica em `./data/` no host (mapeado para `/data` no container):
 
-```
+```text
 ./data/.grouter/
-  ├── grouter.db        # SQLite com contas, tokens, locks, config
-  ├── server.log        # logs do daemon
-  └── server.pid        # PID do processo (gerenciado pelo grouter)
+  |- grouter.db
+  |- server.log
+  `- server.pid
 ```
 
-Backup = copiar a pasta `./data/`.
-Restore = colar a pasta de volta antes de subir.
+## OAuth no container
 
-## OAuth dentro do container
+- Device code (ex.: GitHub Copilot) funciona normalmente via terminal.
+- Authorization code com callback local pode exigir fluxo alternativo:
+1. autenticar fora do Docker e copiar DB para `./data/.grouter/`, ou
+2. usar API key/import token no dashboard.
 
-- **Device-code** (Qwen, GitHub Copilot, etc.): funciona normalmente via
-  `docker compose exec grouter grouter add` — o código é exibido no terminal
-  e você autoriza no navegador do host.
-- **Authorization-code com callback** (Claude, Codex, GitLab, iFlow): o
-  callback vai para uma porta efêmera em `127.0.0.1` dentro do container, que
-  o navegador do host não alcança. Duas opções:
-  1. Rode `grouter add` fora do Docker só para autenticar, depois copie
-     `~/.grouter/grouter.db` para `./data/.grouter/`.
-  2. Use API key / import token pelo dashboard web em
-     `http://localhost:3099/dashboard`.
+## Troubleshooting rapido
 
-## Detalhes do Dockerfile
+**Porta 3099 em uso**
 
-- **Base**: `oven/bun:1.2-alpine` (imagem final ~80 MB).
-- **Multi-stage**: builder roda `bun install` + `bun run build` → gera
-  `dist/grouter` (binário único com logos embutidos e HTML estático).
-  Runtime copia só o binário — sem `node_modules`, sem sources.
-- **Segurança**: usuário não-root `grouter`, sem shell sobrando.
-- **Signals**: `tini` como PID 1 → `docker stop` encerra limpo (SIGTERM é
-  propagado, o daemon fecha as portas corretamente).
-- **Healthcheck**: `wget http://127.0.0.1:3099/health` a cada 30s.
+Altere mapeamento no `docker-compose.yml`:
 
-## Variáveis de ambiente úteis
-
-| Variável | Default | O que faz |
-|---|---|---|
-| `TZ` | `UTC` | Fuso horário (afeta timestamps nos logs) |
-| `HOME` | `/data` | Raiz do SQLite (`$HOME/.grouter/grouter.db`). **Não mude** a menos que ajuste o volume também. |
-| `GROUTER_IN_DOCKER` | `1` | Flag informativa, disponível para o código detectar o ambiente. |
-
-Defina `TZ` pelo `.env` ou na linha de comando:
-
-```bash
-TZ=America/Sao_Paulo docker compose up -d
-```
-
-## Troubleshooting
-
-**Porta 3099 já em uso**
-Mude o mapeamento em `docker-compose.yml`:
 ```yaml
 ports:
-  - "8099:3099"    # agora use http://localhost:8099
+  - "8099:3099"
 ```
 
-**Container reinicia em loop**
+**Container reiniciando**
+
 ```bash
 docker compose logs --tail=100 grouter
 ```
-Causa comum: `./data/.grouter/grouter.db` corrompido — remova e recomece.
 
-**Permissão negada em `./data/`**
-O container roda com UID do usuário `grouter` (Alpine). Se o host tem UID
-diferente, ajuste:
+**Permissao em `./data/`**
+
 ```bash
 sudo chown -R $(id -u):$(id -g) ./data
 ```
 
-**Rebuild não pega mudanças**
+**Rebuild nao aplicou mudancas**
+
 ```bash
 docker compose build --no-cache
 docker compose up -d --force-recreate
@@ -149,7 +109,8 @@ docker compose up -d --force-recreate
 ## Desinstalar
 
 ```bash
-docker compose down              # para o container
-docker rmi grouter:latest        # remove a imagem
-rm -rf ./data                    # remove os dados (irreversível)
+docker compose down
+docker rmi grouter:latest
+rm -rf ./data
 ```
+
