@@ -40,7 +40,7 @@ export function startCallbackListener(options?: {
   redirectHost?: string;      // public callback host shown to the provider/browser
 }): CallbackListener {
   const path = options?.path ?? DEFAULT_PATH;
-  const redirectHost = options?.redirectHost ?? "127.0.0.1";
+  const redirectHost = options?.redirectHost ?? "localhost";
   // `localhost` can resolve to IPv4 or IPv6 depending on OS/browser.
   // Bind dual-stack in that case to avoid callback refusal on one family.
   const bindHost = redirectHost === "localhost" ? "::" : redirectHost;
@@ -113,4 +113,36 @@ export function startCallbackListener(options?: {
 
 function escape(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
+}
+
+/**
+ * Creates a virtual CallbackListener whose promise is resolved externally - no HTTP server.
+ * Used when GROUTER_PUBLIC_URL is set and the OAuth callback arrives via the main server route.
+ */
+export function createRemoteCallbackListener(
+  redirectUri: string,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): CallbackListener & { resolveRemote(c: CallbackCapture): void } {
+  let resolver: ((c: CallbackCapture) => void) | null = null;
+  let closed = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  return {
+    redirectUri,
+    port: 0,
+    wait() {
+      return new Promise<CallbackCapture>((res, rej) => {
+        resolver = res;
+        timer = setTimeout(() => { if (!closed) rej(new Error("Callback timeout")); }, timeoutMs);
+        const orig = resolver;
+        resolver = (c) => { clearTimeout(timer!); orig(c); };
+      });
+    },
+    close() {
+      closed = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      resolver = null;
+    },
+    resolveRemote(c: CallbackCapture) { resolver?.(c); },
+  };
 }

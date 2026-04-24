@@ -5,7 +5,7 @@ import {
   completeAuthCodeFlow,
   importToken,
 } from "../auth/orchestrator.ts";
-import { startCallbackListener } from "../auth/server.ts";
+import { startCallbackListener, createRemoteCallbackListener, type CallbackCapture } from "../auth/server.ts";
 import { ensureProviderServer } from "../proxy/server.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider } from "../db/accounts.ts";
@@ -21,12 +21,16 @@ import { listConnectionsByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey, parseAllowedProviders } from "../db/client_keys.ts";
 
+const PUBLIC_URL = process.env.GROUTER_PUBLIC_URL?.replace(/\$\//, "") ?? null;
+
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
   close: () => void;
   waiter: Promise<{ code: string | null; state: string | null; error: string | null }>;
   done: boolean;
   createdAt: number;
+  state?: string;
+  resolveRemote?: (c: CallbackCapture) => void;
 }
 const pendingListeners = new Map<string, PendingListener>();
 const CALLBACK_POLL_WAIT_MS = 8_000;
@@ -180,11 +184,13 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       return json({ error: `Provider ${body.provider} does not use authorization-code flow` }, 400);
     }
 
-    const listener = startCallbackListener({
-      port: adapter.fixedPort ?? 0,
-      path: adapter.callbackPath ?? "/callback",
-      redirectHost: adapter.callbackHost,
-    });
+    const listener = PUBLIC_URL && !adapter.fixedPort
+      ? createRemoteCallbackListener("${PUBLIC_URL}/oauth/callback")
+      : startCallbackListener({
+          port: adapter.fixedPort ?? 0,
+          path: adapter.callbackPath ?? "/callback",
+          redirectHost: adapter.callbackHost,
+        });
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
     let started: ReturnType<typeof startAuthCodeFlow>;
@@ -196,11 +202,14 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       throw err;
     }
 
+    const remoteListener = listener as ReturnType<typeof createRemoteCallbackListener>;
     pendingListeners.set(started.session_id, {
       close: listener.close,
       waiter,
       done: false,
       createdAt: Date.now(),
+      state: started.state,
+      resolveRemote: remoteListener.resolveRemote?.bind(remoteListener),
     });
 
     // If the callback flow fails (timeout/denied) and no poll request is in flight,
@@ -270,6 +279,38 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
 }
 
 // â”€â”€ POST /api/auth/import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- GET /oauth/callback?code=...&state=... (public-facing, cloud/Kubernetes mode)
+// The OAuth provider redirects the user's browser here after authorization.
+export function handleOAuthCallback(req: Request): Response {
+  const url = new URL(req.url);
+  const code  = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const error = url.searchParams.get("error");
+
+  const ST = "font-family:system-ui;padding:40px;background:#0d0f13;color:#eee";
+  const html = (msg: string, success: boolean): string =>
+    "<html><body style='" + ST + "'><h2>" + (success ? "Authorization complete" : "Authorization failed") +
+    "</h2><p>" + msg + "</p><script>setTimeout(()=>{try{window.close();}catch{}},300);</script></body></html>";
+
+  let found: PendingListener | null = null;
+  for (const [, p] of pendingListeners) {
+    if (p.state === state) { found = p; break; }
+  }
+
+  if (!found?.resolveRemote) {
+    return new Response(
+      html("No pending auth session found. Try starting the authorization again.", false),
+      { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
+  }
+
+  found.resolveRemote({ code, state, error, url });
+  return new Response(
+    html("You can close this tab and return to the app.", true),
+    { headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}
+
 // Body: { provider: string; input: string; meta?: Record<string, unknown> }
 export async function handleAuthImport(req: Request): Promise<Response> {
   try {

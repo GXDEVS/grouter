@@ -49,6 +49,7 @@ import {
   handleUpdateClientKey,
   handleDeleteClientKey,
   handleRefreshProviderModelsBatch,
+  handleOAuthCallback,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
@@ -260,6 +261,7 @@ export function startServer(port: number) {
         GET: (req: BunRequest) => serveLogo(req.params.file!),
       },
       "/dashboard": { GET: () => serveDashboard() },
+      "/oauth/callback": { GET: (req: Request) => handleOAuthCallback(req) },
 
       // â”€â”€ Dashboard API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       "/api/status": {

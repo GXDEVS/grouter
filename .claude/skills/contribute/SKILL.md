@@ -1,7 +1,7 @@
 ---
-name: contribute
+
+## name: contribute
 description: Guides contributors through the full git workflow for grouter — validates the developer's git identity, creates a conventionally-named branch, walks through changes asking per-change commit intent, writes Conventional Commits messages (fix, feat, wip, chore, etc. — no emojis), pushes, and opens a PR via gh. Use when the user wants to commit, push, deploy, or open a PR against this repo. Trigger phrases: "contribute", "commit my changes", "open a pr", "ship this", "vou contribuir", "fazer um commit", "abrir pr", "subir alteração", "enviar pr".
----
 
 # grouter — Contribution Flow
 
@@ -9,7 +9,7 @@ End-to-end helper for contributing to `grouter` (GXDEVS/grouter). Take the user 
 
 ## Ground rules — non-negotiable
 
-1. **Use the developer's git identity.** Read `git config user.name` and `git config user.email`. Never run `git config --global user.*` or override the identity. If unset, stop and tell the user to configure it (see step 0).
+1. **Use the developer's git identity.** Read `git config user.name` and `git config user.email`. Never run `git config --global user.`* or override the identity. If unset, stop and tell the user to configure it (see step 0).
 2. **No emojis.** Not in branch names, commit messages, PR titles, PR bodies, or terminal output. None.
 3. **No Claude attribution.** Do not append `Co-Authored-By: Claude …`, "Generated with Claude Code", or any similar footer to commits or PRs. Leave the message ending with the body/footer the user approved.
 4. **Never force-push, never `--no-verify`, never amend a commit that was already pushed.** If a hook fails, fix the underlying issue and create a new commit.
@@ -29,11 +29,13 @@ gh auth status 2>&1 || true
 
 Decision table:
 
-| Check | Missing → do this |
-|---|---|
+
+| Check                            | Missing → do this                                                                                                                                     |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `user.name` / `user.email` empty | Stop. Tell the user to run `git config --global user.name "Your Name"` and `git config --global user.email "you@example.com"` themselves, then retry. |
-| `gh auth status` not logged in | Tell the user to run `gh auth login` in the prompt as `! gh auth login` (interactive). PR step needs it. Commits/branch work can still proceed. |
-| `origin` points to a fork | Fine — PRs will target `GXDEVS/grouter:main` via `gh pr create --repo GXDEVS/grouter`. Confirm the fork URL with the user. |
+| `gh auth status` not logged in   | Tell the user to run `gh auth login` in the prompt as `! gh auth login` (interactive). PR step needs it. Commits/branch work can still proceed.       |
+| `origin` points to a fork        | Fine — PRs will target `GXDEVS/grouter:main` via `gh pr create --repo GXDEVS/grouter`. Confirm the fork URL with the user.                            |
+
 
 Print a one-line summary (`committing as <name> <email> → origin <url>`) so the user can catch a wrong identity before any commits are made.
 
@@ -63,18 +65,20 @@ Then decide what branch work happens on (Step 2). Never commit directly to `main
 
 ### Allowed types (branches)
 
-| Prefix | Use for |
-|---|---|
-| `feat/` | new user-visible capability (new provider, new CLI command, new dashboard view) |
-| `fix/` | bug fix where behavior was wrong |
-| `hotfix/` | urgent production fix, shipping out-of-cycle |
-| `refactor/` | internal restructuring, no behavior change |
-| `perf/` | performance improvement, no behavior change |
-| `chore/` | deps, build, tooling, housekeeping |
-| `docs/` | README, CLAUDE.md, comments-only |
-| `test/` | tests only |
-| `ci/` | `.github/workflows`, release pipelines |
-| `release/` | release prep, e.g. `release/v4.8.0` |
+
+| Prefix      | Use for                                                                         |
+| ----------- | ------------------------------------------------------------------------------- |
+| `feat/`     | new user-visible capability (new provider, new CLI command, new dashboard view) |
+| `fix/`      | bug fix where behavior was wrong                                                |
+| `hotfix/`   | urgent production fix, shipping out-of-cycle                                    |
+| `refactor/` | internal restructuring, no behavior change                                      |
+| `perf/`     | performance improvement, no behavior change                                     |
+| `chore/`    | deps, build, tooling, housekeeping                                              |
+| `docs/`     | README, CLAUDE.md, comments-only                                                |
+| `test/`     | tests only                                                                      |
+| `ci/`       | `.github/workflows`, release pipelines                                          |
+| `release/`  | release prep, e.g. `release/v4.8.0`                                             |
+
 
 ### Good vs. bad for this repo
 
@@ -99,9 +103,9 @@ This is the heart of the skill. Loop:
 1. Run `git status --short` and `git diff` to see what's unstaged.
 2. Group files into **logical changes** (one feature/fix = one commit). If everything in the diff is one logical change, that's one group. If the user touched two unrelated things, propose two commits.
 3. For **each group**, show the user:
-   - The files in the group.
-   - A proposed Conventional Commits message (see format below).
-   - Ask: **"Commit this as `<type>(<scope>): <description>`? (y / edit / skip)"**
+  - The files in the group.
+  - A proposed Conventional Commits message (see format below).
+  - Ask: **"Commit this as `<type>(<scope>): <description>`? (y / edit / skip)"**
 4. On `y`: stage only those files (`git add <file> <file>`) and commit. Never `git add .` or `git add -A` — it's how secrets and unrelated noise leak in.
 5. On `edit`: take the user's revised message, re-confirm, then commit.
 6. On `skip`: leave the files unstaged and move on.
@@ -128,20 +132,22 @@ This is the heart of the skill. Loop:
 
 Same list as branches, plus two more that are commit-only:
 
-| Type | When to use |
-|---|---|
-| `feat` | new capability |
-| `fix` | bug fix |
-| `wip` | intentionally-incomplete work-in-progress commit, will be squashed/rebased before merge — only use on private branches, never on a commit that will be merged as-is |
-| `refactor` | internal change, no behavior change |
-| `perf` | performance |
-| `chore` | deps, build, tooling |
-| `docs` | docs only |
-| `style` | formatting, whitespace, lint — **no logic change** |
-| `test` | tests only |
-| `build` | build system, bundler, `bun build` config |
-| `ci` | `.github/workflows`, release automation |
-| `revert` | reverts a prior commit; body references the reverted SHA |
+
+| Type       | When to use                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `feat`     | new capability                                                                                                                                                      |
+| `fix`      | bug fix                                                                                                                                                             |
+| `wip`      | intentionally-incomplete work-in-progress commit, will be squashed/rebased before merge — only use on private branches, never on a commit that will be merged as-is |
+| `refactor` | internal change, no behavior change                                                                                                                                 |
+| `perf`     | performance                                                                                                                                                         |
+| `chore`    | deps, build, tooling                                                                                                                                                |
+| `docs`     | docs only                                                                                                                                                           |
+| `style`    | formatting, whitespace, lint — **no logic change**                                                                                                                  |
+| `test`     | tests only                                                                                                                                                          |
+| `build`    | build system, bundler, `bun build` config                                                                                                                           |
+| `ci`       | `.github/workflows`, release automation                                                                                                                             |
+| `revert`   | reverts a prior commit; body references the reverted SHA                                                                                                            |
+
 
 ### Scopes for this repo
 
@@ -181,11 +187,11 @@ If the branch already tracks remote, `git push` is enough. If the push is reject
 ### Before creating
 
 1. Fetch base branch and verify the PR diff is what the user expects:
-   ```bash
+  ```bash
    git fetch origin main
    git log --oneline origin/main..HEAD
    git diff --stat origin/main...HEAD
-   ```
+  ```
 2. Draft title + body (see format below) and **show it to the user for approval** before running `gh pr create`.
 
 ### PR title
@@ -256,3 +262,4 @@ Offer, don't auto-run:
 - User asks to bundle unrelated changes into one commit "to save time" — push back once, explain why per-change commits help review and bisect; if they still insist, comply.
 - User on `main` tries to commit without a branch — create a branch first.
 - Commit message with emojis — rewrite without them before committing.
+
