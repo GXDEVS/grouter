@@ -98,33 +98,48 @@ export function openaiToClaude(
     result.system = [{ type: "text", text: userSystem }];
   }
 
-  // Messages (merge consecutive same-role, separate tool_result)
+  // Messages: build Anthropic-compliant turn structure where every assistant message
+  // containing tool_use blocks is IMMEDIATELY followed by a user message containing the
+  // matching tool_result blocks. Consecutive same-role messages are merged.
   const nonSystem = messages.filter(m => m.role !== "system");
   const out: Record<string, unknown>[] = [];
   let curRole: string | undefined;
   let curParts: Record<string, unknown>[] = [];
+  let pendingToolResults: Record<string, unknown>[] = [];
 
   const flush = () => {
     if (curRole && curParts.length) { out.push({ role: curRole, content: curParts }); curParts = []; }
+  };
+  const flushPendingToolResults = () => {
+    if (pendingToolResults.length) {
+      out.push({ role: "user", content: pendingToolResults });
+      pendingToolResults = [];
+    }
   };
 
   for (const msg of nonSystem) {
     const newRole = (msg.role === "user" || msg.role === "tool") ? "user" : "assistant";
     const blocks = contentBlocks(msg);
-    const hasToolResult = blocks.some(b => b.type === "tool_result");
+    const toolResults = blocks.filter(b => b.type === "tool_result");
+    const otherBlocks = blocks.filter(b => b.type !== "tool_result");
 
-    if (hasToolResult) {
-      flush();
-      out.push({ role: "user", content: blocks.filter(b => b.type === "tool_result") });
-      const other = blocks.filter(b => b.type !== "tool_result");
-      if (other.length) { curRole = newRole; curParts.push(...other); }
-      continue;
+    if (toolResults.length) {
+      // Tool results must come in a 'user' message right after the assistant's tool_use.
+      // Flush any pending assistant turn first, then accumulate tool_results until they
+      // are followed by a non-tool_result message.
+      if (curRole === "assistant") flush();
+      pendingToolResults.push(...toolResults);
     }
-    if (curRole !== newRole) { flush(); curRole = newRole; }
-    curParts.push(...blocks);
-    if (blocks.some(b => b.type === "tool_use")) flush();
+
+    if (otherBlocks.length) {
+      // Any non-tool_result block ends the tool_result accumulation.
+      flushPendingToolResults();
+      if (curRole !== newRole) { flush(); curRole = newRole; }
+      curParts.push(...otherBlocks);
+    }
   }
   flush();
+  flushPendingToolResults();
   result.messages = out;
 
   // Tools
