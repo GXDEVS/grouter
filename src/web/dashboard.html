@@ -653,6 +653,12 @@
       </div>
       <a id="modal-urllink" href="#" target="_blank" style="display:flex;align-items:center;gap:0.5rem;font-size:0.82rem;color:#0AB9DC;margin-bottom:1rem;word-break:break-all;"><iconify-icon icon="solar:link-bold-duotone" style="flex-shrink:0;"></iconify-icon><span id="modal-urltext"></span></a>
       <div style="display:flex;align-items:center;gap:0.75rem;padding-top:0.75rem;border-top:1px solid #2a2a2a;"><div class="spinner"></div><p id="modal-pollstatus" style="font-size:0.85rem;color:#6b7280;"></p></div>
+      <div style="margin-top:0.75rem;font-size:0.78rem;"><a href="#" id="modal-manual-toggle" style="color:#0AB9DC;text-decoration:underline;cursor:pointer;">Browser couldn't redirect? Paste URL here</a></div>
+      <div id="modal-manual-box" class="hidden" style="margin-top:0.75rem;">
+        <textarea id="modal-manual-input" rows="3" placeholder="Paste the full URL from your browser's address bar (the one that failed to load)" style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:6px;padding:0.5rem;color:#eee;font-size:0.78rem;font-family:monospace;resize:vertical;"></textarea>
+        <button id="modal-manual-submit" style="margin-top:0.5rem;background:#0AB9DC;color:#000;border:none;border-radius:6px;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:600;cursor:pointer;">Submit code</button>
+        <p id="modal-manual-error" style="margin-top:0.5rem;font-size:0.78rem;color:#ef4444;"></p>
+      </div>
     </div>
     <div id="modal-error" class="hidden" style="text-align:center;padding:0.5rem 0;">
       <div style="width:3.5rem;height:3.5rem;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;"><iconify-icon icon="solar:close-circle-bold-duotone" style="color:#ef4444;font-size:2rem;"></iconify-icon></div>
@@ -2156,10 +2162,12 @@ async function runDeviceFlow(providerId) {
 }
 
 async function runAuthCodeFlow(providerId, meta) {
+  const dashboardOrigin = (typeof location !== 'undefined') ? location.origin : '';
+  const isRemoteAccess = dashboardOrigin && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|$)/.test(dashboardOrigin);
   const res = await fetch('/api/auth/authorize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider: providerId, meta: meta || undefined }),
+    body: JSON.stringify({ provider: providerId, meta: meta || undefined, manual: isRemoteAccess }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'Failed to authorize');
@@ -2176,9 +2184,39 @@ async function runAuthCodeFlow(providerId, meta) {
   // Auto-open in a new tab
   try { window.open(data.auth_url, '_blank'); } catch {}
 
+  // Wire manual-paste UI
+  const manualBox = document.getElementById('modal-manual-box');
+  const manualToggle = document.getElementById('modal-manual-toggle');
+  const manualInput = document.getElementById('modal-manual-input');
+  const manualSubmit = document.getElementById('modal-manual-submit');
+  const manualError = document.getElementById('modal-manual-error');
+  manualBox.classList.add('hidden');
+  manualInput.value = '';
+  manualError.textContent = '';
+  if (data.manual_mode) { manualBox.classList.remove('hidden'); }
+  manualToggle.onclick = (e) => { e.preventDefault(); manualBox.classList.remove('hidden'); manualInput.focus(); };
+  let manualResolved = false;
+  manualSubmit.onclick = async () => {
+    const v = manualInput.value.trim();
+    if (!v) { manualError.textContent = 'Paste the URL first'; return; }
+    manualError.textContent = '';
+    manualSubmit.disabled = true;
+    try {
+      const r = await fetch('/api/auth/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: data.session_id, redirect_url: v }),
+      });
+      const j = await r.json();
+      if (j.status === 'complete') { manualResolved = true; onAuthSuccess(j.account); }
+      else { manualError.textContent = j.error || j.message || 'Failed'; manualSubmit.disabled = false; }
+    } catch (err) { manualError.textContent = String(err); manualSubmit.disabled = false; }
+  };
+
   // Poll /api/auth/callback until authorization completes/denies/expires.
   try {
     while (true) {
+      if (manualResolved) return;
       const cb = await fetch(`/api/auth/callback?session_id=${encodeURIComponent(data.session_id)}`);
       const cd = await cb.json();
 

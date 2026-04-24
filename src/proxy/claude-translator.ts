@@ -71,6 +71,7 @@ export function openaiToClaude(
   model: string,
   body: Record<string, unknown>,
   stream: boolean,
+  injectClaudeCodeId = false,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {
     model,
@@ -80,11 +81,22 @@ export function openaiToClaude(
 
   if (body.temperature !== undefined) result.temperature = body.temperature;
 
-  // System
+  // System - OAuth Claude (claude-code beta) requires the first system block to identify
+  // the client as Claude Code. Without it, Anthropic rejects the request.
+  const CLAUDE_CODE_ID = "You are Claude Code, Anthropic's official CLI for Claude.";
   const systemParts: string[] = [];
   const messages = (body.messages ?? []) as Record<string, unknown>[];
   for (const msg of messages) { if (msg.role === "system") systemParts.push(extractText(msg.content)); }
-  if (systemParts.length) result.system = [{ type: "text", text: systemParts.join("\n") }];
+  const userSystem = systemParts.join("\n").trim();
+  if (injectClaudeCodeId) {
+    const systemBlocks: Record<string, unknown>[] = [{ type: "text", text: CLAUDE_CODE_ID }];
+    if (userSystem && !userSystem.startsWith(CLAUDE_CODE_ID)) {
+      systemBlocks.push({ type: "text", text: userSystem });
+    }
+    result.system = systemBlocks;
+  } else if (userSystem) {
+    result.system = [{ type: "text", text: userSystem }];
+  }
 
   // Messages (merge consecutive same-role, separate tool_result)
   const nonSystem = messages.filter(m => m.role !== "system");

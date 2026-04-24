@@ -2,7 +2,6 @@ import chalk from "chalk";
 import { buildQwenHeaders, buildQwenUrl, buildQwenModelsUrl, QWEN_MODELS_OAUTH, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { buildUpstream } from "./upstream.ts";
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
-import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { getSetting } from "../db/index.ts";
@@ -50,6 +49,7 @@ import {
   handleDeleteClientKey,
   handleRefreshProviderModelsBatch,
   handleOAuthCallback,
+  handleAuthManualCode,
 } from "../web/api.ts";
 import { getProxyPoolById } from "../db/pools.ts";
 import { getProviderPort, listProviderPorts } from "../db/ports.ts";
@@ -286,6 +286,10 @@ export function startServer(port: number) {
       },
       "/api/auth/import": {
         POST: (req: Request) => handleAuthImport(req),
+        OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
+      },
+      "/api/auth/manual": {
+        POST: (req: Request) => handleAuthManualCode(req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
       "/api/accounts/:id/toggle": {

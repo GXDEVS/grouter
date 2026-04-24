@@ -21,7 +21,7 @@ import { listConnectionsByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey, parseAllowedProviders } from "../db/client_keys.ts";
 
-const PUBLIC_URL = process.env.GROUTER_PUBLIC_URL?.replace(/\$\//, "") ?? null;
+const PUBLIC_URL = process.env.GROUTER_PUBLIC_URL?.replace(/\/+$/, "") ?? null;
 
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
@@ -184,13 +184,16 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       return json({ error: `Provider ${body.provider} does not use authorization-code flow` }, 400);
     }
 
-    const listener = PUBLIC_URL && !adapter.fixedPort
-      ? createRemoteCallbackListener("${PUBLIC_URL}/oauth/callback")
-      : startCallbackListener({
-          port: adapter.fixedPort ?? 0,
-          path: adapter.callbackPath ?? "/callback",
-          redirectHost: adapter.callbackHost,
-        });
+    const wantManual = (body as { manual?: boolean }).manual === true;
+    const listener = wantManual && !adapter.fixedPort
+      ? createRemoteCallbackListener("http://localhost:1/callback")
+      : (PUBLIC_URL && !adapter.fixedPort
+          ? createRemoteCallbackListener("${PUBLIC_URL}/oauth/callback")
+          : startCallbackListener({
+              port: adapter.fixedPort ?? 0,
+              path: adapter.callbackPath ?? "/callback",
+              redirectHost: adapter.callbackHost,
+            }));
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
     let started: ReturnType<typeof startAuthCodeFlow>;
@@ -228,6 +231,7 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       auth_url: started.authUrl,
       state: started.state,
       redirect_uri: started.redirectUri,
+      manual_mode: wantManual,
     });
   } catch (err) {
     return json({ error: String(err) }, 500);
@@ -280,6 +284,46 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
 
 // â”€â”€ POST /api/auth/import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // -- GET /oauth/callback?code=...&state=... (public-facing, cloud/Kubernetes mode)
+// -- POST /api/auth/manual --
+// Body: { session_id: string; redirect_url?: string; code?: string; state?: string }
+// Manual code-paste flow for headless/cloud environments.
+// User pastes the full redirect URL (or just code+state) after authorizing in their browser.
+export async function handleAuthManualCode(req: Request): Promise<Response> {
+  try {
+    const body = (await req.json()) as { session_id?: string; redirect_url?: string; code?: string; state?: string };
+    if (!body.session_id) return json({ error: "session_id required" }, 400);
+
+    let code = body.code ?? null;
+    let state = body.state ?? null;
+
+    if (body.redirect_url) {
+      try {
+        const u = new URL(body.redirect_url.trim());
+        code = u.searchParams.get("code") ?? code;
+        state = u.searchParams.get("state") ?? state;
+      } catch {
+        return json({ error: "Invalid redirect_url - paste the full URL from your browser's address bar" }, 400);
+      }
+    }
+
+    if (!code) return json({ error: "Missing 'code' - could not extract from URL" }, 400);
+    if (!state) return json({ error: "Missing 'state' - could not extract from URL" }, 400);
+
+    const pending = pendingListeners.get(body.session_id);
+    if (pending) {
+      pending.done = true;
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(body.session_id);
+    }
+
+    const connection = await completeAuthCodeFlow(body.session_id, code, state);
+    ensureProviderServer(connection.provider);
+    return json({ status: "complete", account: connection });
+  } catch (err) {
+    return json({ status: "error", message: String(err) }, 500);
+  }
+}
+
 // The OAuth provider redirects the user's browser here after authorization.
 export function handleOAuthCallback(req: Request): Response {
   const url = new URL(req.url);
