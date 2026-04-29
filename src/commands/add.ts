@@ -20,7 +20,7 @@ import { getProxyPort } from "../db/index.ts";
  * Multi-provider interactive `grouter add`.
  * Picks provider with arrow keys, then runs the right flow in-terminal.
  */
-export async function addCommand(): Promise<void> {
+export async function addCommand(opts: { callbackHost?: string; callbackPort?: string } = {}): Promise<void> {
   console.log("");
 
   try {
@@ -39,7 +39,7 @@ export async function addCommand(): Promise<void> {
       }
       if (adapter.flow === "device_code")            await runDeviceFlow(providerId);
       else if (adapter.flow === "authorization_code"
-            || adapter.flow === "authorization_code_pkce") await runAuthCodeFlow(providerId, p);
+            || adapter.flow === "authorization_code_pkce") await runAuthCodeFlow(providerId, p, opts);
       else if (adapter.flow === "import_token")       await runImportFlow(providerId, p);
       else throw new Error(`Unsupported flow: ${adapter.flow}`);
     }
@@ -135,7 +135,11 @@ async function runDeviceFlow(providerId: string): Promise<void> {
 
 // Authorization-code flow
 
-async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
+async function runAuthCodeFlow(
+  providerId: string,
+  p: Provider,
+  opts: { callbackHost?: string; callbackPort?: string } = {},
+): Promise<void> {
   const adapter = getAdapter(providerId)!;
 
   // Prompt for meta fields if the provider requires them (GitLab baseUrl/clientId/secret)
@@ -153,22 +157,32 @@ async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
     }
   }
 
+  const callbackHost = opts.callbackHost ?? adapter.callbackHost;
+  const callbackPort = opts.callbackPort ? parseInt(opts.callbackPort, 10) : (adapter.fixedPort ?? 0);
+  const isHeadless = Boolean(opts.callbackHost);
+
+  if (isHeadless) {
+    console.log(chalk.yellow(`  Headless mode: callback URL is http://${opts.callbackHost}:${callbackPort || "<random>"}/callback`));
+    console.log(chalk.gray("  Make sure that host:port is reachable from your browser before continuing.\n"));
+  }
+
   // Spin up ephemeral listener - wrap in try/finally to guarantee cleanup
   let listener;
   try {
     listener = startCallbackListener({
-      port: adapter.fixedPort ?? 0,
+      port: callbackPort,
       path: adapter.callbackPath ?? "/callback",
-      redirectHost: adapter.callbackHost,
+      redirectHost: callbackHost,
     });
   } catch (err) {
     // Port already in use - provide helpful error
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("port") && adapter.fixedPort) {
+    const fixedPort = callbackPort || adapter.fixedPort;
+    if (msg.includes("port") && fixedPort) {
       throw new Error(
-        `Port ${adapter.fixedPort} is already in use. ` +
+        `Port ${fixedPort} is already in use. ` +
         `Another OAuth session may be in progress. ` +
-        `Try: killing any process on port ${adapter.fixedPort} or wait a few minutes.`
+        `Try: killing any process on port ${fixedPort} or wait a few minutes.`
       );
     }
     throw err;
@@ -189,14 +203,62 @@ async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
     const spinner = ora("Waiting for callback...").start();
 
     try {
-      const capture = await listener.wait();
-      if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
-      if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+      // After 8 seconds, surface a manual-paste prompt that races the callback
+      // listener — if the callback can't reach the listener (firewall, NAT, no
+      // public IP), the user can paste the redirect URL or just code+state.
+      const MANUAL_PROMPT_DELAY_MS = 8_000;
+      const manualPromise: Promise<{ code: string; state: string } | null> = new Promise((resolve) => {
+        setTimeout(async () => {
+          spinner.stop();
+          try {
+            const pasted = await input({
+              message: "Callback didn't arrive? Paste the redirect URL or press Enter to keep waiting:",
+              default: "",
+            });
+            if (!pasted.trim()) { resolve(null); return; }
+            try {
+              const u = new URL(pasted.trim());
+              const code = u.searchParams.get("code");
+              const state = u.searchParams.get("state");
+              if (!code || !state) { resolve(null); return; }
+              resolve({ code, state });
+            } catch { resolve(null); }
+          } catch { resolve(null); }
+        }, MANUAL_PROMPT_DELAY_MS);
+      });
 
-      spinner.text = "Exchanging code for tokens...";
-      const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
-      spinner.succeed(chalk.green("Authorization successful!"));
-      printSavedAccount(connection, p);
+      const winner = await Promise.race<
+        { kind: "callback"; capture: Awaited<ReturnType<typeof listener.wait>> } |
+        { kind: "manual"; capture: { code: string; state: string } } |
+        null
+      >([
+        listener.wait().then((c) => ({ kind: "callback" as const, capture: c })),
+        manualPromise.then((m) => m ? { kind: "manual" as const, capture: m } : null),
+      ]);
+
+      if (!winner) {
+        spinner.fail("No code received");
+        return;
+      }
+      if (winner.kind === "callback") {
+        const capture = winner.capture;
+        if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
+        if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
+        spinner.start("Exchanging code for tokens...");
+        const connection = await completeAuthCodeFlow(started.session_id, capture.code, capture.state);
+        spinner.succeed(chalk.green("Authorization successful!"));
+        printSavedAccount(connection, p);
+      } else {
+        const { code, state } = winner.capture;
+        const exchanging = ora("Exchanging code for tokens...").start();
+        try {
+          const connection = await completeAuthCodeFlow(started.session_id, code, state);
+          exchanging.succeed(chalk.green("Authorization successful!"));
+          printSavedAccount(connection, p);
+        } catch (err) {
+          exchanging.fail(err instanceof Error ? err.message : String(err));
+        }
+      }
     } catch (err) {
       spinner.fail(err instanceof Error ? err.message : String(err));
     }
