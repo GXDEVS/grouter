@@ -5,7 +5,7 @@ import {
   completeAuthCodeFlow,
   importToken,
 } from "../auth/orchestrator.ts";
-import { startCallbackListener } from "../auth/server.ts";
+import { startCallbackListener, createRemoteCallbackListener, type CallbackCapture } from "../auth/server.ts";
 import { ensureProviderServer } from "../proxy/server.ts";
 import { getAdapter } from "../auth/providers/index.ts";
 import { addApiKeyConnection, listAccounts, removeAccount, updateAccount, getConnectionCountByProvider } from "../db/accounts.ts";
@@ -21,12 +21,16 @@ import { listConnectionsByProvider } from "../db/accounts.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 import { listClientKeys, createClientKey, deleteClientKey, updateClientKey, getClientKey, parseAllowedProviders } from "../db/client_keys.ts";
 
+const PUBLIC_URL = process.env.GROUTER_PUBLIC_URL?.replace(/\/+$/, "") ?? null;
+
 // Pending auth-code callback listeners keyed by session_id
 interface PendingListener {
   close: () => void;
   waiter: Promise<{ code: string | null; state: string | null; error: string | null }>;
   done: boolean;
   createdAt: number;
+  state?: string;
+  resolveRemote?: (c: CallbackCapture) => void;
   /** Remote-mode resolver -- set when GROUTER_OAUTH_CALLBACK_URL is active. */
   remoteResolve?: (capture: { code: string | null; state: string | null; error: string | null }) => void;
   /** OAuth state value -- used to clean up pendingByState on expiry. */
@@ -187,37 +191,16 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       return json({ error: `Provider ${body.provider} does not use authorization-code flow` }, 400);
     }
 
-    // -- Remote-callback mode (GROUTER_OAUTH_CALLBACK_URL is set) ----------------
-    const remoteCallbackUrl = process.env.GROUTER_OAUTH_CALLBACK_URL;
-    if (remoteCallbackUrl) {
-      let remoteResolve!: (c: { code: string | null; state: string | null; error: string | null }) => void;
-      const waiter = new Promise<{ code: string | null; state: string | null; error: string | null }>(
-        resolve => { remoteResolve = resolve; },
-      );
-      const started = startAuthCodeFlow(body.provider, remoteCallbackUrl, body.meta);
-      pendingListeners.set(started.session_id, {
-        close: () => {},
-        waiter,
-        done: false,
-        createdAt: Date.now(),
-        remoteResolve,
-        sessionState: started.state,
-      });
-      pendingByState.set(started.state, started.session_id);
-      return json({
-        session_id: started.session_id,
-        auth_url: started.authUrl,
-        state: started.state,
-        redirect_uri: remoteCallbackUrl,
-      });
-    }
-
-    // -- Local ephemeral-listener mode (default) ----------------------------------
-        const listener = startCallbackListener({
-      port: adapter.fixedPort ?? 0,
-      path: adapter.callbackPath ?? "/callback",
-      redirectHost: adapter.callbackHost,
-    });
+    const wantManual = (body as { manual?: boolean }).manual === true;
+    const listener = wantManual && !adapter.fixedPort
+      ? createRemoteCallbackListener("http://localhost:1/callback")
+      : (PUBLIC_URL && !adapter.fixedPort
+          ? createRemoteCallbackListener("${PUBLIC_URL}/oauth/callback")
+          : startCallbackListener({
+              port: adapter.fixedPort ?? 0,
+              path: adapter.callbackPath ?? "/callback",
+              redirectHost: adapter.callbackHost,
+            }));
     const waiter = listener.wait().catch(e => ({ code: null, state: null, error: String(e) }));
 
     let started: ReturnType<typeof startAuthCodeFlow>;
@@ -229,11 +212,14 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       throw err;
     }
 
+    const remoteListener = listener as ReturnType<typeof createRemoteCallbackListener>;
     pendingListeners.set(started.session_id, {
       close: listener.close,
       waiter,
       done: false,
       createdAt: Date.now(),
+      state: started.state,
+      resolveRemote: remoteListener.resolveRemote?.bind(remoteListener),
     });
 
     // If the callback flow fails (timeout/denied) and no poll request is in flight,
@@ -252,6 +238,7 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       auth_url: started.authUrl,
       state: started.state,
       redirect_uri: started.redirectUri,
+      manual_mode: wantManual,
     });
   } catch (err) {
     return json({ error: String(err) }, 500);
@@ -304,6 +291,78 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
 }
 
 // â”€â”€ POST /api/auth/import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- GET /oauth/callback?code=...&state=... (public-facing, cloud/Kubernetes mode)
+// -- POST /api/auth/manual --
+// Body: { session_id: string; redirect_url?: string; code?: string; state?: string }
+// Manual code-paste flow for headless/cloud environments.
+// User pastes the full redirect URL (or just code+state) after authorizing in their browser.
+export async function handleAuthManualCode(req: Request): Promise<Response> {
+  try {
+    const body = (await req.json()) as { session_id?: string; redirect_url?: string; code?: string; state?: string };
+    if (!body.session_id) return json({ error: "session_id required" }, 400);
+
+    let code = body.code ?? null;
+    let state = body.state ?? null;
+
+    if (body.redirect_url) {
+      try {
+        const u = new URL(body.redirect_url.trim());
+        code = u.searchParams.get("code") ?? code;
+        state = u.searchParams.get("state") ?? state;
+      } catch {
+        return json({ error: "Invalid redirect_url - paste the full URL from your browser's address bar" }, 400);
+      }
+    }
+
+    if (!code) return json({ error: "Missing 'code' - could not extract from URL" }, 400);
+    if (!state) return json({ error: "Missing 'state' - could not extract from URL" }, 400);
+
+    const pending = pendingListeners.get(body.session_id);
+    if (pending) {
+      pending.done = true;
+      try { pending.close(); } catch { /* ignore */ }
+      pendingListeners.delete(body.session_id);
+    }
+
+    const connection = await completeAuthCodeFlow(body.session_id, code, state);
+    ensureProviderServer(connection.provider);
+    return json({ status: "complete", account: connection });
+  } catch (err) {
+    return json({ status: "error", message: String(err) }, 500);
+  }
+}
+
+// The OAuth provider redirects the user's browser here after authorization.
+export function handleOAuthCallback(req: Request): Response {
+  const url = new URL(req.url);
+  const code  = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const error = url.searchParams.get("error");
+
+  const ST = "font-family:system-ui;padding:40px;background:#0d0f13;color:#eee";
+  const html = (msg: string, success: boolean): string =>
+    "<html><body style='" + ST + "'><h2>" + (success ? "Authorization complete" : "Authorization failed") +
+    "</h2><p>" + msg + "</p><script>setTimeout(()=>{try{window.close();}catch{}},300);</script></body></html>";
+
+  let found: PendingListener | null = null;
+  for (const [, p] of pendingListeners) {
+    if (p.state === state) { found = p; break; }
+  }
+
+  if (!found?.resolveRemote) {
+    return new Response(
+      html("No pending auth session found. Try starting the authorization again.", false),
+      { status: 400, headers: { "Content-Type": "text/html; charset=utf-8" } },
+    );
+  }
+
+  found.resolveRemote({ code, state, error, url });
+  return new Response(
+    html("You can close this tab and return to the app.", true),
+    { headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}
+
 // Body: { provider: string; input: string; meta?: Record<string, unknown> }
 export async function handleAuthImport(req: Request): Promise<Response> {
   try {

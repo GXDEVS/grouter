@@ -23,10 +23,8 @@ import {
   buildClaudeHeaders,
   buildKimiCodingHeaders,
 } from "./claude-translator.ts";
-import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
-import { extractCodexAccountId } from "../auth/providers/codex.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -83,30 +81,6 @@ function extractCodexAccountId(token: string, providerData: Record<string, unkno
 
   return null;
 }
-
-function resolveCodexResponsesUrl(baseUrl: string | null): string {
-  const base = (baseUrl && baseUrl.trim()) || "https://chatgpt.com/backend-api/codex";
-  const normalized = base.replace(/\/+$/, "");
-  if (normalized.endsWith("/codex/responses")) return normalized;
-  if (normalized.endsWith("/codex")) return `${normalized}/responses`;
-  return `${normalized}/codex/responses`;
-}
-
-function buildCodexHeaders(token: string, accountId: string | null, stream: boolean): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    Accept: stream ? "text/event-stream" : "application/json",
-    Authorization: `Bearer ${token}`,
-    originator: "codex_cli_rs",
-    "User-Agent": `codex_cli_rs/0.0.1 (${platform()}; ${arch()})`,
-    Origin: "https://chatgpt.com",
-    Referer: "https://chatgpt.com/",
-    "Accept-Language": "en-US,en;q=0.9",
-  };
-  if (accountId) headers["ChatGPT-Account-ID"] = accountId;
-  return headers;
-}
-
 // ── Header helpers ───────────────────────────────────────────────────────────
 
 function mapStainlessOs(): string {
@@ -361,7 +335,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
         req: {
           url:     "https://api.anthropic.com/v1/messages",
           headers: buildClaudeHeaders(token, ctx.stream),
-          body:    openaiToClaude(model, ctx.body, ctx.stream),
+          body:    openaiToClaude(model, ctx.body, ctx.stream, true),
         },
         format: "claude",
       };

@@ -1,4 +1,4 @@
-﻿import chalk from "chalk";
+import chalk from "chalk";
 import ora from "ora";
 import open from "open";
 import { select, input, password, editor, Separator } from "@inquirer/prompts";
@@ -198,7 +198,33 @@ async function runAuthCodeFlow(
     const spinner = ora("Waiting for callback…").start();
 
     try {
-      const capture = await listener.wait();
+      // Race the local callback against an optional manual paste prompt
+      const MANUAL_PROMPT_DELAY_MS = 8000;
+      const manualPromise: Promise<{ code: string; state: string } | null> = new Promise((resolve) => {
+        setTimeout(async () => {
+          try {
+            const pasted = await input({
+              message: "Callback didn't arrive? Paste the full redirect URL (or just press Enter to keep waiting):",
+              default: "",
+            });
+            if (!pasted.trim()) { resolve(null); return; }
+            try {
+              const u = new URL(pasted.trim());
+              const code = u.searchParams.get("code");
+              const state = u.searchParams.get("state");
+              if (!code || !state) { resolve(null); return; }
+              resolve({ code, state });
+            } catch { resolve(null); }
+          } catch { resolve(null); }
+        }, MANUAL_PROMPT_DELAY_MS);
+      });
+
+      const result = await Promise.race([
+        listener.wait().then((cap) => ({ kind: "callback" as const, cap })),
+        manualPromise.then((m) => m ? { kind: "manual" as const, cap: { code: m.code, state: m.state, error: null, url: new URL("http://manual/") } } : null),
+      ]);
+      if (!result) { spinner.fail("No code received"); return; }
+      const capture = result.cap;
       if (capture.error) { spinner.fail(`Authorization denied: ${capture.error}`); return; }
       if (!capture.code || !capture.state) { spinner.fail("Missing code or state in callback"); return; }
 

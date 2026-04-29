@@ -1,7 +1,7 @@
 ---
-name: install
+
+## name: install
 description: Walks a user through installing and first-running grouter on their machine. Detects their environment (bun / docker / neither), picks the right install path (bunx one-shot, global bun install, from-source build, or docker compose), verifies the binary is on PATH, and optionally kicks off `grouter setup` / `grouter add` / `grouter serve on`. Use when the user asks to install, set up, bootstrap, reinstall, or uninstall grouter, or says their `grouter` command is missing. Trigger phrases: "install grouter", "setup grouter", "bootstrap grouter", "grouter not found", "how do I install this", "instalar grouter", "como instalo", "subir o projeto", "deploy local", "reinstall", "uninstall grouter".
----
 
 # grouter — Install & First-Run Flow
 
@@ -29,13 +29,15 @@ uname -s
 
 Decision:
 
-| State | Recommend |
-|---|---|
-| `bun` present, user just wants to try | **Path A — bunx** |
-| `bun` present, user wants permanent install | **Path B — global install** |
-| Inside a clone of the repo, contributor | **Path C — from source** |
-| `docker` present, no bun, or user prefers containers | **Path D — docker** |
-| Neither bun nor docker | Stop — install [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install \| bash`) or Docker first. Tell the user which. |
+
+| State                                                | Recommend                                                                                                               |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `bun` present, user just wants to try                | **Path A — bunx**                                                                                                       |
+| `bun` present, user wants permanent install          | **Path B — global install**                                                                                             |
+| Inside a clone of the repo, contributor              | **Path C — from source**                                                                                                |
+| `docker` present, no bun, or user prefers containers | **Path D — docker**                                                                                                     |
+| Neither bun nor docker                               | Stop — install [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`) or Docker first. Tell the user which. |
+
 
 If `grouter` is already on PATH, ask whether the user wants to **upgrade** (rerun their original install path) or **reinstall fresh** (uninstall → install).
 
@@ -93,6 +95,7 @@ bash setup.sh
 ```
 
 This is the script in `setup.sh` at repo root. It:
+
 1. Checks `bun` is present.
 2. Removes any previous install (unlinks old binary).
 3. Runs `bun install --frozen-lockfile`.
@@ -235,16 +238,18 @@ docker compose down -v      # stop AND remove volumes (destructive — confirm)
 
 ## Common failure modes → fixes
 
-| Symptom | Likely cause | Fix |
-|---|---|---|
-| `bun: command not found` | Bun not installed | `curl -fsSL https://bun.sh/install \| bash`, open new terminal |
-| `grouter: command not found` after install | `~/.bun/bin` not on PATH | add the PATH export to shell rc, re-source |
-| `bun install` slow / stuck behind a proxy | npm registry blocked | check corporate proxy, set `BUN_CONFIG_REGISTRY` |
-| `EADDRINUSE` on `:3099` | Another process owns the port | `grouter serve restart` (kills stale daemon), or `grouter config --port <other>` |
-| Dashboard 404 on `/dashboard` | Daemon not running | `grouter serve on` and retry |
-| Docker `health` never turns green | Container crash loop | `docker compose logs -f grouter` — read the first error |
-| `bun link` silently does nothing | Prior broken install | `bash setup.sh` (handles cleanup), or `bun unlink` first |
-| Logos broken after `bun link` from source | `prebuild` skipped | run `bun run build` (not just `bun link`) — it regenerates `src/web/logos-embedded.ts` |
+
+| Symptom                                    | Likely cause                  | Fix                                                                                    |
+| ------------------------------------------ | ----------------------------- | -------------------------------------------------------------------------------------- |
+| `bun: command not found`                   | Bun not installed             | `curl -fsSL https://bun.sh/install | bash`, open new terminal                          |
+| `grouter: command not found` after install | `~/.bun/bin` not on PATH      | add the PATH export to shell rc, re-source                                             |
+| `bun install` slow / stuck behind a proxy  | npm registry blocked          | check corporate proxy, set `BUN_CONFIG_REGISTRY`                                       |
+| `EADDRINUSE` on `:3099`                    | Another process owns the port | `grouter serve restart` (kills stale daemon), or `grouter config --port <other>`       |
+| Dashboard 404 on `/dashboard`              | Daemon not running            | `grouter serve on` and retry                                                           |
+| Docker `health` never turns green          | Container crash loop          | `docker compose logs -f grouter` — read the first error                                |
+| `bun link` silently does nothing           | Prior broken install          | `bash setup.sh` (handles cleanup), or `bun unlink` first                               |
+| Logos broken after `bun link` from source  | `prebuild` skipped            | run `bun run build` (not just `bun link`) — it regenerates `src/web/logos-embedded.ts` |
+
 
 ## Decision tree — quick
 
@@ -264,3 +269,4 @@ User has neither                             ────► install Bun first, 
 - Don't edit `src/web/logos-embedded.ts` by hand — it's generated from `src/public/logos/*.png` by the prebuild step.
 - Don't delete `~/.grouter/grouter.db` to "fix" something — it holds the user's OAuth tokens. Use `grouter unlock`, `grouter disable <id>`, or `grouter remove <id>` first.
 - Don't call the hidden `grouter _daemon` subcommand directly — it's what `grouter serve on` spawns. Use `grouter serve` variants.
+
