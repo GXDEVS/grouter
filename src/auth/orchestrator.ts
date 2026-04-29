@@ -14,10 +14,15 @@ import type { Connection } from "../types.ts";
 const sessions = new Map<string, PendingSessionData>();
 const SESSION_TTL_MS = 10 * 60 * 1000;
 
-setInterval(() => {
+// Sweep expired pending OAuth sessions. unref() so this background timer
+// never holds short-lived CLI commands (`grouter list`, `grouter status`,
+// etc.) open past their work — the daemon and dashboard keep their own
+// processes alive through the bound listeners.
+const sessionSweeper = setInterval(() => {
   const now = Date.now();
   for (const [k, s] of sessions) if (now > s.expiresAt) sessions.delete(k);
 }, 5 * 60 * 1000);
+sessionSweeper.unref?.();
 
 function newSessionId(): string {
   return crypto.randomBytes(16).toString("hex");
