@@ -27,8 +27,14 @@ interface PendingListener {
   waiter: Promise<{ code: string | null; state: string | null; error: string | null }>;
   done: boolean;
   createdAt: number;
+  /** Remote-mode resolver -- set when GROUTER_OAUTH_CALLBACK_URL is active. */
+  remoteResolve?: (capture: { code: string | null; state: string | null; error: string | null }) => void;
+  /** OAuth state value -- used to clean up pendingByState on expiry. */
+  sessionState?: string;
 }
 const pendingListeners = new Map<string, PendingListener>();
+/** Reverse index: OAuth state -> session_id (remote-mode only). */
+const pendingByState = new Map<string, string>();
 const CALLBACK_POLL_WAIT_MS = 8_000;
 const PENDING_LISTENER_TTL_MS = 15 * 60 * 1000;
 
@@ -37,6 +43,7 @@ setInterval(() => {
   for (const [sessionId, pending] of pendingListeners) {
     if (pending.done || (now - pending.createdAt) <= PENDING_LISTENER_TTL_MS) continue;
     try { pending.close(); } catch { /* ignore */ }
+    if (pending.sessionState) pendingByState.delete(pending.sessionState);
     pendingListeners.delete(sessionId);
   }
 }, 60 * 1000);
@@ -180,7 +187,33 @@ export async function handleAuthAuthorize(req: Request): Promise<Response> {
       return json({ error: `Provider ${body.provider} does not use authorization-code flow` }, 400);
     }
 
-    const listener = startCallbackListener({
+    // -- Remote-callback mode (GROUTER_OAUTH_CALLBACK_URL is set) ----------------
+    const remoteCallbackUrl = process.env.GROUTER_OAUTH_CALLBACK_URL;
+    if (remoteCallbackUrl) {
+      let remoteResolve!: (c: { code: string | null; state: string | null; error: string | null }) => void;
+      const waiter = new Promise<{ code: string | null; state: string | null; error: string | null }>(
+        resolve => { remoteResolve = resolve; },
+      );
+      const started = startAuthCodeFlow(body.provider, remoteCallbackUrl, body.meta);
+      pendingListeners.set(started.session_id, {
+        close: () => {},
+        waiter,
+        done: false,
+        createdAt: Date.now(),
+        remoteResolve,
+        sessionState: started.state,
+      });
+      pendingByState.set(started.state, started.session_id);
+      return json({
+        session_id: started.session_id,
+        auth_url: started.authUrl,
+        state: started.state,
+        redirect_uri: remoteCallbackUrl,
+      });
+    }
+
+    // -- Local ephemeral-listener mode (default) ----------------------------------
+        const listener = startCallbackListener({
       port: adapter.fixedPort ?? 0,
       path: adapter.callbackPath ?? "/callback",
       redirectHost: adapter.callbackHost,
@@ -247,6 +280,7 @@ export async function handleAuthCallback(req: Request): Promise<Response> {
     // before closing the local listener.
     setTimeout(() => {
       try { pending.close(); } catch { /* ignore */ }
+      if (pending.sessionState) pendingByState.delete(pending.sessionState);
       pendingListeners.delete(sessionId);
     }, 350);
 
@@ -285,6 +319,48 @@ export async function handleAuthImport(req: Request): Promise<Response> {
 }
 
 // â”€â”€ POST /api/accounts/:id/toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// -- GET /oauth/callback ------------------------------------------------------
+// Public OAuth redirect receiver for containerised / K8s deployments.
+// Set GROUTER_OAUTH_CALLBACK_URL=https://<your-domain>/oauth/callback in the env.
+export function handleOAuthCallback(req: Request): Response {
+  const url   = new URL(req.url);
+  const code  = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const error = url.searchParams.get("error");
+  if (!state) {
+    return new Response(oauthCallbackHtml(false, "Missing state parameter."), {
+      status: 400, headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+  const sessionId = pendingByState.get(state);
+  if (!sessionId) {
+    return new Response(oauthCallbackHtml(false, "No pending session -- it may have expired. Try authorising again."), {
+      status: 400, headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+  const pending = pendingListeners.get(sessionId);
+  if (!pending?.remoteResolve) {
+    return new Response(oauthCallbackHtml(false, "Session no longer active."), {
+      status: 400, headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+  }
+  pendingByState.delete(state);
+  pending.remoteResolve({ code, state, error });
+  return new Response(oauthCallbackHtml(!error, error ?? "Authorization complete. You can close this tab."), {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+function oauthCallbackHtml(success: boolean, message: string): string {
+  const icon  = success ? "&#10003;" : "&#10007;";
+  const color = success ? "#22c55e"  : "#ef4444";
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>grouter auth</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0f172a;color:#f8fafc}
+.card{text-align:center;padding:2rem;border-radius:1rem;background:#1e293b;max-width:400px}
+.icon{font-size:3rem;color:\}p{margin:.5rem 0;color:#94a3b8}</style></head>
+<body><div class="card"><div class="icon">\</div><p>\</p></div></body></html>`;
+}
+
 export function handleAccountToggle(id: string): Response {
   const accounts = listAccounts();
   const account  = accounts.find((a) => a.id === id);

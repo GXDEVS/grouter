@@ -8,8 +8,8 @@
 //                       cline, openrouter, openai (apikey), groq, deepseek, nvidia, ollama,
 //                       gemini (apikey via /v1beta/openai/), gitlab (apikey or OAuth Bearer),
 //                       github-models, sambanova.
-//   ⚠️ claude-format   — claude (OAuth), anthropic (apikey), kimi-coding.
-//                       Needs OpenAI→Anthropic translator. Returns 501 for now.
+//   ✅ claude-format   — claude (OAuth), anthropic (apikey), kimi-coding.
+//                       Translated via openaiToClaude() + claudeChunkToOpenAI().
 //   ⚠️ codex-responses — codex. Uses /responses endpoint, needs translator.
 //   ⚠️ kiro            — AWS CodeWhisperer event-stream binary. Needs translator.
 //   ⚠️ cursor          — Connect-RPC over proto. Needs translator.

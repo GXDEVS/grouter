@@ -60,6 +60,8 @@ program.command("setup")
 
 program.command("add")
   .description("Wizard — add a connection for any provider (OAuth, API key, import token)")
+  .option("--callback-host <host>", "Public IP/hostname for the OAuth callback — use on headless/VPS servers")
+  .option("--callback-port <port>", "Fixed port for the OAuth callback server (default: random ephemeral)")
   .action(addCommand);
 
 program.command("list").alias("ls")

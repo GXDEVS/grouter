@@ -19,7 +19,7 @@ import { getProxyPort } from "../db/index.ts";
  * Multi-provider interactive `grouter add`.
  * Picks provider with arrow keys, then runs the right flow in-terminal.
  */
-export async function addCommand(): Promise<void> {
+export async function addCommand(opts: { callbackHost?: string; callbackPort?: string } = {}): Promise<void> {
   console.log("");
 
   try {
@@ -38,7 +38,7 @@ export async function addCommand(): Promise<void> {
       }
       if (adapter.flow === "device_code")            await runDeviceFlow(providerId);
       else if (adapter.flow === "authorization_code"
-            || adapter.flow === "authorization_code_pkce") await runAuthCodeFlow(providerId, p);
+            || adapter.flow === "authorization_code_pkce") await runAuthCodeFlow(providerId, p, opts);
       else if (adapter.flow === "import_token")       await runImportFlow(providerId, p);
       else throw new Error(`Unsupported flow: ${adapter.flow}`);
     }
@@ -52,7 +52,6 @@ export async function addCommand(): Promise<void> {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Provider picker Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function pickProvider(): Promise<string | null> {
   const all = Object.values(PROVIDERS).filter(p => !isProviderLocked(p));
@@ -82,7 +81,6 @@ async function pickProvider(): Promise<string | null> {
   });
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Device-code flow Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function runDeviceFlow(providerId: string): Promise<void> {
   const p = getProvider(providerId)!;
@@ -132,9 +130,12 @@ async function runDeviceFlow(providerId: string): Promise<void> {
   pollSpinner.fail("Timed out waiting for authorization.");
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Authorization-code flow Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
+async function runAuthCodeFlow(
+  providerId: string,
+  p: Provider,
+  opts: { callbackHost?: string; callbackPort?: string } = {},
+): Promise<void> {
   const adapter = getAdapter(providerId)!;
 
   // Prompt for meta fields if the provider requires them (GitLab baseUrl/clientId/secret)
@@ -152,22 +153,31 @@ async function runAuthCodeFlow(providerId: string, p: Provider): Promise<void> {
     }
   }
 
+  const callbackHost = opts.callbackHost ?? adapter.callbackHost;
+  const callbackPort = opts.callbackPort ? parseInt(opts.callbackPort, 10) : (adapter.fixedPort ?? 0);
+
+  if (opts.callbackHost) {
+    console.log(chalk.yellow(`  Remote callback mode: http://${opts.callbackHost}:${callbackPort || "<random>"}/callback`));
+    console.log(chalk.gray("  Make sure this port is open in your VPS firewall before proceeding.\n"));
+  }
+
   // Spin up ephemeral listener - wrap in try/finally to guarantee cleanup
   let listener;
   try {
     listener = startCallbackListener({
-      port: adapter.fixedPort ?? 0,
+      port: callbackPort,
       path: adapter.callbackPath ?? "/callback",
-      redirectHost: adapter.callbackHost,
+      redirectHost: callbackHost,
     });
   } catch (err) {
     // Port already in use - provide helpful error
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("port") && adapter.fixedPort) {
+    const fixedPort = callbackPort || adapter.fixedPort;
+    if (msg.includes("port") && fixedPort) {
       throw new Error(
-        `Port ${adapter.fixedPort} is already in use. ` +
+        `Port ${fixedPort} is already in use. ` +
         `Another OAuth session may be in progress. ` +
-        `Try: killing any process on port ${adapter.fixedPort} or wait a few minutes.`
+        `Try: killing any process on port ${fixedPort} or wait a few minutes.`
       );
     }
     throw err;
@@ -234,7 +244,6 @@ async function runImportFlow(providerId: string, p: Provider): Promise<void> {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ API-key flow Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 async function runApiKeyFlow(p: Provider): Promise<void> {
   console.log("");
@@ -303,7 +312,6 @@ async function runApiKeyFlow(p: Provider): Promise<void> {
   }
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function remaining(deadline: number): string {
   const s = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
