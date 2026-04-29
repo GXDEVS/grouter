@@ -284,11 +284,6 @@ export function startServer(port: number) {
         GET: (req: Request) => handleAuthCallback(req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
       },
-      // Public OAuth redirect receiver — used when GROUTER_OAUTH_CALLBACK_URL is set (K8s/containers).
-      // Route your Ingress: /oauth/callback → grouter service.
-      "/oauth/callback": {
-        GET: (req: Request) => handleOAuthCallback(req),
-      },
       "/api/auth/import": {
         POST: (req: Request) => handleAuthImport(req),
         OPTIONS: () => new Response(null, { status: 204, headers: corsHeaders() }),
