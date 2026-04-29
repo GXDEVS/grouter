@@ -4,6 +4,7 @@ export {
   handleAuthImport,
   handleAuthPoll,
   handleAuthStart,
+  handleOAuthCallback,
 } from "./api-auth.ts";
 
 export {

@@ -114,3 +114,61 @@ export function startCallbackListener(options?: {
 function escape(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 }
+
+/**
+ * A virtual CallbackListener that does not bind any port. Resolves only when
+ * an external caller invokes resolveRemote() — used by the headless / cloud
+ * deployment mode where the OAuth callback arrives at a public URL handled
+ * by the main proxy server (see GROUTER_PUBLIC_URL and the /oauth/callback
+ * route in src/web/api-auth.ts).
+ */
+export interface RemoteCallbackListener extends CallbackListener {
+  resolveRemote(capture: CallbackCapture): void;
+}
+
+export function createRemoteCallbackListener(
+  redirectUri: string,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
+): RemoteCallbackListener {
+  let resolver: ((cap: CallbackCapture) => void) | null = null;
+  let rejector: ((err: Error) => void) | null = null;
+  let closed = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const cleanup = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+  };
+
+  return {
+    redirectUri,
+    port: 0,
+    wait(overrideTimeoutMs?: number) {
+      return new Promise<CallbackCapture>((resolve, reject) => {
+        resolver = resolve;
+        rejector = reject;
+        timer = setTimeout(() => {
+          if (closed) return;
+          closed = true;
+          cleanup();
+          reject(new Error("Callback timeout"));
+        }, overrideTimeoutMs ?? timeoutMs);
+      });
+    },
+    close() {
+      if (closed) return;
+      closed = true;
+      cleanup();
+      rejector?.(new Error("Callback listener closed"));
+      resolver = null;
+      rejector = null;
+    },
+    resolveRemote(capture: CallbackCapture) {
+      if (closed) return;
+      closed = true;
+      cleanup();
+      resolver?.(capture);
+      resolver = null;
+      rejector = null;
+    },
+  };
+}

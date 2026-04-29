@@ -54,6 +54,10 @@ Request flow:
 ### Provider registry and auth
 `src/providers/registry.ts` is the source of truth for provider metadata (models, colors, logos, auth type, deprecation flags). Every provider in the `PROVIDERS` record must have a matching **OAuth adapter** in `src/auth/providers/<id>.ts` (exported via `src/auth/providers/index.ts`) implementing one of: `device_code`, `auth_code` (+ optional PKCE), or `import_token`. `src/auth/orchestrator.ts` owns the session state machine — pending sessions are held in-memory with a 10-minute TTL.
 
+**OAuth callback modes.** Default is an ephemeral local listener on `127.0.0.1` (or `localhost` dual-stack, IPv6-friendly). Two alternatives:
+- Set `GROUTER_PUBLIC_URL=https://<your-domain>` and the proxy will route OAuth redirects through `<PUBLIC_URL>/oauth/callback` instead of binding a local port. Used in K8s/VPS deployments where the user's browser cannot reach a container's localhost. Skipped automatically for adapters with a `fixedPort` (Codex on `:1455`).
+- `grouter add --callback-host <host> [--callback-port <port>]` forces a specific bind. Useful when you control the firewall and want a stable URL. After 8s without a callback hit, `grouter add` opens a manual prompt where you can paste the redirect URL — covers the case where the callback can't reach the listener at all.
+
 When adding a new provider:
 1. Add entry to `PROVIDERS` in `src/providers/registry.ts`.
 2. Drop `src/auth/providers/<id>.ts` exporting an `OAuthAdapter`.

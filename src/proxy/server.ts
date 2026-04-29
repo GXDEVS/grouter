@@ -11,6 +11,7 @@ import {
   handleAddConnection,
   handleAuthAuthorize,
   handleAuthCallback,
+  handleOAuthCallback,
   handleAuthImport,
   handleAuthPoll,
   handleAuthStart,
@@ -132,6 +133,7 @@ export function startServer(port: number) {
         GET: (req: BunRequest) => serveLogo(req.params.file!, req),
       },
       "/dashboard": { GET: () => serveDashboard() },
+      "/oauth/callback": { GET: (req: Request) => handleOAuthCallback(req) },
 
       // Dashboard API.
       "/api/status": { GET: () => handleStatus() },
