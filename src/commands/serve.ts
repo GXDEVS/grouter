@@ -1,4 +1,4 @@
-import { openSync } from "node:fs";
+import { existsSync, openSync, readFileSync } from "node:fs";
 import chalk from "chalk";
 import { getStrategy, getStickyLimit, getProxyPort } from "../db/index.ts";
 import { startAllServers } from "../proxy/server.ts";
@@ -163,16 +163,52 @@ export async function serveRestartCommand(options: { port?: number }): Promise<v
 export function serveLogsCommand(): void {
   console.log(chalk.gray(`\n  Tailing ${LOG_FILE}  (Ctrl+C to stop)\n`));
 
-  if (process.platform === "win32") {
-    // Windows: use PowerShell's Get-Content -Wait (equivalent to tail -f)
-    Bun.spawn(["powershell", "-NoProfile", "-Command", `Get-Content -Path '${LOG_FILE}' -Tail 50 -Wait`], {
-      stdio: ["ignore", "inherit", "inherit"],
-    });
+  const tailLastLines = (content: string, count: number): string => {
+    const lines = content.split(/\r?\n/);
+    if (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
+    return lines.slice(-count).join("\n");
+  };
+
+  let offset = 0;
+
+  if (existsSync(LOG_FILE)) {
+    const initial = readFileSync(LOG_FILE);
+    const tail = tailLastLines(initial.toString("utf8"), 50);
+    if (tail) {
+      process.stdout.write(tail);
+      if (!tail.endsWith("\n")) process.stdout.write("\n");
+    }
+    offset = initial.length;
   } else {
-    Bun.spawn(["tail", "-f", "-n", "50", LOG_FILE], {
-      stdio: ["ignore", "inherit", "inherit"],
-    });
+    console.log(chalk.gray("  (log file not created yet, waiting for new logs...)"));
   }
+
+  const timer = setInterval(() => {
+    try {
+      if (!existsSync(LOG_FILE)) return;
+      const bytes = readFileSync(LOG_FILE);
+      if (bytes.length < offset) {
+        // log rotated/truncated
+        offset = 0;
+      }
+      if (bytes.length > offset) {
+        const chunk = bytes.subarray(offset).toString("utf8");
+        process.stdout.write(chunk);
+        offset = bytes.length;
+      }
+    } catch {
+      // keep tailing
+    }
+  }, 300);
+
+  const stop = () => {
+    clearInterval(timer);
+    process.stdout.write("\n");
+    process.exit(0);
+  };
+
+  process.once("SIGINT", stop);
+  process.once("SIGTERM", stop);
 }
 
 // ── Foreground (legacy / daemon entry point) ──────────────────────────────────

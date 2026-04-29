@@ -11,6 +11,16 @@ function extractText(content: unknown): string {
   return "";
 }
 
+function serializeContent(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (content === null || content === undefined) return "";
+  try {
+    return JSON.stringify(content);
+  } catch {
+    return String(content);
+  }
+}
+
 function tryJSON(s: unknown): unknown {
   if (typeof s !== "string") return s;
   try { return JSON.parse(s); } catch { return s; }
@@ -21,7 +31,8 @@ function contentBlocks(msg: Record<string, unknown>): Record<string, unknown>[] 
   const role = msg.role as string;
 
   if (role === "tool") {
-    blocks.push({ type: "tool_result", tool_use_id: msg.tool_call_id, content: msg.content });
+    const normalizedContent = extractText(msg.content) || serializeContent(msg.content);
+    blocks.push({ type: "tool_result", tool_use_id: msg.tool_call_id, content: normalizedContent });
     return blocks;
   }
 
@@ -81,11 +92,13 @@ export function openaiToClaude(
   // System
   const systemParts: string[] = [];
   const messages = (body.messages ?? []) as Record<string, unknown>[];
-  for (const msg of messages) { if (msg.role === "system") systemParts.push(extractText(msg.content)); }
+  for (const msg of messages) {
+    if (msg.role === "system" || msg.role === "developer") systemParts.push(extractText(msg.content));
+  }
   if (systemParts.length) result.system = [{ type: "text", text: systemParts.join("\n") }];
 
   // Messages (merge consecutive same-role, separate tool_result)
-  const nonSystem = messages.filter(m => m.role !== "system");
+  const nonSystem = messages.filter(m => m.role !== "system" && m.role !== "developer");
   const out: Record<string, unknown>[] = [];
   let curRole: string | undefined;
   let curParts: Record<string, unknown>[] = [];
@@ -114,7 +127,8 @@ export function openaiToClaude(
   result.messages = out;
 
   // Tools
-  if (Array.isArray(body.tools) && (body.tools as unknown[]).length) {
+  const disableTools = body.tool_choice === "none";
+  if (!disableTools && Array.isArray(body.tools) && (body.tools as unknown[]).length) {
     result.tools = (body.tools as Record<string, unknown>[]).map(t => {
       if (t.type === "function" && t.function) {
         const fn = t.function as { name: string; description?: string; parameters?: unknown };
@@ -126,7 +140,7 @@ export function openaiToClaude(
 
   if (body.tool_choice) {
     const c = body.tool_choice;
-    if (c === "auto" || c === "none") result.tool_choice = { type: "auto" };
+    if (c === "auto") result.tool_choice = { type: "auto" };
     else if (c === "required") result.tool_choice = { type: "any" };
     else if (typeof c === "object" && (c as { function?: { name: string } }).function) result.tool_choice = { type: "tool", name: (c as { function: { name: string } }).function.name };
   }

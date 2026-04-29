@@ -17,16 +17,34 @@ function toRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
+function serializeContent(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function normalizeTextContent(content: unknown): string {
   if (typeof content === "string") return content;
-  if (!Array.isArray(content)) return "";
+  if (!Array.isArray(content)) return serializeContent(content);
   const parts: string[] = [];
   for (const item of content) {
     const rec = toRecord(item);
-    if (!rec) continue;
+    if (!rec) {
+      const serialized = serializeContent(item);
+      if (serialized) parts.push(serialized);
+      continue;
+    }
     if (typeof rec.text === "string") parts.push(rec.text);
     else if (typeof rec.output_text === "string") parts.push(rec.output_text);
     else if (rec.type === "text" && typeof rec.content === "string") parts.push(rec.content);
+    else {
+      const serialized = serializeContent(rec);
+      if (serialized) parts.push(serialized);
+    }
   }
   return parts.join("\n");
 }
@@ -82,17 +100,18 @@ function mapInputMessages(messages: unknown): unknown[] {
         (typeof msg.tool_call_id === "string" && msg.tool_call_id) ||
         (typeof msg.toolCallId === "string" && msg.toolCallId) ||
         "";
+      const output = normalizeTextContent(msg.content) || serializeContent(msg.content);
       input.push({
         type: "function_call_output",
         call_id: callId,
-        output: normalizeTextContent(msg.content),
+        output,
       });
       continue;
     }
 
     const mappedRole = role === "assistant" ? "assistant" : "user";
     const text = normalizeTextContent(msg.content);
-    input.push({ role: mappedRole, content: text });
+    if (text) input.push({ role: mappedRole, content: text });
 
     const toolCalls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
     for (const tcRaw of toolCalls) {

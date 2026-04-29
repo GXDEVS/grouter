@@ -243,7 +243,7 @@ Visit `http://localhost:3099/dashboard` once the proxy is running.
 ## Architecture
 
 - High-level architecture and module boundaries are documented in [`architecture.md`](./architecture.md).
-- Agent-oriented implementation details and contributor guardrails are in [`AGENTS.md`](./AGENTS.md).
+- Agent-oriented implementation details and contributor guardrails are in [`CLAUDE.md`](./CLAUDE.md).
 
 ---
 
@@ -293,7 +293,7 @@ scripts/
 `-- asset-benchmark.ts   # prints asset + binary size metrics
 ```
 
-See [`AGENTS.md`](./AGENTS.md) for the full architecture guide - request flow, provider-registry rules, database migration conventions, and Bun-first runtime defaults.
+See [`CLAUDE.md`](./CLAUDE.md) for the full architecture guide - request flow, provider-registry rules, database migration conventions, and Bun-first runtime defaults.
 
 ---
 
@@ -317,7 +317,7 @@ Lowercase, kebab-case, under 60 chars. Types:
 | `refactor/` | internal restructuring, no behavior change |
 | `perf/` | performance improvement |
 | `chore/` | deps, build, tooling |
-| `docs/` | README, AGENTS.md, comments |
+| `docs/` | README, CLAUDE.md, comments |
 | `test/` | tests only |
 | `ci/` | `.github/workflows`, release pipelines |
 | `release/` | release prep (e.g. `release/v4.8.0`) |
@@ -385,7 +385,7 @@ For non-trivial changes (new provider with odd OAuth flow, schema migration, rot
 
 - **Bugs & feature requests** -> [GitHub Issues](https://github.com/GXDEVS/grouter/issues)
 - **Security issues** -> do not open a public issue. Email the maintainer or use GitHub's private vulnerability reporting.
-- **Architecture questions** -> [`AGENTS.md`](./AGENTS.md) covers the request flow, DB schema, and provider-registry contract.
+- **Architecture questions** -> [`CLAUDE.md`](./CLAUDE.md) covers the request flow, DB schema, and provider-registry contract.
 
 ---
 

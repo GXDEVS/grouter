@@ -8,6 +8,7 @@ export interface BunRequest extends Request {
 
 export const MAX_RETRIES = 3;
 export const SERVER_IDLE_TIMEOUT_SECONDS = 240;
+export const DISABLED_PROVIDER_IDS = new Set<string>();
 
 export function logReq(
   method: string,

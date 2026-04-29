@@ -48,7 +48,7 @@ import {
 } from "../public/animation-embedded.ts";
 import { handleChatCompletions } from "./chat-handler.ts";
 import { clearModelsCache, fetchModels } from "./models.ts";
-import { SERVER_IDLE_TIMEOUT_SECONDS, corsHeaders, jsonResponse } from "./server-helpers.ts";
+import { DISABLED_PROVIDER_IDS, SERVER_IDLE_TIMEOUT_SECONDS, corsHeaders, jsonResponse } from "./server-helpers.ts";
 import type { BunRequest } from "./server-helpers.ts";
 
 // HTML pages embedded at build time.
@@ -166,6 +166,12 @@ export function startServer(port: number) {
       "/api/providers/:id/wake": {
         POST: (req: BunRequest) => {
           const id = req.params.id!;
+          if (DISABLED_PROVIDER_IDS.has(id)) {
+            return jsonResponse({
+              error: `${id} is disabled in this build.`,
+              provider: id,
+            }, 410);
+          }
           ensureProviderServer(id);
           const providerPort = getProviderPort(id);
           return jsonResponse({ ok: true, provider: id, port: providerPort });
@@ -217,6 +223,9 @@ export function startServer(port: number) {
  * are forced to use `provider`, ignoring any provider prefix in the model name.
  */
 export function startProviderServer(provider: string, port: number) {
+  if (DISABLED_PROVIDER_IDS.has(provider)) {
+    throw new Error(`provider ${provider} is disabled`);
+  }
   return Bun.serve({
     port,
     idleTimeout: SERVER_IDLE_TIMEOUT_SECONDS,
@@ -253,6 +262,7 @@ const runningProviderServers = new Set<string>();
  * Safe to call at any time, e.g. right after a new connection is added.
  */
 export function ensureProviderServer(provider: string): void {
+  if (DISABLED_PROVIDER_IDS.has(provider)) return;
   if (runningProviderServers.has(provider)) return;
   const port = getProviderPort(provider);
   if (!port) return;
@@ -269,6 +279,7 @@ export function startAllServers(mainPort: number) {
   const main = startServer(mainPort);
   const providerServers = [] as Array<{ provider: string; port: number }>;
   for (const row of listProviderPorts()) {
+    if (DISABLED_PROVIDER_IDS.has(row.provider)) continue;
     try {
       startProviderServer(row.provider, row.port);
       runningProviderServers.add(row.provider);

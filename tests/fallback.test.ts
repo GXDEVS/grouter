@@ -2,22 +2,47 @@ import { describe, test, expect } from "bun:test";
 import { checkFallbackError, formatDuration } from "../src/rotator/fallback.ts";
 
 describe("checkFallbackError", () => {
-  test("401 unauthorized → should fallback with 15min cooldown", () => {
+  test("401 unauthorized → should fallback without cooldown lock", () => {
+    // Auth/permission failures (401/402/403) are surfaced quickly instead of
+    // being converted into long cooldown locks that mask actionable errors as
+    // 503 loops. They still rotate within a single request, but the account
+    // is not held in a future cooldown.
     const result = checkFallbackError(401, "Unauthorized", 0);
     expect(result.shouldFallback).toBe(true);
-    expect(result.cooldownMs).toBe(15 * 60 * 1000);
+    expect(result.cooldownMs).toBe(0);
   });
 
-  test("403 forbidden → should fallback with 1hr cooldown (payment)", () => {
-    const result = checkFallbackError(403, "Forbidden", 0);
-    expect(result.shouldFallback).toBe(true);
-    expect(result.cooldownMs).toBe(60 * 60 * 1000);
+  test("402/403 → should fallback without cooldown lock", () => {
+    for (const status of [402, 403]) {
+      const result = checkFallbackError(status, "Forbidden", 0);
+      expect(result.shouldFallback).toBe(true);
+      expect(result.cooldownMs).toBe(0);
+    }
   });
 
-  test("402 payment required → should fallback with 1hr cooldown", () => {
-    const result = checkFallbackError(402, "Payment Required", 0);
+  test("413 with payload signals → should NOT fallback (client payload issue)", () => {
+    // Groq and similar providers return 413 for request-too-large / context-window
+    // / TPM overruns. The proxy compacts/retries the request itself instead of
+    // punishing the account, so these don't trigger account cooldown.
+    for (const text of [
+      "Request too large for context",
+      "tokens per minute requested",
+      "context length exceeded",
+      "Prompt is too long",
+    ]) {
+      const result = checkFallbackError(413, text, 0);
+      expect(result.shouldFallback).toBe(false);
+      expect(result.cooldownMs).toBe(0);
+    }
+  });
+
+  test("413 with structured rate_limit marker → treated as rate limit", () => {
+    // When the upstream payload explicitly carries a rate-limit type marker,
+    // 413 is reclassified as a rate limit (still backs off exponentially).
+    const result = checkFallbackError(413, '{"type":"rate_limit_exceeded"}', 0);
     expect(result.shouldFallback).toBe(true);
-    expect(result.cooldownMs).toBe(60 * 60 * 1000);
+    expect(result.cooldownMs).toBeGreaterThan(0);
+    expect(result.newBackoffLevel).toBe(1);
   });
 
   test("429 rate limit → should fallback with exponential backoff", () => {
