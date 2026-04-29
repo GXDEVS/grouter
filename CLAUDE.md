@@ -38,12 +38,18 @@ The `prebuild` script (`scripts/embed-logos.ts`) reads `src/public/logos/*.png` 
 - **Router** on `:3099` (configurable) — picks any active account across all providers using the rotation strategy.
 - **Per-provider listeners** on `:3100+` — each provider with registered accounts gets its own `Bun.serve` instance that **pins** the provider on every request. Port allocation lives in the `provider_ports` table.
 
-Request flow for `/v1/chat/completions`:
+Both `/v1/chat/completions` (OpenAI-compatible) and `/v1/messages` (Anthropic-compatible) are exposed on the router and on every per-provider listener. They share the same handler core in `src/proxy/chat-handler.ts`:
+
+- `/v1/messages` is implemented in `src/proxy/messages-handler.ts` as a thin wrapper that translates the Anthropic Messages body to OpenAI shape, forwards through `handleChatCompletions`, then converts the response back (non-stream) or transforms the SSE stream chunk-by-chunk via `openaiChunkToClaude` (stream).
+
+Request flow:
 1. `selectAccount()` in `src/rotator/index.ts` picks a connection by provider + model, respecting model-locks and strategy (`fill-first` vs `round-robin` with stickiness).
 2. `checkAndRefreshAccount()` in `src/token/refresh.ts` refreshes OAuth tokens within `TOKEN_EXPIRY_BUFFER_MS`.
 3. `buildUpstream()` in `src/proxy/upstream.ts` constructs the upstream URL + headers per provider.
-4. On upstream error, `checkFallbackError()` + `markAccountUnavailable()` applies cooldowns from `src/constants.ts` (unauthorized → 15min, payment → 1hr, transient → 5s, rate-limit → exponential backoff up to level 15).
-5. Claude-style upstream formats are translated to OpenAI chat.completions SSE/non-stream via `claude-translator.ts`.
+4. The upstream call is wrapped in 3-layer timeouts (`UPSTREAM_FIRST_BYTE_TIMEOUT_MS` 20s, `UPSTREAM_STREAM_IDLE_TIMEOUT_MS` 45s, `UPSTREAM_REQUEST_TOTAL_TIMEOUT_MS` 120s) via `AbortController`.
+5. On upstream error, `checkFallbackError()` + `markAccountUnavailable()` decide rotation. Auth failures (401/402/403) rotate without applying long cooldowns (`cooldownMs: 0`); rate limits (429 + structured markers) get exponential backoff up to level 15; transient 5xx get a 5s cooldown.
+6. Provider-specific recovery paths in the chat handler: codex fallbacks (`-high` model strip on 400, `ChatGPT-Account-ID` drop retry, forced OAuth refresh on 401), gemini capacity-exhausted model fallback (3.1-pro → 2.5-pro → 2.5-flash), large-request body trim + history compaction.
+7. Claude-style upstream formats are translated to OpenAI chat.completions SSE/non-stream via `claude-translator.ts` (`claudeChunkToOpenAI` / `translateClaudeNonStream`). The reverse direction (OpenAI → Anthropic) lives in the same file (`openaiChunkToClaude` / `openaiToClaudeResponse` / `claudeToOpenAI`) and powers `/v1/messages`.
 
 ### Provider registry and auth
 `src/providers/registry.ts` is the source of truth for provider metadata (models, colors, logos, auth type, deprecation flags). Every provider in the `PROVIDERS` record must have a matching **OAuth adapter** in `src/auth/providers/<id>.ts` (exported via `src/auth/providers/index.ts`) implementing one of: `device_code`, `auth_code` (+ optional PKCE), or `import_token`. `src/auth/orchestrator.ts` owns the session state machine — pending sessions are held in-memory with a 10-minute TTL.
