@@ -1256,7 +1256,7 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
       }
 
       const upstreamReader = upstreamResp.body.getReader();
-      let firstRead: ReadableStreamReadResult<Uint8Array> = { done: true, value: undefined };
+      let firstRead: Awaited<ReturnType<typeof upstreamReader.read>> = { done: true, value: undefined };
       let streamFirstByteTimer: ReturnType<typeof setTimeout> | null = setTimeout(
         () => abortForTimeout("first_byte_timeout"),
         UPSTREAM_FIRST_BYTE_TIMEOUT_MS,
@@ -1610,10 +1610,8 @@ async function handleChatCompletions(req: Request, pinnedProvider?: string): Pro
     return jsonResponse(data);
   }
 
-  if (lastTimeoutError) {
-    logReq("POST", "/v1/chat/completions", 504, Date.now() - start, { model: rawModel, rotated: rotations });
-    return upstreamTimeoutResponse(provider, lastTimeoutError.category, lastTimeoutError.model);
-  }
+  const timeoutResp = emitLastTimeoutResponse();
+  if (timeoutResp) return timeoutResp;
 
   logReq("POST", "/v1/chat/completions", 502, Date.now() - start, { model: rawModel, rotated: rotations });
   if (lastFetchError) {
