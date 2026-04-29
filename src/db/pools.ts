@@ -13,6 +13,18 @@ export interface ProxyPool {
   updated_at: string;
 }
 
+const PROXY_POOL_PATCH_COLUMNS = {
+  name: "name",
+  proxy_url: "proxy_url",
+  no_proxy: "no_proxy",
+  is_active: "is_active",
+  test_status: "test_status",
+  last_tested_at: "last_tested_at",
+  last_error: "last_error",
+} as const;
+
+export type ProxyPoolPatch = Partial<Pick<ProxyPool, keyof typeof PROXY_POOL_PATCH_COLUMNS>>;
+
 // ── Read ──────────────────────────────────────────────────────────────────────
 
 export function listProxyPools(): ProxyPool[] {
@@ -46,13 +58,22 @@ export function createProxyPool(data: {
   return getProxyPoolById(id)!;
 }
 
-export function updateProxyPool(id: string, patch: Partial<Omit<ProxyPool, "id" | "created_at">>): void {
-  const entries = Object.entries(patch);
-  if (!entries.length) return;
+export function updateProxyPool(id: string, patch: ProxyPoolPatch): void {
+  const rawEntries = Object.entries(patch).filter(([, v]) => v !== undefined);
+  if (!rawEntries.length) return;
+
+  const invalidKeys = rawEntries
+    .map(([k]) => k)
+    .filter((k) => !(k in PROXY_POOL_PATCH_COLUMNS));
+  if (invalidKeys.length > 0) {
+    throw new Error(`Invalid proxy pool patch field(s): ${invalidKeys.join(", ")}`);
+  }
+
+  const entries = rawEntries as Array<[keyof typeof PROXY_POOL_PATCH_COLUMNS, string | number | null]>;
   const now = new Date().toISOString();
-  const sets = entries.map(([k]) => `${k} = ?`).join(", ");
+  const sets = entries.map(([k]) => `${PROXY_POOL_PATCH_COLUMNS[k]} = ?`).join(", ");
   db().query(`UPDATE proxy_pools SET ${sets}, updated_at = ? WHERE id = ?`)
-    .run(...entries.map(([, v]) => v as string | number | null), now, id);
+    .run(...entries.map(([, v]) => v), now, id);
 }
 
 export function deleteProxyPool(id: string): boolean {

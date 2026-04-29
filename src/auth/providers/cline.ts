@@ -1,4 +1,4 @@
-import type { OAuthAdapter, NormalizedTokens } from "../types.ts";
+import type { OAuthAdapter } from "../types.ts";
 
 const CONFIG = {
   authorizeUrl: "https://api.cline.bot/api/v1/auth/authorize",

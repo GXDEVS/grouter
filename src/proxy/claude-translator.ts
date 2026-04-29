@@ -3,8 +3,6 @@
 // Ported from 9router/open-sse/translator/request/openai-to-claude.js +
 //            9router/open-sse/translator/response/claude-to-openai.js
 
-import type { Connection } from "../types.ts";
-
 // ── Request: OpenAI → Claude /v1/messages ────────────────────────────────────
 
 function extractText(content: unknown): string {

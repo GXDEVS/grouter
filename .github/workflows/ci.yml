@@ -22,22 +22,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Non-blocking while legacy type errors are cleaned up. Remove
-      # continue-on-error once `bunx tsc --noEmit` returns green locally.
       - name: Type check
         run: bunx tsc --noEmit
-        continue-on-error: true
 
-      # `bun test` exits 1 when no tests are found. Skip the step while the
-      # repo has zero tests — remove the guard once the first *.test.ts lands.
       - name: Test
-        run: |
-          count=$(find . \( -path ./node_modules -o -path ./dist \) -prune -o -type f \( -name '*.test.*' -o -name '*.spec.*' -o -name '*_test.*' -o -name '*_spec.*' \) -print | wc -l)
-          if [ "$count" -gt 0 ]; then
-            bun test
-          else
-            echo "::notice::No test files found — skipping bun test"
-          fi
+        run: bun test
 
       - name: Build
         run: bun run build

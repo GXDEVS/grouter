@@ -1,7 +1,7 @@
 import { existsSync, openSync, readFileSync } from "node:fs";
 import chalk from "chalk";
 import { getStrategy, getStickyLimit, getProxyPort } from "../db/index.ts";
-import { startServer, startAllServers } from "../proxy/server.ts";
+import { startAllServers } from "../proxy/server.ts";
 import { listProviderPorts } from "../db/ports.ts";
 import { listAccounts } from "../db/accounts.ts";
 import { readPid, writePid, removePid, isRunning, LOG_FILE } from "../daemon/index.ts";

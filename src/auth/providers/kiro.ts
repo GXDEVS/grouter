@@ -1,4 +1,4 @@
-import type { OAuthAdapter, NormalizedTokens } from "../types.ts";
+import type { OAuthAdapter } from "../types.ts";
 import { parseIdTokenEmail } from "../pkce.ts";
 
 const CONFIG = {

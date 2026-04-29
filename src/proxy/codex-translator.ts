@@ -68,6 +68,22 @@ function mapToolDefs(tools: unknown): unknown[] | undefined {
   return mapped.length ? mapped : undefined;
 }
 
+function mapToolChoice(toolChoice: unknown): unknown {
+  if (toolChoice === "auto" || toolChoice === "required" || toolChoice === "none") return toolChoice;
+  const rec = toRecord(toolChoice);
+  if (!rec) return undefined;
+  if (rec.type !== "function") return undefined;
+  const fn = toRecord(rec.function);
+  if (!fn || typeof fn.name !== "string" || !fn.name) return undefined;
+  return { type: "function", name: fn.name };
+}
+
+function defaultCodexToolChoice(): "required" | "auto" | "none" {
+  const raw = (process.env.GROUTER_CODEX_DEFAULT_TOOL_CHOICE ?? "required").trim().toLowerCase();
+  if (raw === "auto" || raw === "none" || raw === "required") return raw;
+  return "required";
+}
+
 function mapInputMessages(messages: unknown): unknown[] {
   if (!Array.isArray(messages)) return [];
   const input: unknown[] = [];
@@ -118,7 +134,7 @@ function mapInputMessages(messages: unknown): unknown[] {
 
 export function openaiToCodexResponses(body: Record<string, unknown>, stream: boolean): Record<string, unknown> {
   const messages = Array.isArray(body.messages) ? body.messages : [];
-  const systemParts = messages
+  const instructionParts = messages
     .map((m) => toRecord(m))
     .filter((m): m is Record<string, unknown> => !!m && (m.role === "system" || m.role === "developer"))
     .map((m) => normalizeTextContent(m.content))
@@ -126,6 +142,11 @@ export function openaiToCodexResponses(body: Record<string, unknown>, stream: bo
 
   const mappedInput = mapInputMessages(messages);
   const mappedTools = mapToolDefs(body.tools);
+  const mappedToolChoice = mapToolChoice(body.tool_choice);
+  const parallelToolCalls =
+    typeof body.parallel_tool_calls === "boolean"
+      ? body.parallel_tool_calls
+      : true;
 
   const out: Record<string, unknown> = {
     model: typeof body.model === "string" ? body.model : "",
@@ -134,11 +155,11 @@ export function openaiToCodexResponses(body: Record<string, unknown>, stream: bo
     input: mappedInput,
   };
 
-  if (systemParts.length) out.instructions = systemParts.join("\n");
+  if (instructionParts.length) out.instructions = instructionParts.join("\n");
   if (mappedTools) {
     out.tools = mappedTools;
-    out.tool_choice = body.tool_choice !== undefined ? body.tool_choice : "auto";
-    out.parallel_tool_calls = typeof body.parallel_tool_calls === "boolean" ? body.parallel_tool_calls : true;
+    out.tool_choice = mappedToolChoice ?? defaultCodexToolChoice();
+    out.parallel_tool_calls = parallelToolCalls;
   }
   if (typeof body.temperature === "number") out.temperature = body.temperature;
   // chatgpt.com/backend-api/codex/responses can reject token-cap fields
@@ -434,30 +455,33 @@ export function codexChunkToOpenAI(rawLine: string, state: CodexStreamState): st
       );
     }
 
-    if (!state.sawToolDelta && toolCalls.length > 0) {
+    // Fallback: some upstream responses only include function calls on completion.
+    if (!state.sawToolDelta && toolCalls.length) {
       if (!state.roleSent) {
         state.roleSent = true;
         out.push(roleChunk(state));
       }
       for (const rawToolCall of toolCalls) {
-        const toolCall = toRecord(rawToolCall);
-        const fn = toRecord(toolCall?.function);
-        if (!toolCall || !fn) continue;
-        const callId = typeof toolCall.id === "string" ? toolCall.id : "";
-        const toolIndex = getToolIndex(state, callId || `tool-${state.nextToolIndex}`);
+        const tc = toRecord(rawToolCall);
+        const fn = toRecord(tc?.function);
+        if (!tc || !fn) continue;
+        const callId = typeof tc.id === "string" ? tc.id : "";
+        const name = typeof fn.name === "string" ? fn.name : "tool";
+        const args = typeof fn.arguments === "string" ? fn.arguments : "";
+        const toolIndex = typeof tc.index === "number" ? tc.index : getToolIndex(state, callId);
+
         out.push(
           toolCallDeltaChunk(state, {
             index: toolIndex,
             id: callId,
             type: "function",
-            function: {
-              name: typeof fn.name === "string" ? fn.name : "tool",
-              arguments: typeof fn.arguments === "string" ? fn.arguments : "{}",
-            },
+            function: { name, arguments: args },
           }),
         );
+        state.sawToolDelta = true;
+        if (callId) state.toolCallIndexById.set(callId, toolIndex);
+        if (callId && args) state.toolArgsSeenById.add(callId);
       }
-      state.sawToolDelta = true;
     }
 
     const doneChunk: Record<string, unknown> = {

@@ -99,7 +99,7 @@ program.command("keys [action] [arg...]")
 const serve = program.command("serve")
   .description("Manage the OpenAI-compatible proxy server")
   .option("-p, --port <number>", "Port to listen on (default: 3099)")
-  .action((opts: { port?: string }) => {
+  .action(() => {
     // bare `grouter serve` → show status
     serveStatusCommand();
   });
@@ -142,7 +142,7 @@ serve.command("fg")
 const upCmd = program.command("up")
   .description("Install integrations and providers");
 
-const upOpenclaude = upCmd.command("openclaude")
+upCmd.command("openclaude")
   .description("Configure Claude Code to use grouter (interactive wizard by default)")
   .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
   .option("-m, --model <model>", "Model to use")
