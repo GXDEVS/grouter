@@ -47,6 +47,7 @@ import {
   ANIMATION_RAW_SHA1,
 } from "../public/animation-embedded.ts";
 import { handleChatCompletions } from "./chat-handler.ts";
+import { handleMessages } from "./messages-handler.ts";
 import { clearModelsCache, fetchModels } from "./models.ts";
 import { DISABLED_PROVIDER_IDS, SERVER_IDLE_TIMEOUT_SECONDS, corsHeaders, jsonResponse } from "./server-helpers.ts";
 import type { BunRequest } from "./server-helpers.ts";
@@ -210,6 +211,9 @@ export function startServer(port: number) {
       "/v1/chat/completions": {
         POST: (req: Request) => handleChatCompletions(req),
       },
+      "/v1/messages": {
+        POST: (req: Request) => handleMessages(req),
+      },
     },
     fetch(req) {
       if (req.method === "OPTIONS") return preflight();
@@ -245,6 +249,9 @@ export function startProviderServer(provider: string, port: number) {
       },
       "/v1/chat/completions": {
         POST: (req: Request) => handleChatCompletions(req, provider),
+      },
+      "/v1/messages": {
+        POST: (req: Request) => handleMessages(req, provider),
       },
     },
     fetch(req) {
