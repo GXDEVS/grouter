@@ -401,6 +401,7 @@ export function handleGetProviders(): Response {
       logo:              p.logo ?? null,
       apiKeyUrl:         p.apiKeyUrl ?? null,
       deprecated:        p.deprecated ?? false,
+      underConstruction: p.underConstruction ?? false,
       deprecationReason: p.deprecationReason ?? null,
       underConstruction:       p.underConstruction ?? false,
       underConstructionReason: p.underConstructionReason ?? null,
