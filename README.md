@@ -376,6 +376,7 @@ For non-trivial changes (new provider with odd OAuth flow, schema migration, rot
 
 - **Bugs & feature requests** → [GitHub Issues](https://github.com/GXDEVS/grouter/issues)
 - **Security issues** → do not open a public issue. Email the maintainer or use GitHub's private vulnerability reporting.
+- **HTTP API reference** → [`API.md`](./API.md) covers `/v1/chat/completions`, `/v1/messages`, `/v1/models`, error envelopes, CORS, and integration recipes.
 - **Architecture questions** → [`CLAUDE.md`](./CLAUDE.md) covers the request flow, DB schema, and provider-registry contract.
 
 ---
