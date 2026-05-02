@@ -1,4 +1,4 @@
-# Kiro Translator
+﻿# Kiro Translator
 
 ## Overview
 
@@ -8,29 +8,29 @@ The Kiro translator enables Grouter to proxy requests to AWS CodeWhisperer (Kiro
 
 ```
 Client (OpenAI format)
-    ↓
+    â†“
 Grouter /v1/chat/completions
-    ↓
-upstream.ts → dispatch.format = "kiro"
-    ↓
-chat-handler.ts → Kiro interceptor
-    ↓
-kiro-translator.ts → callKiroNonStreaming()
-    ↓
+    â†“
+upstream.ts â†’ dispatch.format = "kiro"
+    â†“
+chat-handler.ts â†’ Kiro interceptor
+    â†“
+kiro-translator.ts â†’ callKiroNonStreaming()
+    â†“
 AWS CodeWhisperer SDK
-    ↓
+    â†“
 GenerateAssistantResponseCommand
-    ↓
+    â†“
 assistantResponseEvent stream
-    ↓
-translateKiroNonStream() → OpenAI format
-    ↓
+    â†“
+translateKiroNonStream() â†’ OpenAI format
+    â†“
 Client receives response
 ```
 
 ## MVP Status
 
-### ✅ Implemented
+### âœ… Implemented
 
 - **Non-streaming `/v1/chat/completions`**
   - Converts OpenAI messages to Kiro prompt format
@@ -50,7 +50,7 @@ Client receives response
   - Account unavailability marking
   - Proper error messages in OpenAI format
 
-### ⚠️ Not Implemented Yet
+### âš ï¸ Not Implemented Yet
 
 - **Streaming SSE**
   - Currently returns HTTP 501 with message: "Kiro streaming is not implemented yet. Use stream=false."
@@ -256,3 +256,22 @@ Message: feat: implement kiro translator MVP
 
 **Last Updated:** 2026-05-01  
 **Status:** MVP Complete, Ready for Production Testing
+
+## Streaming status
+
+`stream=true` is supported through simulated SSE.
+
+The implementation currently calls Kiro through the non-streaming SDK flow, waits for the full assistant response, then emits OpenAI-compatible SSE chunks.
+
+This is enough for clients that require an SSE-compatible response shape.
+
+**This is not true incremental token streaming yet.** True Kiro event streaming remains future work.
+
+### SSE Format
+
+When `stream=true`, the response includes:
+- `delta.role` - Role of the message (assistant)
+- `delta.content` - Content chunks
+- `finish_reason: "stop"` - Completion indicator
+- `data: [DONE]` - End of stream marker
+

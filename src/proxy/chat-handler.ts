@@ -14,7 +14,7 @@ import { isRateLimitedResult, isTemporarilyUnavailableResult, type Connection } 
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
-import { callKiroNonStreaming } from "./kiro-translator.ts";
+import { callKiroNonStreaming, openAICompletionToSSE, sseHeaders } from "./kiro-translator.ts";
 import {
   DISABLED_PROVIDER_IDS,
   MAX_RETRIES,
@@ -561,43 +561,41 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
 
     
     // ========================================
+        // ========================================
     // Kiro SDK Interceptor
     // ========================================
     if (dispatch.format === "kiro") {
-      if (stream) {
-        clearRequestTotalTimer();
-        removeClientAbortListener();
-        logReq("POST", "/v1/chat/completions", 501, Date.now() - start, {
-          model: rawModel,
-          account: label,
-          rotated: rotations,
-        });
-        return jsonResponse({
-          error: {
-            message: "Kiro streaming is not implemented yet. Use stream=false.",
-            type: "provider_not_supported",
-            code: 501,
-            provider,
-          },
-        }, 501);
-      }
-
       try {
-        const response = await handleKiroSdkNonStreaming({
-          account: selected,
+        const completion = await callKiroNonStreaming({
+          token: selected.access_token,
+          expiresAt: selected.expires_at || "",
+          region: "us-east-1",
           body: upstreamBody,
-          model: rawModel,
+          model: rawModel || "kiro/auto",
           signal: abortController.signal,
         });
 
         clearRequestTotalTimer();
         removeClientAbortListener();
+
         logReq("POST", "/v1/chat/completions", 200, Date.now() - start, {
           model: rawModel,
           account: label,
           rotated: rotations,
+          streaming: stream ? "simulated" : "none",
         });
-        return response;
+
+        if (stream) {
+          return new Response(openAICompletionToSSE(completion), {
+            status: 200,
+            headers: {
+              ...sseHeaders(),
+              ...corsHeaders(),
+            },
+          });
+        }
+
+        return jsonResponse(completion, 200);
       } catch (err) {
         clearRequestTotalTimer();
         removeClientAbortListener();
@@ -618,6 +616,7 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
         markAccountUnavailable(selected.id, 503, msg, currentModel || null);
 
         if (attempt < MAX_RETRIES - 1 && hasAlternativeAccount()) {
+          console.log(`  ${chalk.yellow("->")} rotating away from ${chalk.cyan(label)} (kiro sdk error)`);
           excludeIds.add(selected.id);
           rotations++;
           continue;
@@ -639,10 +638,7 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
         }, 502);
       }
     }
-
-
-
-    fetchOptions.signal = abortController.signal;
+fetchOptions.signal = abortController.signal;
     let fetchFirstByteTimer: ReturnType<typeof setTimeout> | null = setTimeout(
       () => abortForTimeout("first_byte_timeout"),
       UPSTREAM_FIRST_BYTE_TIMEOUT_MS,

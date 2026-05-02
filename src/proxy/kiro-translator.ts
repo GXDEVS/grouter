@@ -1,4 +1,4 @@
-﻿// OpenAI <-> AWS CodeWhisperer/Kiro translator
+// OpenAI <-> AWS CodeWhisperer/Kiro translator
 // Converts between OpenAI Chat Completions format and AWS CodeWhisperer streaming format
 //
 // Based on SDK: @aws/codewhisperer-streaming-client@1.0.39
@@ -13,7 +13,7 @@ import {
   type ChatResponseStream,
 } from "@aws/codewhisperer-streaming-client";
 
-// ── Model Extraction ────────────────────────────────────────────────────────
+// -- Model Extraction --------------------------------------------------------
 
 /**
  * Extract Kiro model name from OpenAI model format
@@ -24,7 +24,7 @@ export function extractKiroModel(model: string): string {
   return model.replace(/^kiro\//, "");
 }
 
-// ── Request Transformation ──────────────────────────────────────────────────
+// -- Request Transformation --------------------------------------------------
 
 /**
  * Transform OpenAI messages to Kiro prompt
@@ -75,7 +75,7 @@ export function buildKiroGenerateAssistantInput(
   };
 }
 
-// ── Client Creation ─────────────────────────────────────────────────────────
+// -- Client Creation ---------------------------------------------------------
 
 /**
  * Create configured CodeWhisperer client
@@ -99,7 +99,7 @@ export function buildKiroClient(
   });
 }
 
-// ── Response Transformation (Non-Streaming) ─────────────────────────────────
+// -- Response Transformation (Non-Streaming) ---------------------------------
 
 /**
  * Transform Kiro response events to OpenAI completion format
@@ -179,7 +179,7 @@ export function translateKiroNonStream(
   return response;
 }
 
-// ── High-Level API (Non-Streaming) ──────────────────────────────────────────
+// -- High-Level API (Non-Streaming) ------------------------------------------
 
 export interface CallKiroParams {
   token: string;
@@ -229,7 +229,7 @@ export async function callKiroNonStreaming(
   return translateKiroNonStream(events, model);
 }
 
-// ── Streaming Support (Future) ──────────────────────────────────────────────
+// -- Streaming Support (Future) ----------------------------------------------
 
 // TODO: Implement streaming support
 // - Stream state tracking
@@ -237,3 +237,112 @@ export async function callKiroNonStreaming(
 // - Proper finish_reason handling
 // - Usage reporting at end of stream
 
+// ── Simulated Streaming (SSE Compatibility) ─────────────────────────────────
+
+/**
+ * Convert OpenAI completion to SSE stream
+ * This provides SSE compatibility for clients that expect streaming,
+ * by wrapping a non-streaming response in SSE format.
+ * 
+ * @param completion - OpenAI completion response from callKiroNonStreaming
+ * @returns ReadableStream of SSE chunks
+ */
+export function openAICompletionToSSE(completion: Record<string, unknown>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+
+  const choice = Array.isArray(completion.choices)
+    ? (completion.choices[0] as any)
+    : null;
+
+  const content = choice?.message?.content ?? "";
+
+  const id = typeof completion.id === "string"
+    ? completion.id
+    : `chatcmpl-kiro-${crypto.randomUUID()}`;
+
+  const model = typeof completion.model === "string"
+    ? completion.model
+    : "kiro";
+
+  const created = typeof completion.created === "number"
+    ? completion.created
+    : Math.floor(Date.now() / 1000);
+
+  const usage = completion.usage as Record<string, number> | undefined;
+
+  // Build SSE chunks following OpenAI format
+  const chunks = [
+    // Chunk 1: Role
+    {
+      id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [
+        {
+          index: 0,
+          delta: { role: "assistant" },
+          finish_reason: null,
+        },
+      ],
+    },
+    // Chunk 2: Content
+    {
+      id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [
+        {
+          index: 0,
+          delta: { content },
+          finish_reason: null,
+        },
+      ],
+    },
+    // Chunk 3: Final (with usage if available)
+    {
+      id,
+      object: "chat.completion.chunk",
+      created,
+      model,
+      choices: [
+        {
+          index: 0,
+          delta: {},
+          finish_reason: "stop",
+        },
+      ],
+      ...(usage ? { usage } : {}),
+    },
+  ];
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      try {
+        // Emit all chunks
+        for (const chunk of chunks) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+        }
+        // Emit [DONE] signal (CRITICAL for closing the stream)
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
+}
+
+/**
+ * Get SSE headers for streaming responses
+ * @returns Headers for SSE response
+ */
+export function sseHeaders(): Record<string, string> {
+  return {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+  };
+}
