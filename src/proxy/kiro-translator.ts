@@ -1,21 +1,16 @@
-// OpenAI <-> AWS CodeWhisperer/Kiro translator
+﻿// OpenAI <-> AWS CodeWhisperer/Kiro translator
 // Converts between OpenAI Chat Completions format and AWS CodeWhisperer streaming format
 //
 // Based on SDK: @aws/codewhisperer-streaming-client@1.0.39
-// Commands: GenerateAssistantResponseCommand, SendMessageCommand
-// Events: AssistantResponseEvent (union of 17+ event types)
+// Commands: GenerateAssistantResponseCommand
+// Events: ChatResponseStream (assistantResponseEvent, etc.)
 
 import {
   CodeWhispererStreamingClient,
   GenerateAssistantResponseCommand,
-  type GenerateAssistantResponseRequest,
+  type GenerateAssistantResponseCommandInput,
   type GenerateAssistantResponseResponse,
-  type UserInputMessage,
-  type ConversationState,
-  type AssistantResponseEvent,
-  type ChatMessage,
-  type ContextUsageEvent,
-  type MessageMetadataEvent,
+  type ChatResponseStream,
 } from "@aws/codewhisperer-streaming-client";
 
 // ── Model Extraction ────────────────────────────────────────────────────────
@@ -26,56 +21,58 @@ import {
  * @returns Kiro model name (e.g., "claude-sonnet-4.5")
  */
 export function extractKiroModel(model: string): string {
-  // Remove "kiro/" prefix if present
   return model.replace(/^kiro\//, "");
 }
 
 // ── Request Transformation ──────────────────────────────────────────────────
 
 /**
- * Transform OpenAI messages to Kiro conversation format
- * @param body - OpenAI Chat Completions request body
- * @returns Kiro GenerateAssistantResponseRequest
+ * Transform OpenAI messages to Kiro prompt
+ * For MVP: concatenate all messages into a single prompt
+ * @param messages - OpenAI messages array
+ * @returns Concatenated prompt string
  */
-export function openaiMessagesToKiroConversation(
-  body: Record<string, unknown>
-): GenerateAssistantResponseRequest {
-  const messages = (body.messages ?? []) as Array<Record<string, unknown>>;
-  
-  // Extract user message (last message should be user)
-  const lastMessage = messages[messages.length - 1];
-  const userContent = typeof lastMessage?.content === "string" 
-    ? lastMessage.content 
-    : "";
-
-  // Build conversation history (all messages except last)
-  const history: ChatMessage[] = messages.slice(0, -1).map(msg => ({
-    role: msg.role as string,
-    content: typeof msg.content === "string" ? msg.content : "",
-  }));
-
-  // Build request
-  const request: GenerateAssistantResponseRequest = {
-    userInputMessage: {
-      content: userContent,
-    },
-  };
-
-  // Add conversation state if there's history
-  if (history.length > 0) {
-    request.conversationState = {
-      history,
-    };
+export function openaiMessagesToKiroPrompt(messages: unknown[]): string {
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return "";
   }
 
-  // TODO: Add support for:
-  // - temperature
-  // - max_tokens
-  // - tools
-  // - model selection
-  // - system messages
+  const parts: string[] = [];
 
-  return request;
+  for (const msg of messages) {
+    if (typeof msg !== "object" || !msg) continue;
+    const m = msg as Record<string, unknown>;
+    const role = typeof m.role === "string" ? m.role : "user";
+    const content = typeof m.content === "string" ? m.content : "";
+
+    if (!content) continue;
+
+    // Format: "Role: content"
+    const roleLabel = role.charAt(0).toUpperCase() + role.slice(1);
+    parts.push(`${roleLabel}: ${content}`);
+  }
+
+  return parts.join("\n\n");
+}
+
+/**
+ * Build Kiro GenerateAssistantResponse input
+ * @param prompt - User prompt
+ * @returns GenerateAssistantResponseCommandInput
+ */
+export function buildKiroGenerateAssistantInput(
+  prompt: string
+): GenerateAssistantResponseCommandInput {
+  return {
+    conversationState: {
+      currentMessage: {
+        userInputMessage: {
+          content: prompt,
+        },
+      },
+      chatTriggerType: "MANUAL",
+    },
+  };
 }
 
 // ── Client Creation ─────────────────────────────────────────────────────────
@@ -83,101 +80,85 @@ export function openaiMessagesToKiroConversation(
 /**
  * Create configured CodeWhisperer client
  * @param token - OAuth access token from Grouter
+ * @param expiresAt - Token expiration date
  * @param region - AWS region (default: us-east-1)
  * @returns Configured client instance
  */
 export function buildKiroClient(
   token: string,
+  expiresAt: string,
   region: string = "us-east-1"
 ): CodeWhispererStreamingClient {
-  // TODO: Determine correct authentication method
-  // Option 1: Direct token (if supported)
-  // Option 2: Token provider from @aws-sdk/token-providers
-  // Option 3: Custom credentials provider
-  
   return new CodeWhispererStreamingClient({
     region,
-    credentials: {
-      // Placeholder - needs testing
-      accessKeyId: token,
-      secretAccessKey: "not-used",
-      sessionToken: token,
+    token: {
+      token,
+      expiration: new Date(expiresAt),
     },
+    endpoint: "https://codewhisperer.us-east-1.amazonaws.com",
   });
-}
-
-// ── Headers ─────────────────────────────────────────────────────────────────
-
-/**
- * Build headers for Kiro requests
- * Note: SDK handles most headers automatically
- * @param token - OAuth access token
- * @param stream - Whether streaming is enabled
- * @returns Headers object
- */
-export function buildKiroHeaders(
-  token: string,
-  stream: boolean
-): Record<string, string> {
-  // SDK handles headers automatically
-  // This function may not be needed, but kept for compatibility
-  return {
-    "Content-Type": "application/json",
-    "Accept": stream ? "application/vnd.amazon.eventstream" : "application/json",
-  };
 }
 
 // ── Response Transformation (Non-Streaming) ─────────────────────────────────
 
 /**
  * Transform Kiro response events to OpenAI completion format
- * @param events - Array of AssistantResponseEvent from Kiro
+ * @param events - Array of ChatResponseStream events from Kiro
  * @param model - Model name for response
  * @returns OpenAI Chat Completion response
  */
 export function translateKiroNonStream(
-  events: AssistantResponseEvent[],
+  events: ChatResponseStream[],
   model: string
 ): Record<string, unknown> {
   let content = "";
   let messageId = "";
-  let finishReason = "stop";
+  let modelId = "";
   let usage: Record<string, number> | null = null;
 
   // Process all events
   for (const event of events) {
-    // AssistantResponseMessage - contains message content
-    if ("content" in event && typeof event.content === "string") {
-      content += event.content;
-    }
-    if ("messageId" in event && typeof event.messageId === "string") {
-      messageId = event.messageId;
+    // assistantResponseEvent - contains message content
+    if ("assistantResponseEvent" in event && event.assistantResponseEvent) {
+      const evt = event.assistantResponseEvent as any;
+      if (typeof evt.content === "string") {
+        content += evt.content;
+      }
+      if (typeof evt.messageId === "string") {
+        messageId = evt.messageId;
+      }
+      if (typeof evt.modelId === "string") {
+        modelId = evt.modelId;
+      }
     }
 
-    // ContextUsageEvent - contains token usage
-    if ("tokenUsage" in event && event.tokenUsage) {
-      const tokenUsage = event.tokenUsage as any;
-      usage = {
-        prompt_tokens: tokenUsage.inputTokens ?? 0,
-        completion_tokens: tokenUsage.outputTokens ?? 0,
-        total_tokens: (tokenUsage.inputTokens ?? 0) + (tokenUsage.outputTokens ?? 0),
-      };
+    // contextUsageEvent - contains token usage
+    if ("contextUsageEvent" in event && event.contextUsageEvent) {
+      const evt = event.contextUsageEvent as any;
+      if (evt.tokenUsage) {
+        const tokenUsage = evt.tokenUsage;
+        usage = {
+          prompt_tokens: tokenUsage.inputTokens ?? 0,
+          completion_tokens: tokenUsage.outputTokens ?? 0,
+          total_tokens: (tokenUsage.inputTokens ?? 0) + (tokenUsage.outputTokens ?? 0),
+        };
+      }
     }
 
     // TODO: Handle other event types:
-    // - CodeEvent
-    // - CitationEvent
-    // - ReasoningContentEvent
-    // - ToolUseEvent
-    // - ToolResultEvent
-    // - InvalidStateEvent (errors)
+    // - codeEvent
+    // - citationEvent
+    // - reasoningContentEvent
+    // - toolUseEvent
+    // - toolResultEvent
+    // - invalidStateEvent (errors)
   }
 
-  return {
-    id: `chatcmpl-${messageId || Date.now()}`,
+  const response: Record<string, unknown> = {
+    id: `chatcmpl-kiro-${messageId || crypto.randomUUID()}`,
     object: "chat.completion",
     created: Math.floor(Date.now() / 1000),
-    model,
+    model: modelId || model,
     choices: [
       {
         index: 0,
@@ -185,224 +166,74 @@ export function translateKiroNonStream(
           role: "assistant",
           content: content || null,
         },
-        finish_reason: finishReason,
+        finish_reason: "stop",
       },
     ],
-    usage: usage ?? {
-      prompt_tokens: 0,
-      completion_tokens: 0,
-      total_tokens: 0,
-    },
   };
+
+  // Add usage if available
+  if (usage) {
+    response.usage = usage;
+  }
+
+  return response;
 }
 
-// ── Response Transformation (Streaming) ─────────────────────────────────────
+// ── High-Level API (Non-Streaming) ──────────────────────────────────────────
 
-/**
- * Stream state for tracking Kiro event stream
- */
-export interface KiroStreamState {
-  messageId: string;
+export interface CallKiroParams {
+  token: string;
+  expiresAt: string;
+  region?: string;
+  body: Record<string, unknown>;
   model: string;
-  content: string;
-  finishReason: string | null;
-  usage: Record<string, number> | null;
-  finishReasonSent: boolean;
 }
-
-/**
- * Create new stream state
- */
-export function newKiroStreamState(model: string): KiroStreamState {
-  return {
-    messageId: "",
-    model,
-    content: "",
-    finishReason: null,
-    usage: null,
-    finishReasonSent: false,
-  };
-}
-
-/**
- * Transform Kiro event to OpenAI SSE chunk(s)
- * @param event - Single AssistantResponseEvent from Kiro
- * @param state - Stream state
- * @returns Array of SSE-formatted strings
- */
-export function kiroEventToOpenAI(
-  event: AssistantResponseEvent,
-  state: KiroStreamState
-): string[] {
-  const results: string[] = [];
-
-  function sseOut(delta: unknown, fr: string | null = null): string {
-    return `data: ${JSON.stringify({
-      id: `chatcmpl-${state.messageId || Date.now()}`,
-      object: "chat.completion.chunk",
-      created: Math.floor(Date.now() / 1000),
-      model: state.model,
-      choices: [{ index: 0, delta, finish_reason: fr }],
-    })}\n\n`;
-  }
-
-  // AssistantResponseMessage - message content
-  if ("content" in event && typeof event.content === "string") {
-    if (!state.messageId && "messageId" in event) {
-      state.messageId = event.messageId as string;
-      results.push(sseOut({ role: "assistant" }));
-    }
-    if (event.content) {
-      state.content += event.content;
-      results.push(sseOut({ content: event.content }));
-    }
-  }
-
-  // ContextUsageEvent - token usage
-  if ("tokenUsage" in event && event.tokenUsage) {
-    const tokenUsage = event.tokenUsage as any;
-    state.usage = {
-      prompt_tokens: tokenUsage.inputTokens ?? 0,
-      completion_tokens: tokenUsage.outputTokens ?? 0,
-      total_tokens: (tokenUsage.inputTokens ?? 0) + (tokenUsage.outputTokens ?? 0),
-    };
-  }
-
-  // MessageMetadataEvent - may contain finish signal
-  if ("messageId" in event && !state.messageId) {
-    state.messageId = event.messageId as string;
-  }
-
-  // TODO: Handle other event types:
-  // - CodeEvent
-  // - CitationEvent
-  // - ReasoningContentEvent
-  // - ToolUseEvent
-  // - ToolResultEvent
-  // - InvalidStateEvent (errors)
-  // - End of stream detection
-
-  return results;
-}
-
-/**
- * Generate final SSE chunk with finish_reason and usage
- */
-export function kiroStreamFinish(state: KiroStreamState): string {
-  const final: Record<string, unknown> = {
-    id: `chatcmpl-${state.messageId || Date.now()}`,
-    object: "chat.completion.chunk",
-    created: Math.floor(Date.now() / 1000),
-    model: state.model,
-    choices: [{ index: 0, delta: {}, finish_reason: state.finishReason ?? "stop" }],
-  };
-
-  if (state.usage) {
-    final.usage = state.usage;
-  }
-
-  return `data: ${JSON.stringify(final)}\n\ndata: [DONE]\n\n`;
-}
-
-// ── High-Level API ──────────────────────────────────────────────────────────
 
 /**
  * Execute non-streaming Kiro request
- * @param client - Configured CodeWhispererStreamingClient
- * @param body - OpenAI Chat Completions request body
- * @param model - Model name
+ * @param params - Request parameters
  * @returns OpenAI-compatible response
  */
-export async function executeKiroNonStream(
-  client: CodeWhispererStreamingClient,
-  body: Record<string, unknown>,
-  model: string
+export async function callKiroNonStreaming(
+  params: CallKiroParams
 ): Promise<Record<string, unknown>> {
-  const request = openaiMessagesToKiroConversation(body);
-  const command = new GenerateAssistantResponseCommand(request);
-  const response = await client.send(command);
+  const { token, expiresAt, region = "us-east-1", body, model } = params;
+
+  // Extract messages and convert to prompt
+  const messages = (body.messages ?? []) as unknown[];
+  const prompt = openaiMessagesToKiroPrompt(messages);
+
+  if (!prompt) {
+    throw new Error("No messages provided");
+  }
+
+  // Build input
+  const input = buildKiroGenerateAssistantInput(prompt);
+
+  // Create client
+  const client = buildKiroClient(token, expiresAt, region);
+
+  // Execute command
+  const command = new GenerateAssistantResponseCommand(input);
+  const response: GenerateAssistantResponseResponse = await client.send(command);
 
   // Collect all events
-  const events: AssistantResponseEvent[] = [];
-  if (response.chatResponseStream) {
-    for await (const event of response.chatResponseStream) {
+  const events: ChatResponseStream[] = [];
+  if (response.generateAssistantResponseResponse) {
+    for await (const event of response.generateAssistantResponseResponse) {
       events.push(event);
     }
   }
 
+  // Transform to OpenAI format
   return translateKiroNonStream(events, model);
 }
 
-/**
- * Execute streaming Kiro request
- * @param client - Configured CodeWhispererStreamingClient
- * @param body - OpenAI Chat Completions request body
- * @param model - Model name
- * @returns Async generator of SSE chunks
- */
-export async function* executeKiroStream(
-  client: CodeWhispererStreamingClient,
-  body: Record<string, unknown>,
-  model: string
-): AsyncGenerator<string> {
-  const request = openaiMessagesToKiroConversation(body);
-  const command = new GenerateAssistantResponseCommand(request);
-  const response = await client.send(command);
+// ── Streaming Support (Future) ──────────────────────────────────────────────
 
-  const state = newKiroStreamState(model);
+// TODO: Implement streaming support
+// - Stream state tracking
+// - Event-to-SSE transformation
+// - Proper finish_reason handling
+// - Usage reporting at end of stream
 
-  if (response.chatResponseStream) {
-    for await (const event of response.chatResponseStream) {
-      const chunks = kiroEventToOpenAI(event, state);
-      for (const chunk of chunks) {
-        yield chunk;
-      }
-    }
-  }
-
-  // Send final chunk
-  yield kiroStreamFinish(state);
-}
-
-// ── Notes ───────────────────────────────────────────────────────────────────
-//
-// TODO List for Full Implementation:
-//
-// 1. Authentication:
-//    - Test token authentication method
-//    - Implement token refresh if needed
-//    - Handle 401/403 errors
-//
-// 2. Request Mapping:
-//    - Add temperature support
-//    - Add max_tokens support
-//    - Add system message support
-//    - Add tool/function calling support
-//    - Add model selection (how to specify model?)
-//
-// 3. Response Mapping:
-//    - Handle CodeEvent (code blocks)
-//    - Handle CitationEvent (citations)
-//    - Handle ReasoningContentEvent (thinking)
-//    - Handle ToolUseEvent (function calls)
-//    - Handle ToolResultEvent (function results)
-//    - Handle InvalidStateEvent (errors)
-//    - Detect end of stream properly
-//
-// 4. Error Handling:
-//    - Map AWS exceptions to OpenAI errors
-//    - Handle rate limiting
-//    - Handle token expiration
-//    - Handle invalid requests
-//
-// 5. Testing:
-//    - Unit tests for transformations
-//    - Integration test with real token
-//    - Test streaming vs non-streaming
-//    - Test error cases
-//
-// 6. Integration:
-//    - Update upstream.ts dispatcher
-//    - Update chat-handler.ts to use SDK directly
-//    - Add format: "kiro" handling
-//    - Test end-to-end with Maestro

@@ -384,6 +384,16 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       };
     }
     case "kiro":
+      // Kiro uses AWS CodeWhisperer SDK, not HTTP
+      return {
+        kind: "ok",
+        req: {
+          url: "kiro-sdk://generateAssistantResponse",
+          headers: {},
+          body: ctx.body,
+        },
+        format: "kiro",
+      };
       return { kind: "unsupported", reason: "Kiro uses AWS CodeWhisperer's event-stream format. The translator is not yet implemented." };
     case "cursor":
       return { kind: "unsupported", reason: "Cursor uses a Connect-RPC proto format. The translator is not yet implemented." };
