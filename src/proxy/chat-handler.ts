@@ -14,6 +14,7 @@ import { isRateLimitedResult, isTemporarilyUnavailableResult, type Connection } 
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
+import { callKiroNonStreaming, openAICompletionToSSE, sseHeaders } from "./kiro-translator.ts";
 import {
   DISABLED_PROVIDER_IDS,
   MAX_RETRIES,
@@ -295,6 +296,33 @@ function clearStaleCodexTokenRevokedState(): number {
   return stale.length;
 }
 
+
+/**
+ * Handle Kiro SDK non-streaming requests
+ */
+async function handleKiroSdkNonStreaming(params: {
+  account: Connection;
+  body: Record<string, unknown>;
+  model: string | null;
+  signal?: AbortSignal;
+}): Promise<Response> {
+  const { account, body, model, signal } = params;
+  
+  const result = await callKiroNonStreaming({
+    token: account.access_token,
+    expiresAt: account.expires_at || "",
+    region: "us-east-1",
+    body,
+    model: model || "kiro/auto",
+    signal,
+  });
+
+  return new Response(JSON.stringify(result), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export async function handleChatCompletions(req: Request, pinnedProvider?: string): Promise<Response> {
   const start = Date.now();
   let body: Record<string, unknown>;
@@ -531,7 +559,86 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
     };
     if (clientSignal) clientSignal.addEventListener("abort", abortForClientCancel, { once: true });
 
-    fetchOptions.signal = abortController.signal;
+    
+    // ========================================
+        // ========================================
+    // Kiro SDK Interceptor
+    // ========================================
+    if (dispatch.format === "kiro") {
+      try {
+        const completion = await callKiroNonStreaming({
+          token: selected.access_token,
+          expiresAt: selected.expires_at || "",
+          region: "us-east-1",
+          body: upstreamBody,
+          model: rawModel || "kiro/auto",
+          signal: abortController.signal,
+        });
+
+        clearRequestTotalTimer();
+        removeClientAbortListener();
+
+        logReq("POST", "/v1/chat/completions", 200, Date.now() - start, {
+          model: rawModel,
+          account: label,
+          rotated: rotations,
+          streaming: stream ? "simulated" : "none",
+        });
+
+        if (stream) {
+          return new Response(openAICompletionToSSE(completion), {
+            status: 200,
+            headers: {
+              ...sseHeaders(),
+              ...corsHeaders(),
+            },
+          });
+        }
+
+        return jsonResponse(completion, 200);
+      } catch (err) {
+        clearRequestTotalTimer();
+        removeClientAbortListener();
+
+        if (abortReason === "client_cancelled") {
+          return new Response(null, { status: 499 });
+        }
+
+        if (abortReason && abortReason !== "client_cancelled") {
+          const timeoutResult = onTimeoutBeforeClientResponse(abortReason);
+          if (timeoutResult === "retry") continue;
+          return timeoutResult;
+        }
+
+        const msg = err instanceof Error ? err.message : String(err);
+        console.log(`  ${chalk.red("x")} kiro sdk failed -> ${chalk.cyan(label)} ${chalk.red(msg)}`);
+
+        markAccountUnavailable(selected.id, 503, msg, currentModel || null);
+
+        if (attempt < MAX_RETRIES - 1 && hasAlternativeAccount()) {
+          console.log(`  ${chalk.yellow("->")} rotating away from ${chalk.cyan(label)} (kiro sdk error)`);
+          excludeIds.add(selected.id);
+          rotations++;
+          continue;
+        }
+
+        logReq("POST", "/v1/chat/completions", 502, Date.now() - start, {
+          model: rawModel,
+          account: label,
+          rotated: rotations,
+        });
+
+        return jsonResponse({
+          error: {
+            message: `Kiro SDK request failed: ${msg}`,
+            type: "upstream_unreachable",
+            code: 502,
+            provider,
+          },
+        }, 502);
+      }
+    }
+fetchOptions.signal = abortController.signal;
     let fetchFirstByteTimer: ReturnType<typeof setTimeout> | null = setTimeout(
       () => abortForTimeout("first_byte_timeout"),
       UPSTREAM_FIRST_BYTE_TIMEOUT_MS,
