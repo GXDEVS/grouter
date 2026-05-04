@@ -297,32 +297,6 @@ function clearStaleCodexTokenRevokedState(): number {
 }
 
 
-/**
- * Handle Kiro SDK non-streaming requests
- */
-async function handleKiroSdkNonStreaming(params: {
-  account: Connection;
-  body: Record<string, unknown>;
-  model: string | null;
-  signal?: AbortSignal;
-}): Promise<Response> {
-  const { account, body, model, signal } = params;
-  
-  const result = await callKiroNonStreaming({
-    token: account.access_token,
-    expiresAt: account.expires_at || "",
-    region: "us-east-1",
-    body,
-    model: model || "kiro/auto",
-    signal,
-  });
-
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 export async function handleChatCompletions(req: Request, pinnedProvider?: string): Promise<Response> {
   const start = Date.now();
   let body: Record<string, unknown>;
