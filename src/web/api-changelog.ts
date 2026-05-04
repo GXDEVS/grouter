@@ -128,7 +128,9 @@ export async function handleChangelog(): Promise<Response> {
   }
 
   const entries = parseEntries(raw, CURRENT_VERSION);
-  const latest = entries[0]?.version ?? null;
+  // Pick the most recent *released* version for update comparison — skip
+  // "Unreleased" or any non-semver heading so it doesn't break isNewer().
+  const latest = entries.find(e => /^\d/.test(e.version))?.version ?? null;
 
   const payload: ChangelogPayload = {
     current: CURRENT_VERSION,

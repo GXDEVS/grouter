@@ -8,6 +8,21 @@ The dashboard reads this file directly from
 `https://raw.githubusercontent.com/GXDEVS/grouter/main/CHANGELOG.md`
 to surface release notes and notify when a newer version is available.
 
+## [Unreleased]
+
+### Added
+- **Dashboard Changelog tab** — sidebar entry that fetches `CHANGELOG.md`
+  from the GitHub raw URL, caches it for 30 minutes in the settings table,
+  and parses it into per-version sections. Shows an update banner and a
+  "New" badge when the running build is behind the latest release. The
+  file is also embedded in the binary so the tab works offline before the
+  cache warms.
+- **Kiro non-streaming translator** — `/v1/chat/completions` requests with
+  `model: kiro/...` are routed through `@aws/codewhisperer-streaming-client`
+  using the existing OAuth account. `stream=false` returns a real
+  OpenAI-compatible response; `stream=true` is satisfied via simulated SSE
+  (full response wrapped in chunks) until native event streaming lands.
+
 ## [5.5.0] - 2026-04-29
 
 ### Added
@@ -98,6 +113,7 @@ to surface release notes and notify when a newer version is available.
 - SQLite state in `~/.grouter/grouter.db` with idempotent silent migrations.
 - Dashboard + setup wizard served from the embedded HTML files.
 
+[Unreleased]: https://github.com/GXDEVS/grouter/compare/v5.5.0...HEAD
 [5.5.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.5.0
 [5.4.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.4.0
 [5.3.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.3.0
