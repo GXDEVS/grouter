@@ -8,6 +8,34 @@ The dashboard reads this file directly from
 `https://raw.githubusercontent.com/GXDEVS/grouter/main/CHANGELOG.md`
 to surface release notes and notify when a newer version is available.
 
+## [Unreleased]
+
+### Added
+- **`grouter up <platform>` for OpenCode, Cline, and OpenClaw** — the `up`
+  command now ships three new adapters in addition to OpenClaude:
+  - `grouter up opencode` writes/merges
+    `~/.config/opencode/opencode.json` with a custom `@ai-sdk/openai-compatible`
+    provider named `grouter`, pointing at the local proxy. Honours
+    `OPENCODE_CONFIG`. Existing config (mcp servers, other providers, etc.) is
+    preserved.
+  - `grouter up cline` shells out to the `cline` CLI
+    (`cline auth -p openai -k grouter -b http://localhost:<port>/v1 -m <model>`).
+    If the binary isn't on `PATH`, prints install instructions and the manual
+    settings to use in the VS Code extension.
+  - `grouter up openclaw` writes/merges `~/.openclaw/openclaw.json` under
+    `agents.defaults.models["grouter/<model>"]`. Honours `OPENCLAW_CONFIG_PATH`
+    and `OPENCLAW_HOME`. Sets the entry as `primary` only if the user hasn't
+    already configured one.
+  Each adapter supports the same flags as `up openclaude` — `--provider`,
+  `--model`, `--port`, `--no-interactive`, `--remove`.
+
+### Changed
+- **`up` wizard refactor** — provider/model picker extracted into
+  `src/commands/up-shared.ts` (`pickProviderAndModel`, `resolveTarget`,
+  `printActiveConfig`, `printWriteReport`). Each platform adapter is now ~150
+  lines focused only on its own config-file shape; `openclaude.ts` keeps the
+  shell-rc / settings.json injection it always had.
+
 ## [5.6.0] - 2026-05-04
 
 ### Added
@@ -129,6 +157,7 @@ to surface release notes and notify when a newer version is available.
 - Dashboard + setup wizard served from the embedded HTML files.
 
 [Unreleased]: https://github.com/GXDEVS/grouter/compare/v5.6.0...HEAD
+
 [5.6.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.6.0
 [5.5.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.5.0
 [5.4.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.4.0
