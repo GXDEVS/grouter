@@ -23,6 +23,18 @@ to surface release notes and notify when a newer version is available.
   OpenAI-compatible response; `stream=true` is satisfied via simulated SSE
   (full response wrapped in chunks) until native event streaming lands.
 
+### Changed
+- **Kiro model routing** — `kiro/<model>` now forwards `<model>` to the
+  upstream `userInputMessage.modelId`, so picking `kiro/deepseek-3.2` or
+  `kiro/claude-haiku-4.5` actually selects that model instead of always
+  falling through to the server's default.
+
+### Fixed
+- **Kiro client cancellation** — `AbortSignal` from the proxy is now
+  forwarded to the AWS SDK call, so a client disconnect mid-request
+  actually cancels the upstream work instead of leaking the connection
+  until completion.
+
 ## [5.5.0] - 2026-04-29
 
 ### Added
