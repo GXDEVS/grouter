@@ -17,11 +17,14 @@ to surface release notes and notify when a newer version is available.
   "New" badge when the running build is behind the latest release. The
   file is also embedded in the binary so the tab works offline before the
   cache warms.
-- **Kiro non-streaming translator** — `/v1/chat/completions` requests with
+- **Kiro translator** — `/v1/chat/completions` requests with
   `model: kiro/...` are routed through `@aws/codewhisperer-streaming-client`
-  using the existing OAuth account. `stream=false` returns a real
-  OpenAI-compatible response; `stream=true` is satisfied via simulated SSE
-  (full response wrapped in chunks) until native event streaming lands.
+  using the existing OAuth account. Both `stream=false` (single
+  OpenAI-compatible response) and `stream=true` (native SSE — each
+  upstream `assistantResponseEvent` is forwarded as its own
+  `chat.completion.chunk` in real time, with role/content/finish chunks
+  and usage on the final delta) are supported. Tool calls and
+  `reasoningContentEvent` are still skipped.
 
 ### Changed
 - **Kiro model routing** — `kiro/<model>` now forwards `<model>` to the
