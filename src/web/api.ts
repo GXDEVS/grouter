@@ -45,3 +45,5 @@ export {
   handleStatus,
   handleUnlockAll,
 } from "./api-system.ts";
+
+export { handleChangelog } from "./api-changelog.ts";

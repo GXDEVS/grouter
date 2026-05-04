@@ -15,6 +15,7 @@ import {
   handleAuthImport,
   handleAuthPoll,
   handleAuthStart,
+  handleChangelog,
   handleCreateClientKey,
   handleCreateCustomProvider,
   handleCreateProxyPool,
@@ -210,6 +211,7 @@ export function startServer(port: number) {
           return jsonResponse({ current: CURRENT_VERSION, latest: remote ?? CURRENT_VERSION });
         },
       },
+      "/api/changelog": { GET: () => handleChangelog() },
       "/v1/chat/completions": {
         POST: (req: Request) => handleChatCompletions(req),
       },

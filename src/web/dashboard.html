@@ -194,6 +194,11 @@
       <button class="nav-item" id="nav-accounts" onclick="showTab('accounts')"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-accounts-label">Accounts</span></button>
       <button class="nav-item" id="nav-keys" onclick="showTab('keys')"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-keys-label">API Keys</span></button>
       <button class="nav-item" id="nav-settings" onclick="showTab('settings')"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-settings-label">Settings</span></button>
+      <button class="nav-item" id="nav-changelog" onclick="showTab('changelog')" style="position:relative;">
+        <iconify-icon icon="solar:notes-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon>
+        <span id="nav-changelog-label">Changelog</span>
+        <span id="nav-changelog-badge" class="hidden" style="position:absolute;right:0.625rem;top:50%;transform:translateY(-50%);background:#0AB9DC;color:#0d0d0d;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;">New</span>
+      </button>
     </nav>
     <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
       <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
@@ -475,6 +480,35 @@
       </div>
     </div>
 
+    <!-- Changelog tab -->
+    <div id="tab-changelog" class="hidden">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+            <iconify-icon icon="solar:notes-bold-duotone" style="color:#0AB9DC;font-size:1.4rem;"></iconify-icon>
+            <h3 id="changelog-title" style="font-weight:600;font-size:0.95rem;flex:1;">Release notes</h3>
+            <button class="btn-ghost" style="height:2rem;padding:0 0.75rem;font-size:0.78rem;" onclick="loadChangelog(true)">
+              <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+              <span id="changelog-refresh-label">Refresh</span>
+            </button>
+          </div>
+          <div id="changelog-version-banner" style="display:flex;align-items:center;gap:0.625rem;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:0.75rem 0.875rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <iconify-icon id="changelog-banner-icon" icon="solar:info-circle-bold-duotone" style="color:#0AB9DC;font-size:1.2rem;flex-shrink:0;"></iconify-icon>
+            <div style="flex:1;min-width:0;">
+              <p id="changelog-banner-title" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin:0;">Checking for updates…</p>
+              <p id="changelog-banner-sub" style="font-size:0.75rem;color:#6b7280;margin:0.15rem 0 0;"></p>
+            </div>
+            <a id="changelog-banner-cta" href="#" style="display:none;align-items:center;gap:0.375rem;font-size:0.78rem;color:#0AB9DC;text-decoration:none;flex-shrink:0;">
+              <iconify-icon icon="solar:download-square-bold-duotone"></iconify-icon>
+              <span id="changelog-banner-cta-label">View release</span>
+            </a>
+          </div>
+          <p id="changelog-source" style="font-size:0.7rem;color:#4b5563;margin:0 0 1rem;"></p>
+          <div id="changelog-entries" style="display:flex;flex-direction:column;gap:0.875rem;"></div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -715,6 +749,11 @@
     <button class="nav-item" id="mob-nav-providers" onclick="showTab('providers');toggleDrawer()"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-providers-label">Providers</span></button>
     <button class="nav-item" id="mob-nav-accounts" onclick="showTab('accounts');toggleDrawer()"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-accounts-label">Accounts</span></button>
     <button class="nav-item" id="mob-nav-settings" onclick="showTab('settings');toggleDrawer()"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="mob-nav-settings-label">Settings</span></button>
+    <button class="nav-item" id="mob-nav-changelog" onclick="showTab('changelog');toggleDrawer()" style="position:relative;">
+      <iconify-icon icon="solar:notes-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon>
+      <span id="mob-nav-changelog-label">Changelog</span>
+      <span id="mob-nav-changelog-badge" class="hidden" style="position:absolute;right:0.625rem;top:50%;transform:translateY(-50%);background:#0AB9DC;color:#0d0d0d;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;">New</span>
+    </button>
   </nav>
   <!-- Divider -->
   <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
@@ -1148,7 +1187,7 @@ function applyI18n() {
 
 // ── Dashboard nav ─────────────────────────────────────────────────────
 function showTab(tab) {
-  ['overview','providers','accounts','keys','settings'].forEach(t => {
+  ['overview','providers','accounts','keys','settings','changelog'].forEach(t => {
     const hidden = document.getElementById('tab-'+t)?.classList.toggle('hidden', t!==tab);
     const navEl = document.getElementById('nav-'+t);
     if (navEl) navEl.classList.toggle('active', t===tab);
@@ -1174,6 +1213,11 @@ function showTab(tab) {
     document.getElementById('page-title').textContent = "Client API Keys";
     document.getElementById('page-sub').textContent   = "Manage local API keys and token quotas";
     loadClientKeys();
+  } else if (tab==='changelog') {
+    document.getElementById('page-title').textContent = T.page_changelog || 'Changelog';
+    document.getElementById('page-sub').textContent   = T.page_changelog_sub || "What's new in grouter";
+    loadChangelog();
+    markChangelogSeen();
   } else {
     document.getElementById('page-title').textContent = T.page_settings;
     document.getElementById('page-sub').textContent   = T.page_settings_sub;
@@ -1196,6 +1240,171 @@ function toggleDrawer() {
 async function loadStatus() {
   const lv = _langVersion;
   try { const r = await fetch('/api/status'); const d = await r.json(); if (_langVersion === lv) { statusData = d; renderStatus(statusData); } else { applyI18n(); } } catch {}
+}
+
+// ── Changelog ─────────────────────────────────────────────────────────
+let _changelogData = null;
+let _changelogLoading = false;
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function renderInlineMd(line) {
+  let s = escapeHtml(line);
+  s = s.replace(/`([^`]+)`/g, '<code style="background:#1a1a1a;border:1px solid #2a2a2a;padding:0.05rem 0.35rem;border-radius:4px;font-size:0.78em;">$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener" style="color:#0AB9DC;">$1</a>');
+  return s;
+}
+
+function renderChangelogBody(md) {
+  const lines = md.split(/\r?\n/);
+  const out = [];
+  let inList = false;
+  let pendingPara = [];
+
+  const flushPara = () => {
+    if (pendingPara.length) {
+      out.push('<p style="margin:0.4rem 0;color:#cbd5e1;line-height:1.5;font-size:0.85rem;">' + pendingPara.map(renderInlineMd).join(' ') + '</p>');
+      pendingPara = [];
+    }
+  };
+  const closeList = () => { if (inList) { out.push('</ul>'); inList = false; } };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) { flushPara(); closeList(); continue; }
+    const h3 = /^###\s+(.+)$/.exec(line);
+    if (h3) {
+      flushPara(); closeList();
+      out.push('<h4 style="margin:0.75rem 0 0.25rem;font-size:0.78rem;font-weight:700;color:#0AB9DC;text-transform:uppercase;letter-spacing:0.06em;">' + escapeHtml(h3[1]) + '</h4>');
+      continue;
+    }
+    const li = /^[-*]\s+(.+)$/.exec(line);
+    if (li) {
+      flushPara();
+      if (!inList) { out.push('<ul style="margin:0.25rem 0 0.5rem 1.1rem;padding:0;color:#cbd5e1;font-size:0.85rem;line-height:1.5;">'); inList = true; }
+      out.push('<li style="margin:0.2rem 0;">' + renderInlineMd(li[1]) + '</li>');
+      continue;
+    }
+    closeList();
+    pendingPara.push(line.trim());
+  }
+  flushPara();
+  closeList();
+  return out.join('');
+}
+
+function setChangelogBanner(payload) {
+  const banner = document.getElementById('changelog-version-banner');
+  const icon = document.getElementById('changelog-banner-icon');
+  const title = document.getElementById('changelog-banner-title');
+  const sub = document.getElementById('changelog-banner-sub');
+  const cta = document.getElementById('changelog-banner-cta');
+  if (!banner) return;
+
+  if (payload.hasUpdate && payload.latest) {
+    icon.setAttribute('icon', 'solar:bell-bing-bold-duotone');
+    icon.style.color = '#22c55e';
+    banner.style.borderColor = 'rgba(34,197,94,0.35)';
+    banner.style.background = 'rgba(34,197,94,0.06)';
+    title.textContent = `Update available — v${payload.latest}`;
+    sub.textContent = `You're running v${payload.current}. Run "grouter update" to install.`;
+    cta.style.display = 'inline-flex';
+    cta.href = `https://github.com/GXDEVS/grouter/releases/tag/v${payload.latest}`;
+  } else if (payload.latest) {
+    icon.setAttribute('icon', 'solar:check-circle-bold-duotone');
+    icon.style.color = '#22c55e';
+    banner.style.borderColor = '#2a2a2a';
+    banner.style.background = '#1a1a1a';
+    title.textContent = `You're on the latest version — v${payload.current}`;
+    sub.textContent = '';
+    cta.style.display = 'none';
+  } else {
+    icon.setAttribute('icon', 'solar:danger-triangle-bold-duotone');
+    icon.style.color = '#f59e0b';
+    title.textContent = `v${payload.current} (offline)`;
+    sub.textContent = 'Could not reach GitHub. Showing local copy if available.';
+    cta.style.display = 'none';
+  }
+}
+
+function setChangelogBadge(show) {
+  for (const id of ['nav-changelog-badge','mob-nav-changelog-badge']) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !show);
+  }
+}
+
+function markChangelogSeen() {
+  if (!_changelogData?.latest) return;
+  try { localStorage.setItem('changelog_seen_version', _changelogData.latest); } catch {}
+  setChangelogBadge(false);
+}
+
+function refreshChangelogBadge() {
+  if (!_changelogData) return;
+  let seen = '';
+  try { seen = localStorage.getItem('changelog_seen_version') || ''; } catch {}
+  const showBadge = !!_changelogData.hasUpdate || (_changelogData.latest && _changelogData.latest !== seen && _changelogData.entries?.[0]?.isNewer);
+  setChangelogBadge(!!showBadge);
+}
+
+async function loadChangelog(force) {
+  if (_changelogLoading) return;
+  _changelogLoading = true;
+  const list = document.getElementById('changelog-entries');
+  const source = document.getElementById('changelog-source');
+  if (!_changelogData || force) {
+    if (list) list.innerHTML = '<p style="font-size:0.82rem;color:#6b7280;">Loading…</p>';
+  }
+  try {
+    const r = await fetch('/api/changelog' + (force ? '?_=' + Date.now() : ''));
+    const data = await r.json();
+    _changelogData = data;
+    setChangelogBanner(data);
+    refreshChangelogBadge();
+    if (source) {
+      const fetched = data.fetchedAt ? new Date(data.fetchedAt).toLocaleString() : '—';
+      source.textContent = `Source: ${data.source} · fetched ${fetched}${data.stale ? ' (cached, GitHub unreachable)' : ''}`;
+    }
+    if (!list) return;
+    if (!data.entries.length) {
+      list.innerHTML = '<p style="font-size:0.82rem;color:#6b7280;">No changelog entries available.</p>';
+      return;
+    }
+    list.innerHTML = data.entries.map(entry => {
+      const isUnreleased = !/^\d/.test(entry.version);
+      const versionLabel = isUnreleased
+        ? escapeHtml(entry.version)
+        : `v${escapeHtml(entry.version)}`;
+      const upcomingBadge = isUnreleased
+        ? '<span style="background:rgba(168,85,247,0.15);color:#a855f7;font-size:0.62rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;margin-left:0.5rem;">Upcoming</span>'
+        : '';
+      const newBadge = !isUnreleased && entry.isNewer
+        ? '<span style="background:rgba(34,197,94,0.15);color:#22c55e;font-size:0.62rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;margin-left:0.5rem;">New</span>'
+        : '';
+      const isCurrent = !isUnreleased && entry.version === data.current
+        ? '<span style="background:rgba(10,185,220,0.15);color:#0AB9DC;font-size:0.62rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;margin-left:0.5rem;">Current</span>'
+        : '';
+      const date = entry.date ? `<span style="color:#6b7280;font-size:0.75rem;margin-left:0.5rem;">${escapeHtml(entry.date)}</span>` : '';
+      return `
+        <div style="border:1px solid ${isUnreleased ? 'rgba(168,85,247,0.35)' : '#2a2a2a'};border-radius:12px;padding:0.875rem 1rem;background:#141414;">
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.25rem;margin-bottom:0.4rem;">
+            <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#e8e8e8;">${versionLabel}</h4>
+            ${date}${upcomingBadge}${newBadge}${isCurrent}
+          </div>
+          <div>${renderChangelogBody(entry.body)}</div>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    if (list) list.innerHTML = '<p style="font-size:0.82rem;color:#ef4444;">Failed to load changelog: ' + escapeHtml(String(e)) + '</p>';
+  } finally {
+    _changelogLoading = false;
+  }
 }
 
 const MODEL_PRICING = {
@@ -2597,6 +2806,8 @@ window.addEventListener('load', () => {
   Promise.all([loadStatus(), loadProxyPools()]).finally(() => stopLoadingAnim());
   toggleAutoPoll();
   checkDashboardVersion();
+  // Fire-and-forget: surfaces the "New" badge in the sidebar without blocking boot.
+  loadChangelog();
 });
 </script>
 <script src="/public/animation.js"></script>
