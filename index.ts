@@ -22,6 +22,9 @@ import { modelsCommand } from "./src/commands/models.ts";
 import { updateCommand } from "./src/commands/update.ts";
 import { keysCommand } from "./src/commands/keys.ts";
 import { upOpenclaudeCommand, upOpenclaudeRemoveCommand } from "./src/commands/openclaude.ts";
+import { upOpencodeCommand, upOpencodeRemoveCommand } from "./src/commands/opencode.ts";
+import { upClineCommand, upClineRemoveCommand } from "./src/commands/cline.ts";
+import { upOpenclawCommand, upOpenclawRemoveCommand } from "./src/commands/openclaw.ts";
 import { printUpdateBannerSync, scheduleUpdateCheck, CURRENT_VERSION } from "./src/update/checker.ts";
 
 const program = new Command()
@@ -39,6 +42,9 @@ Examples:
   $ grouter list               Show all connections with status
   $ grouter models [provider]  List models per provider (+ dedicated port)
   $ grouter up openclaude      Wizard — configure OpenClaude with a provider/model
+  $ grouter up opencode        Wizard — configure OpenCode (sst) with a provider/model
+  $ grouter up cline           Wizard — configure Cline CLI with a provider/model
+  $ grouter up openclaw        Wizard — configure OpenClaw with a provider/model
   $ grouter test               Check connectivity
   $ grouter update             Check for a new version on the npm registry
   $ grouter unlock             Clear all rate-limit locks
@@ -144,6 +150,23 @@ serve.command("fg")
 const upCmd = program.command("up")
   .description("Install integrations and providers");
 
+interface UpFlags {
+  provider?: string;
+  model?: string;
+  port?: string;
+  remove?: boolean;
+  interactive?: boolean;
+}
+
+function toUpOptions(opts: UpFlags) {
+  return {
+    provider: opts.provider,
+    model: opts.model,
+    port: opts.port ? parseInt(opts.port, 10) : undefined,
+    noInteractive: opts.interactive === false,
+  };
+}
+
 upCmd.command("openclaude")
   .description("Configure Claude Code to use grouter (interactive wizard by default)")
   .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
@@ -151,14 +174,45 @@ upCmd.command("openclaude")
   .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
   .option("--no-interactive", "Skip the wizard and use flag values / defaults")
   .option("--remove", "Remove the integration")
-  .action((opts: { provider?: string; model?: string; port?: string; remove?: boolean; interactive?: boolean }) => {
+  .action((opts: UpFlags) => {
     if (opts.remove) return upOpenclaudeRemoveCommand();
-    return upOpenclaudeCommand({
-      provider: opts.provider,
-      model: opts.model,
-      port: opts.port ? parseInt(opts.port, 10) : undefined,
-      noInteractive: opts.interactive === false,
-    });
+    return upOpenclaudeCommand(toUpOptions(opts));
+  });
+
+upCmd.command("opencode")
+  .description("Configure OpenCode (sst) to use grouter — writes ~/.config/opencode/opencode.json")
+  .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
+  .option("-m, --model <model>", "Model to use")
+  .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
+  .option("--no-interactive", "Skip the wizard and use flag values / defaults")
+  .option("--remove", "Remove the integration")
+  .action((opts: UpFlags) => {
+    if (opts.remove) return upOpencodeRemoveCommand();
+    return upOpencodeCommand(toUpOptions(opts));
+  });
+
+upCmd.command("cline")
+  .description("Configure the Cline CLI to use grouter (shells out to `cline auth`)")
+  .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
+  .option("-m, --model <model>", "Model to use")
+  .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
+  .option("--no-interactive", "Skip the wizard and use flag values / defaults")
+  .option("--remove", "Show how to switch the Cline CLI back to another provider")
+  .action((opts: UpFlags) => {
+    if (opts.remove) return upClineRemoveCommand();
+    return upClineCommand(toUpOptions(opts));
+  });
+
+upCmd.command("openclaw")
+  .description("Configure OpenClaw to use grouter — writes ~/.openclaw/openclaw.json")
+  .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
+  .option("-m, --model <model>", "Model to use")
+  .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
+  .option("--no-interactive", "Skip the wizard and use flag values / defaults")
+  .option("--remove", "Remove the integration")
+  .action((opts: UpFlags) => {
+    if (opts.remove) return upOpenclawRemoveCommand();
+    return upOpenclawCommand(toUpOptions(opts));
   });
 
 // ── update ────────────────────────────────────────────────────────────────────
