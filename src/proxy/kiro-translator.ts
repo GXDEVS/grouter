@@ -233,106 +233,112 @@ export async function callKiroNonStreaming(
   return translateKiroNonStream(events, model);
 }
 
-// -- Streaming Support (Future) ----------------------------------------------
-
-// TODO: Implement streaming support
-// - Stream state tracking
-// - Event-to-SSE transformation
-// - Proper finish_reason handling
-// - Usage reporting at end of stream
-
-// ── Simulated Streaming (SSE Compatibility) ─────────────────────────────────
+// -- Native Streaming --------------------------------------------------------
 
 /**
- * Convert OpenAI completion to SSE stream
- * This provides SSE compatibility for clients that expect streaming,
- * by wrapping a non-streaming response in SSE format.
- * 
- * @param completion - OpenAI completion response from callKiroNonStreaming
- * @returns ReadableStream of SSE chunks
+ * Execute a Kiro request and return an OpenAI-compatible SSE stream that
+ * forwards each upstream chunk as soon as it arrives. This is the real
+ * streaming path.
  */
-export function openAICompletionToSSE(completion: Record<string, unknown>): ReadableStream<Uint8Array> {
+export async function callKiroStreaming(
+  params: CallKiroParams,
+): Promise<ReadableStream<Uint8Array>> {
+  const { token, expiresAt, region = "us-east-1", body, model, signal } = params;
+
+  const messages = (body.messages ?? []) as unknown[];
+  const prompt = openaiMessagesToKiroPrompt(messages);
+  if (!prompt) throw new Error("No messages provided");
+
+  const kiroModel = extractKiroModel(model);
+  const input = buildKiroGenerateAssistantInput(prompt, kiroModel);
+  const client = buildKiroClient(token, expiresAt, region);
+  const command = new GenerateAssistantResponseCommand(input);
+  const response: GenerateAssistantResponseResponse = await client.send(
+    command,
+    signal ? { abortSignal: signal } : undefined,
+  );
+
+  const id = `chatcmpl-kiro-${crypto.randomUUID()}`;
+  const created = Math.floor(Date.now() / 1000);
+  const upstream = response.generateAssistantResponseResponse;
   const encoder = new TextEncoder();
 
-  const choice = Array.isArray(completion.choices)
-    ? (completion.choices[0] as any)
-    : null;
-
-  const content = choice?.message?.content ?? "";
-
-  const id = typeof completion.id === "string"
-    ? completion.id
-    : `chatcmpl-kiro-${crypto.randomUUID()}`;
-
-  const model = typeof completion.model === "string"
-    ? completion.model
-    : "kiro";
-
-  const created = typeof completion.created === "number"
-    ? completion.created
-    : Math.floor(Date.now() / 1000);
-
-  const usage = completion.usage as Record<string, number> | undefined;
-
-  // Build SSE chunks following OpenAI format
-  const chunks = [
-    // Chunk 1: Role
-    {
-      id,
-      object: "chat.completion.chunk",
-      created,
-      model,
-      choices: [
-        {
-          index: 0,
-          delta: { role: "assistant" },
-          finish_reason: null,
-        },
-      ],
-    },
-    // Chunk 2: Content
-    {
-      id,
-      object: "chat.completion.chunk",
-      created,
-      model,
-      choices: [
-        {
-          index: 0,
-          delta: { content },
-          finish_reason: null,
-        },
-      ],
-    },
-    // Chunk 3: Final (with usage if available)
-    {
-      id,
-      object: "chat.completion.chunk",
-      created,
-      model,
-      choices: [
-        {
-          index: 0,
-          delta: {},
-          finish_reason: "stop",
-        },
-      ],
-      ...(usage ? { usage } : {}),
-    },
-  ];
-
   return new ReadableStream<Uint8Array>({
-    start(controller) {
+    async start(controller) {
+      const emit = (chunk: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+      };
+
+      let resolvedModel = model;
+      let usage: Record<string, number> | undefined;
+      let emittedRole = false;
+
       try {
-        // Emit all chunks
-        for (const chunk of chunks) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+        if (upstream) {
+          for await (const event of upstream) {
+            if (signal?.aborted) break;
+
+            if ("assistantResponseEvent" in event && event.assistantResponseEvent) {
+              const evt = event.assistantResponseEvent as { content?: unknown; modelId?: unknown };
+              if (!emittedRole) {
+                if (typeof evt.modelId === "string" && evt.modelId) resolvedModel = evt.modelId;
+                emit({
+                  id,
+                  object: "chat.completion.chunk",
+                  created,
+                  model: resolvedModel,
+                  choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+                });
+                emittedRole = true;
+              }
+              if (typeof evt.content === "string" && evt.content) {
+                emit({
+                  id,
+                  object: "chat.completion.chunk",
+                  created,
+                  model: resolvedModel,
+                  choices: [{ index: 0, delta: { content: evt.content }, finish_reason: null }],
+                });
+              }
+            }
+
+            if ("contextUsageEvent" in event && event.contextUsageEvent) {
+              const evt = event.contextUsageEvent as { tokenUsage?: { inputTokens?: number; outputTokens?: number } };
+              if (evt.tokenUsage) {
+                const inTok = evt.tokenUsage.inputTokens ?? 0;
+                const outTok = evt.tokenUsage.outputTokens ?? 0;
+                usage = { prompt_tokens: inTok, completion_tokens: outTok, total_tokens: inTok + outTok };
+              }
+            }
+          }
         }
-        // Emit [DONE] signal (CRITICAL for closing the stream)
+
+        // Guarantee a role chunk even if upstream sent nothing — keeps clients
+        // that expect at least one delta from hanging.
+        if (!emittedRole) {
+          emit({
+            id,
+            object: "chat.completion.chunk",
+            created,
+            model: resolvedModel,
+            choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }],
+          });
+        }
+
+        const finalChunk: Record<string, unknown> = {
+          id,
+          object: "chat.completion.chunk",
+          created,
+          model: resolvedModel,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        };
+        if (usage) finalChunk.usage = usage;
+        emit(finalChunk);
+
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       } catch (err) {
-        controller.error(err);
+        try { controller.error(err); } catch { /* already closed */ }
       }
     },
   });
