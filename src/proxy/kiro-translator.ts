@@ -58,17 +58,22 @@ export function openaiMessagesToKiroPrompt(messages: unknown[]): string {
 /**
  * Build Kiro GenerateAssistantResponse input
  * @param prompt - User prompt
+ * @param modelId - Optional Kiro model ID. Omit (or pass "auto"/"") to let
+ *   the server pick the default model.
  * @returns GenerateAssistantResponseCommandInput
  */
 export function buildKiroGenerateAssistantInput(
-  prompt: string
+  prompt: string,
+  modelId?: string,
 ): GenerateAssistantResponseCommandInput {
+  const userInputMessage: { content: string; modelId?: string } = { content: prompt };
+  if (modelId && modelId !== "auto") {
+    userInputMessage.modelId = modelId;
+  }
   return {
     conversationState: {
       currentMessage: {
-        userInputMessage: {
-          content: prompt,
-        },
+        userInputMessage,
       },
       chatTriggerType: "MANUAL",
     },
@@ -207,7 +212,8 @@ export async function callKiroNonStreaming(
     throw new Error("No messages provided");
   }
 
-  const input = buildKiroGenerateAssistantInput(prompt);
+  const kiroModel = extractKiroModel(model);
+  const input = buildKiroGenerateAssistantInput(prompt, kiroModel);
   const client = buildKiroClient(token, expiresAt, region);
 
   const command = new GenerateAssistantResponseCommand(input);
