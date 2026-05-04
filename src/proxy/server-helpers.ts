@@ -15,7 +15,7 @@ export function logReq(
   path: string,
   status: number,
   ms: number,
-  meta?: { model?: string | null; account?: string; rotated?: number; tokens?: number },
+  meta?: { model?: string | null; account?: string; rotated?: number; tokens?: number; streaming?: string },
 ): void {
   const time = chalk.gray(new Date().toLocaleTimeString("pt-BR", { hour12: false }));
   const sc = status < 300 ? chalk.green : status < 400 ? chalk.cyan : status < 500 ? chalk.yellow : chalk.red;
@@ -25,6 +25,7 @@ export function logReq(
   if (meta?.account) extras += chalk.gray(` -> ${meta.account}`);
   if (meta?.rotated && meta.rotated > 0) extras += chalk.yellow(` x${meta.rotated}`);
   if (meta?.tokens) extras += chalk.gray(` [${meta.tokens}t]`);
+  if (meta?.streaming && meta.streaming !== "none") extras += chalk.cyan(` (${meta.streaming})`);
   console.log(`  ${time} ${chalk.bold(method.padEnd(4))} ${path}${extras} ${sc(String(status))} ${lat}`);
 }
 

@@ -187,6 +187,7 @@ export interface CallKiroParams {
   region?: string;
   body: Record<string, unknown>;
   model: string;
+  signal?: AbortSignal;
 }
 
 /**
@@ -197,9 +198,8 @@ export interface CallKiroParams {
 export async function callKiroNonStreaming(
   params: CallKiroParams
 ): Promise<Record<string, unknown>> {
-  const { token, expiresAt, region = "us-east-1", body, model } = params;
+  const { token, expiresAt, region = "us-east-1", body, model, signal } = params;
 
-  // Extract messages and convert to prompt
   const messages = (body.messages ?? []) as unknown[];
   const prompt = openaiMessagesToKiroPrompt(messages);
 
@@ -207,25 +207,23 @@ export async function callKiroNonStreaming(
     throw new Error("No messages provided");
   }
 
-  // Build input
   const input = buildKiroGenerateAssistantInput(prompt);
-
-  // Create client
   const client = buildKiroClient(token, expiresAt, region);
 
-  // Execute command
   const command = new GenerateAssistantResponseCommand(input);
-  const response: GenerateAssistantResponseResponse = await client.send(command);
+  const response: GenerateAssistantResponseResponse = await client.send(
+    command,
+    signal ? { abortSignal: signal } : undefined,
+  );
 
-  // Collect all events
   const events: ChatResponseStream[] = [];
   if (response.generateAssistantResponseResponse) {
     for await (const event of response.generateAssistantResponseResponse) {
+      if (signal?.aborted) break;
       events.push(event);
     }
   }
 
-  // Transform to OpenAI format
   return translateKiroNonStream(events, model);
 }
 
