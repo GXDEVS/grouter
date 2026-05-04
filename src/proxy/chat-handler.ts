@@ -14,7 +14,7 @@ import { isRateLimitedResult, isTemporarilyUnavailableResult, type Connection } 
 import { claudeChunkToOpenAI, newClaudeStreamState, translateClaudeNonStream } from "./claude-translator.ts";
 import { codexChunkToOpenAI, newCodexStreamState, translateCodexNonStream } from "./codex-translator.ts";
 import { geminiChunkToOpenAI, newGeminiStreamState, translateGeminiNonStream } from "./gemini-translator.ts";
-import { callKiroNonStreaming, openAICompletionToSSE, sseHeaders } from "./kiro-translator.ts";
+import { callKiroNonStreaming, callKiroStreaming, sseHeaders } from "./kiro-translator.ts";
 import {
   DISABLED_PROVIDER_IDS,
   MAX_RETRIES,
@@ -540,14 +540,35 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
     // ========================================
     if (dispatch.format === "kiro") {
       try {
-        const completion = await callKiroNonStreaming({
+        const kiroParams = {
           token: selected.access_token,
           expiresAt: selected.expires_at || "",
           region: "us-east-1",
           body: upstreamBody,
           model: rawModel || "kiro/auto",
           signal: abortController.signal,
-        });
+        };
+
+        if (stream) {
+          const sseStream = await callKiroStreaming(kiroParams);
+
+          clearRequestTotalTimer();
+          removeClientAbortListener();
+
+          logReq("POST", "/v1/chat/completions", 200, Date.now() - start, {
+            model: rawModel,
+            account: label,
+            rotated: rotations,
+            streaming: "native",
+          });
+
+          return new Response(sseStream, {
+            status: 200,
+            headers: { ...sseHeaders(), ...corsHeaders() },
+          });
+        }
+
+        const completion = await callKiroNonStreaming(kiroParams);
 
         clearRequestTotalTimer();
         removeClientAbortListener();
@@ -556,18 +577,8 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
           model: rawModel,
           account: label,
           rotated: rotations,
-          streaming: stream ? "simulated" : "none",
+          streaming: "none",
         });
-
-        if (stream) {
-          return new Response(openAICompletionToSSE(completion), {
-            status: 200,
-            headers: {
-              ...sseHeaders(),
-              ...corsHeaders(),
-            },
-          });
-        }
 
         return jsonResponse(completion, 200);
       } catch (err) {
