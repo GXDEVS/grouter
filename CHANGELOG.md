@@ -8,7 +8,7 @@ The dashboard reads this file directly from
 `https://raw.githubusercontent.com/GXDEVS/grouter/main/CHANGELOG.md`
 to surface release notes and notify when a newer version is available.
 
-## [Unreleased]
+## [5.6.0] - 2026-05-04
 
 ### Added
 - **Dashboard Changelog tab** — sidebar entry that fetches `CHANGELOG.md`
@@ -128,7 +128,8 @@ to surface release notes and notify when a newer version is available.
 - SQLite state in `~/.grouter/grouter.db` with idempotent silent migrations.
 - Dashboard + setup wizard served from the embedded HTML files.
 
-[Unreleased]: https://github.com/GXDEVS/grouter/compare/v5.5.0...HEAD
+[Unreleased]: https://github.com/GXDEVS/grouter/compare/v5.6.0...HEAD
+[5.6.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.6.0
 [5.5.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.5.0
 [5.4.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.4.0
 [5.3.0]: https://github.com/GXDEVS/grouter/releases/tag/v5.3.0
