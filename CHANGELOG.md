@@ -10,6 +10,8 @@ to surface release notes and notify when a newer version is available.
 
 ## [Unreleased]
 
+## [5.7.0] - 2026-05-04
+
 ### Added
 - **`grouter up <platform>` for OpenCode, Cline, and OpenClaw** — the `up`
   command now ships three new adapters in addition to OpenClaude:
