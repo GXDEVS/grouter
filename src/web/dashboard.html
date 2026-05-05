@@ -39,23 +39,23 @@
     .btn-server-group .btn-server.in-group-right.power-restarting iconify-icon { animation: spin 0.85s linear infinite; }
     @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
     /* Update banner card (sidebar / mobile drawer) */
-    .upd-card { display: flex; flex-direction: column; gap: 0.5rem; aspect-ratio: 1 / 1; padding: 0.7rem; margin-bottom: 0.75rem; border-radius: 14px; background: linear-gradient(155deg, rgba(245,158,11,0.10), rgba(245,158,11,0.03) 60%, rgba(15,15,15,0.4)); border: 1px solid rgba(245,158,11,0.35); position: relative; box-shadow: 0 0 0 1px rgba(245,158,11,0.05) inset; }
-    .upd-card .upd-dismiss { position: absolute; top: 0.35rem; right: 0.35rem; background: transparent; border: none; color: #6b7280; cursor: pointer; padding: 0.1rem; line-height: 0; transition: color 0.15s; }
+    .upd-card { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 0.55rem; aspect-ratio: 1 / 1; padding: 0.85rem 0.7rem; margin-bottom: 0.75rem; border-radius: 14px; background: linear-gradient(155deg, rgba(245,158,11,0.10), rgba(245,158,11,0.03) 60%, rgba(15,15,15,0.4)); border: 1px solid rgba(245,158,11,0.35); position: relative; box-shadow: 0 0 0 1px rgba(245,158,11,0.05) inset; }
+    .upd-card .upd-dismiss { position: absolute; top: 0.35rem; right: 0.35rem; background: transparent; border: none; color: #6b7280; cursor: pointer; padding: 0.1rem; line-height: 0; transition: color 0.15s; z-index: 1; }
     .upd-card .upd-dismiss:hover { color: #fbbf24; }
     .upd-card .upd-dismiss iconify-icon { font-size: 0.95rem; }
-    .upd-icon-wrap { width: 2rem; height: 2rem; border-radius: 10px; background: rgba(245,158,11,0.18); display: inline-flex; align-items: center; justify-content: center; color: #f59e0b; }
-    .upd-icon-wrap iconify-icon { font-size: 1.2rem; animation: upd-pulse 2.4s ease-in-out infinite; }
-    @keyframes upd-pulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-    .upd-title { font-size: 0.74rem; font-weight: 700; color: #fbbf24; line-height: 1.2; }
-    .upd-version { font-size: 0.62rem; color: #9ca3af; font-family: 'Courier New', monospace; line-height: 1.2; margin-top: 0.15rem; letter-spacing: 0.02em; }
+    .upd-icon-wrap { width: 3rem; height: 3rem; border-radius: 14px; background: rgba(245,158,11,0.18); display: inline-flex; align-items: center; justify-content: center; color: #f59e0b; box-shadow: 0 0 0 6px rgba(245,158,11,0.06); }
+    .upd-icon-wrap iconify-icon { font-size: 1.85rem; animation: upd-pulse 2.4s ease-in-out infinite; }
+    @keyframes upd-pulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+    .upd-title { font-size: 0.78rem; font-weight: 700; color: #fbbf24; line-height: 1.2; }
+    .upd-version { font-size: 0.62rem; color: #9ca3af; font-family: 'Courier New', monospace; line-height: 1.2; letter-spacing: 0.02em; }
     .upd-version .upd-arrow { color: #f59e0b; padding: 0 0.2rem; }
     .upd-version .upd-latest { color: #22c55e; font-weight: 700; }
-    .upd-tabs { display: flex; gap: 0.25rem; }
-    .upd-tab { flex: 1; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.22rem 0.3rem; border-radius: 6px; cursor: pointer; border: 1px solid #2a2a2a; background: transparent; color: #6b7280; transition: all 0.15s; }
-    .upd-tab:hover { color: #e8e8e8; border-color: #3a3a3a; }
-    .upd-tab.upd-tab-active { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.45); }
-    .upd-cmd-row { display: flex; align-items: center; gap: 0.3rem; background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.35rem 0.45rem; min-height: 1.85rem; }
-    .upd-cmd { flex: 1; min-width: 0; font-size: 0.62rem; color: #e8e8e8; font-family: 'Courier New', monospace; word-break: break-all; line-height: 1.25; user-select: all; }
+    .upd-tabs { display: inline-flex; gap: 0.25rem; padding: 0.18rem; background: rgba(0,0,0,0.25); border: 1px solid #1e1e1e; border-radius: 9999px; }
+    .upd-tab { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.18rem 0.55rem; border-radius: 9999px; cursor: pointer; border: none; background: transparent; color: #6b7280; transition: all 0.15s; }
+    .upd-tab:hover { color: #e8e8e8; }
+    .upd-tab.upd-tab-active { background: rgba(245,158,11,0.18); color: #fbbf24; }
+    .upd-cmd-row { width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.3rem; background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.35rem 0.45rem; min-height: 1.85rem; text-align: left; }
+    .upd-cmd { flex: 1; min-width: 0; font-size: 0.6rem; color: #e8e8e8; font-family: 'Courier New', monospace; word-break: break-all; line-height: 1.25; user-select: all; }
     .upd-copy { background: transparent; border: none; color: #6b7280; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0.15rem; transition: color 0.15s; }
     .upd-copy:hover { color: #0AB9DC; }
     .upd-copy.copied { color: #22c55e; }
@@ -228,28 +228,22 @@
         <button class="upd-dismiss" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">
           <iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon>
         </button>
-        <div style="display:flex;align-items:center;gap:0.5rem;">
-          <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
-          <div style="min-width:0;">
-            <p class="upd-title" data-i18n="update_title">Update available</p>
-            <p class="upd-version" data-upd-version>
-              <span data-upd-current>—</span>
-              <span class="upd-arrow">→</span>
-              <span class="upd-latest" data-upd-latest>—</span>
-            </p>
-          </div>
+        <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
+        <p class="upd-title" data-i18n="update_title">Update available</p>
+        <p class="upd-version">
+          <span data-upd-current>—</span>
+          <span class="upd-arrow">→</span>
+          <span class="upd-latest" data-upd-latest>—</span>
+        </p>
+        <div class="upd-tabs" role="tablist">
+          <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
+          <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
         </div>
-        <div style="margin-top:auto;display:flex;flex-direction:column;gap:0.4rem;">
-          <div class="upd-tabs" role="tablist">
-            <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
-            <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
-          </div>
-          <div class="upd-cmd-row">
-            <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
-            <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
-              <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
-            </button>
-          </div>
+        <div class="upd-cmd-row">
+          <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
+          <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
+            <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
+          </button>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
@@ -869,32 +863,26 @@
   <!-- Language + links -->
   <div style="padding:0.875rem;">
     <!-- Update card (square; shown only when a newer version is available) -->
-    <div id="upd-card-mob" class="upd-card hidden" data-surface="mob" style="max-width:14rem;">
+    <div id="upd-card-mob" class="upd-card hidden" data-surface="mob" style="max-width:14rem;margin-left:auto;margin-right:auto;">
       <button class="upd-dismiss" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">
         <iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon>
       </button>
-      <div style="display:flex;align-items:center;gap:0.5rem;">
-        <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
-        <div style="min-width:0;">
-          <p class="upd-title" data-i18n="update_title">Update available</p>
-          <p class="upd-version">
-            <span data-upd-current>—</span>
-            <span class="upd-arrow">→</span>
-            <span class="upd-latest" data-upd-latest>—</span>
-          </p>
-        </div>
+      <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
+      <p class="upd-title" data-i18n="update_title">Update available</p>
+      <p class="upd-version">
+        <span data-upd-current>—</span>
+        <span class="upd-arrow">→</span>
+        <span class="upd-latest" data-upd-latest>—</span>
+      </p>
+      <div class="upd-tabs" role="tablist">
+        <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
+        <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
       </div>
-      <div style="margin-top:auto;display:flex;flex-direction:column;gap:0.4rem;">
-        <div class="upd-tabs" role="tablist">
-          <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
-          <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
-        </div>
-        <div class="upd-cmd-row">
-          <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
-          <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
-            <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
-          </button>
-        </div>
+      <div class="upd-cmd-row">
+        <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
+        <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
+          <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
+        </button>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
