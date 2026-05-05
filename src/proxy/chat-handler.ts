@@ -540,9 +540,13 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
     // ========================================
     if (dispatch.format === "kiro") {
       try {
+        // Use the refreshed account, not `selected` — `checkAndRefreshAccount`
+        // returns the post-refresh token while `selected` still holds the
+        // pre-refresh one. Mismatch surfaces as AWS rejecting the bearer once
+        // the original short-lived token expires (~8h after sign-in).
         const kiroParams = {
-          token: selected.access_token,
-          expiresAt: selected.expires_at || "",
+          token: account.access_token,
+          expiresAt: account.expires_at || "",
           region: "us-east-1",
           body: upstreamBody,
           model: rawModel || "kiro/auto",

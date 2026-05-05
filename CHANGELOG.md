@@ -10,6 +10,19 @@ to surface release notes and notify when a newer version is available.
 
 ## [Unreleased]
 
+## [5.7.1] - 2026-05-05
+
+### Fixed
+- **Kiro: AWS rejecting tokens after ~8h** — the chat handler's Kiro
+  branch read the bearer from `selected` (the pre-refresh account
+  snapshot) instead of `account` (the post-refresh result of
+  `checkAndRefreshAccount`). Worked right after sign-in while the
+  original token was still valid, then started failing with `The bearer
+  token included in the request is invalid` once AWS expired it. Bug
+  dates back to the Kiro MVP (#44) but only surfaced now as token
+  lifetimes elapsed in the wild. All other providers were already
+  reading from `account`.
+
 ## [5.7.0] - 2026-05-04
 
 ### Added
