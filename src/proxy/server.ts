@@ -20,6 +20,7 @@ import {
   handleCreateCustomProvider,
   handleCreateProxyPool,
   handleDeleteClientKey,
+  handleDeleteCustomProvider,
   handleDeleteProxyPool,
   handleGetConfig,
   handleGetProviderConnections,
@@ -28,6 +29,7 @@ import {
   handleListClientKeys,
   handleListProxyPools,
   handleProviderConfig,
+  handleProxyRestart,
   handleProxyStop,
   handleRefreshProviderModels,
   handleRefreshProviderModelsBatch,
@@ -39,6 +41,7 @@ import {
   handleUnlockAll,
   handleUpdateClientKey,
   handleUpdateConnection,
+  handleUpdateCustomProvider,
   handleUpdateProxyPool,
 } from "../web/api.ts";
 import { serveLogo } from "../web/logos.ts";
@@ -162,6 +165,10 @@ export function startServer(port: number) {
       "/api/unlock": { POST: () => handleUnlockAll() },
       "/api/providers": { GET: () => handleGetProviders() },
       "/api/providers/custom": { POST: (req: Request) => handleCreateCustomProvider(req) },
+      "/api/providers/custom/:id": {
+        PATCH: (req: BunRequest) => handleUpdateCustomProvider(req.params.id!, req),
+        DELETE: (req: BunRequest) => handleDeleteCustomProvider(req.params.id!),
+      },
       "/api/providers/:id/connections": { GET: (req: BunRequest) => handleGetProviderConnections(req.params.id!) },
       "/api/providers/:id/models": { GET: (req: BunRequest) => handleGetProviderModels(req.params.id!) },
       "/api/providers/:id/refresh-models": { POST: (req: BunRequest) => handleRefreshProviderModels(req.params.id!) },
@@ -193,6 +200,7 @@ export function startServer(port: number) {
       "/api/proxy-pools/:id/test": { POST: (req: BunRequest) => handleTestProxyPool(req.params.id!) },
       "/api/connections/:id": { PATCH: (req: BunRequest) => handleUpdateConnection(req.params.id!, req) },
       "/api/proxy/stop": { POST: () => handleProxyStop() },
+      "/api/proxy/restart": { POST: () => handleProxyRestart() },
 
       // Proxy API.
       "/health": {

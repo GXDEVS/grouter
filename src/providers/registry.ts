@@ -12,17 +12,31 @@ export type ProviderCategory = "oauth" | "free" | "apikey";
 
 const CUSTOM_PROVIDERS_PATH = join(homedir(), ".grouter", "custom_providers.json");
 
-export function saveCustomProvider(p: Provider) {
+export function isCustomProviderId(id: string): boolean {
+  return id.startsWith("custom_");
+}
+
+function readCustomProviderFile(): Provider[] {
+  if (!existsSync(CUSTOM_PROVIDERS_PATH)) return [];
+  try {
+    return JSON.parse(readFileSync(CUSTOM_PROVIDERS_PATH, "utf-8")) as Provider[];
+  } catch (err) {
+    console.error("Failed to read custom providers:", err);
+    return [];
+  }
+}
+
+function writeCustomProviderFile(arr: Provider[]) {
   const dir = dirname(CUSTOM_PROVIDERS_PATH);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(CUSTOM_PROVIDERS_PATH, JSON.stringify(arr, null, 2));
+}
 
-  const arr: Provider[] = existsSync(CUSTOM_PROVIDERS_PATH)
-    ? JSON.parse(readFileSync(CUSTOM_PROVIDERS_PATH, "utf-8"))
-    : [];
-
+export function saveCustomProvider(p: Provider) {
+  const arr = readCustomProviderFile();
   if (!arr.find((x: Provider) => x.id === p.id)) {
     arr.push(p);
-    writeFileSync(CUSTOM_PROVIDERS_PATH, JSON.stringify(arr, null, 2));
+    writeCustomProviderFile(arr);
   }
 
   // Register in-memory (avoid duplicates)
@@ -32,18 +46,48 @@ export function saveCustomProvider(p: Provider) {
   }
 }
 
+export function updateCustomProvider(
+  id: string,
+  patch: Partial<Pick<Provider, "name" | "description" | "baseUrl" | "color" | "logo">>,
+): Provider | null {
+  if (!isCustomProviderId(id)) return null;
+  const arr = readCustomProviderFile();
+  const idx = arr.findIndex((x) => x.id === id);
+  if (idx < 0) return null;
+  const existing = arr[idx];
+  if (!existing) return null;
+
+  const merged: Provider = { ...existing, ...patch };
+  arr[idx] = merged;
+  writeCustomProviderFile(arr);
+
+  // Sync in-memory
+  PROVIDERS[id] = merged;
+  const apiKeyIdx = APIKEY_PROVIDERS.findIndex((x) => x.id === id);
+  if (apiKeyIdx >= 0) APIKEY_PROVIDERS[apiKeyIdx] = merged;
+
+  return merged;
+}
+
+export function removeCustomProvider(id: string): boolean {
+  if (!isCustomProviderId(id)) return false;
+  const arr = readCustomProviderFile();
+  const next = arr.filter((x) => x.id !== id);
+  if (next.length === arr.length) return false;
+  writeCustomProviderFile(next);
+
+  delete PROVIDERS[id];
+  const apiKeyIdx = APIKEY_PROVIDERS.findIndex((x) => x.id === id);
+  if (apiKeyIdx >= 0) APIKEY_PROVIDERS.splice(apiKeyIdx, 1);
+
+  return true;
+}
+
 function loadCustomProviders(): Record<string, Provider> {
-  try {
-    if (existsSync(CUSTOM_PROVIDERS_PATH)) {
-      const arr = JSON.parse(readFileSync(CUSTOM_PROVIDERS_PATH, "utf-8")) as Provider[];
-      const map: Record<string, Provider> = {};
-      for (const p of arr) map[p.id] = p;
-      return map;
-    }
-  } catch (err) {
-    console.error("Failed to load custom providers:", err);
-  }
-  return {};
+  const arr = readCustomProviderFile();
+  const map: Record<string, Provider> = {};
+  for (const p of arr) map[p.id] = p;
+  return map;
 }
 
 
@@ -162,23 +206,35 @@ export const PROVIDERS: Record<string, Provider> = {
   kilocode: {
     id: "kilocode",
     name: "KiloCode",
-    description: "KiloCode cloud inference - free tier via OAuth",
-    category: "oauth",
+    description: "KiloCode via OAuth — 12 free models + premium Anthropic via signup credits",
+    category: "free",
     authType: "oauth",
-    color: "#10b981",
+    color: "#FF6B35",
     baseUrl: "https://api.kilo.ai/v1",
     logo: "/public/logos/kilo-code.png",
     allModelsFree: true,
-    freeTier: { notice: "Free OAuth sign-up." },
+    freeTier: {
+      notice: "OAuth sign-in (Gmail). 12 free models + premium (Opus/Sonnet/Haiku) consume your KiloCode credits — ~$20 grátis no signup, depois precisa recarregar.",
+      url: "https://kilocode.ai",
+    },
     models: [
-      { id: "anthropic/claude-sonnet-4-20250514", name: "Claude Sonnet 4" },
-      { id: "anthropic/claude-opus-4-20250514",   name: "Claude Opus 4"   },
-      { id: "google/gemini-2.5-pro",              name: "Gemini 2.5 Pro"  },
-      { id: "google/gemini-2.5-flash",            name: "Gemini 2.5 Flash"},
-      { id: "openai/gpt-4.1",                     name: "GPT-4.1"         },
-      { id: "openai/o3",                          name: "o3"              },
-      { id: "deepseek/deepseek-chat",             name: "DeepSeek Chat"   },
-      { id: "deepseek/deepseek-reasoner",         name: "DeepSeek Reasoner"},
+      // True free tier (gateway isFree:true) — refreshed live from /api/gateway/models
+      { id: "kilo-auto/free",                                          name: "Auto Free"                            },
+      { id: "openrouter/free",                                         name: "Free Models Router"                   },
+      { id: "openrouter/owl-alpha",                                    name: "Owl Alpha"                            },
+      { id: "x-ai/grok-code-fast-1:optimized:free",                    name: "xAI: Grok Code Fast 1 (Free)"         },
+      { id: "inclusionai/ling-2.6-1t:free",                            name: "inclusionAI: Ling-2.6-1T (Free)"      },
+      { id: "nvidia/nemotron-3-super-120b-a12b:free",                  name: "NVIDIA: Nemotron 3 Super (Free)"      },
+      { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",      name: "NVIDIA: Nemotron 3 Nano Omni (Free)"  },
+      { id: "poolside/laguna-m.1:free",                                name: "Poolside: Laguna M.1 (Free)"          },
+      { id: "poolside/laguna-xs.2:free",                               name: "Poolside: Laguna XS.2 (Free)"         },
+      { id: "stepfun/step-3.5-flash:free",                             name: "StepFun: Step 3.5 Flash (Free)"       },
+      { id: "tencent/hy3-preview:free",                                name: "Tencent: Hy3 Preview (Free)"          },
+      { id: "baidu/qianfan-ocr-fast:free",                             name: "Baidu: Qianfan-OCR-Fast (Free)"       },
+      // Premium Anthropic via KiloCode credits — high token consumption!
+      { id: "anthropic/claude-opus-4.6",                               name: "Claude Opus 4.6 (credits)"            },
+      { id: "anthropic/claude-sonnet-4.6",                             name: "Claude Sonnet 4.6 (credits)"          },
+      { id: "anthropic/claude-haiku-4.5",                              name: "Claude Haiku 4.5 (credits)"           },
     ],
   },
 

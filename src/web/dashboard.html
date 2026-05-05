@@ -31,6 +31,13 @@
     .btn-server.power-on:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.07); }
     .btn-server.power-confirming { border-color: #ef4444 !important; color: #ef4444 !important; background: rgba(239,68,68,0.12) !important; animation: power-pulse 0.65s ease-in-out infinite alternate; }
     .btn-server.power-off { color: #374151; border-color: #1e1e1e; cursor: default; opacity: 0.55; }
+    .btn-server-group { display: inline-flex; align-items: stretch; flex-shrink: 0; }
+    .btn-server-group .btn-server.in-group-left { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+    .btn-server-group .btn-server.in-group-right { border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: none; padding: 0 0.625rem; gap: 0; }
+    .btn-server-group .btn-server.in-group-right.power-on:hover { border-color: #0AB9DC; color: #0AB9DC; background: rgba(10,185,220,0.08); }
+    .btn-server-group .btn-server.in-group-right.power-restarting { border-color: #0AB9DC !important; color: #0AB9DC !important; background: rgba(10,185,220,0.1) !important; cursor: default; }
+    .btn-server-group .btn-server.in-group-right.power-restarting iconify-icon { animation: spin 0.85s linear infinite; }
+    @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
     @keyframes power-pulse { from { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); } to { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
     @keyframes spin-once { to { transform: rotate(360deg); } }
     .spin-once iconify-icon { display:inline-flex; animation: spin-once 0.5s ease-out; }
@@ -202,15 +209,15 @@
     </nav>
     <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
       <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
-        <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:13px;flex-shrink:0;"></iconify-icon>
+        <iconify-icon id="lang-flag-dash" icon="circle-flags:us" style="font-size:15px;flex-shrink:0;border-radius:50%;"></iconify-icon>
         <select class="lang-select" style="width:100%;" id="lang-select-dash" onchange="setLang(this.value)">
           <option value="en">English</option>
           <option value="pt">PT-BR</option>
           <option value="zh">中文</option>
         </select>
       </div>
-      <p id="sb-made-by" style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">made by
-        <span id="grouter-version" style="font-size:0.65rem;color:#0AB9DC;font-weight:700;"></span>
+      <p id="sb-made-by" style="font-size:0.65rem;color:#6b7280;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">made by
+        <span id="grouter-version" style="display:inline-flex;align-items:center;gap:0.25rem;padding:0.12rem 0.5rem;border-radius:9999px;background:rgba(10,185,220,0.1);border:1px solid rgba(10,185,220,0.35);color:#0AB9DC;font-size:0.6rem;font-weight:700;letter-spacing:0.04em;line-height:1;"></span>
       </p>
       <div style="display:flex;flex-direction:column;gap:0.375rem;">
         <a href="https://github.com/gxdevs" target="_blank" style="display:flex;align-items:center;gap:0.375rem;font-size:0.72rem;color:#6b7280;text-decoration:none;transition:color 0.2s;" onmouseover="this.style.color='#e8e8e8'" onmouseout="this.style.color='#6b7280'"><iconify-icon icon="mdi:github" style="font-size:1rem;flex-shrink:0;"></iconify-icon>github.com/gxdevs</a>
@@ -229,10 +236,15 @@
           <div class="dot dot-warn dot-pulse" id="proxy-pill-dot"></div>
           <span id="proxy-pill-label" style="color:#6b7280;">checking…</span>
         </div>
-        <button class="btn-server power-off mob-hide" id="btn-server-power" onclick="handleServerPower()" style="opacity:0;transition:opacity 0.3s;">
-          <iconify-icon icon="solar:power-bold-duotone" id="server-power-icon" style="font-size:0.875rem;"></iconify-icon>
-          <span id="server-power-label">Stop server</span>
-        </button>
+        <div class="btn-server-group mob-hide" id="btn-server-group" style="opacity:0;transition:opacity 0.3s;">
+          <button class="btn-server power-off in-group-left" id="btn-server-power" onclick="handleServerPower()">
+            <iconify-icon icon="solar:power-bold-duotone" id="server-power-icon" style="font-size:0.875rem;"></iconify-icon>
+            <span id="server-power-label">Stop server</span>
+          </button>
+          <button class="btn-server power-off in-group-right" id="btn-server-restart" onclick="handleServerRestart()" title="Restart server">
+            <iconify-icon icon="solar:refresh-bold-duotone" id="server-restart-icon" style="font-size:0.95rem;"></iconify-icon>
+          </button>
+        </div>
         <button class="btn-primary mob-hide" style="height:2.5rem;padding:0 1rem;font-size:0.82rem;" onclick="openAddModal()"><iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon><span id="btn-add-acc">Add account</span></button>
         <button class="btn-icon mob-hide" id="btn-refresh" onclick="manualRefresh()" title="Refresh"><iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon></button>
         <button class="btn-icon mob-hide" id="btn-autopoll" onclick="toggleAutoPoll()" title="Auto-refresh" style="position:relative;">
@@ -311,6 +323,18 @@
         <div class="card">
           <div class="section-divider"><h3 id="prov-apikey-title">API Key Providers</h3></div>
           <div id="prov-grid-apikey" class="provider-grid"></div>
+        </div>
+        <!-- Custom Providers -->
+        <div class="card" id="prov-custom-section" style="display:none;">
+          <div class="section-divider" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+            <h3 id="prov-custom-title">Custom Providers</h3>
+            <button class="btn-sm btn-sm-ghost" onclick="openCustomProviderModal()" title="Add custom provider"
+              style="padding:0 0.625rem;height:1.85rem;font-size:0.7rem;display:inline-flex;align-items:center;gap:0.35rem;">
+              <iconify-icon icon="solar:add-circle-bold-duotone" style="font-size:0.95rem;"></iconify-icon>
+              <span id="prov-custom-add-label">New</span>
+            </button>
+          </div>
+          <div id="prov-grid-custom" class="provider-grid"></div>
         </div>
       </div>
     </div>
@@ -588,10 +612,11 @@
 
 <!-- CUSTOM PROVIDER MODAL -->
 <div id="custom-provider-modal" class="modal-overlay hidden">
-  <div class="modal-box" style="max-width:480px;">
+  <div class="modal-box" style="max-width:520px;">
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCustomProviderModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
+    <input type="hidden" id="custom-prov-edit-id" value="" />
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-      <div class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:#94a3b8;"><iconify-icon icon="solar:add-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
+      <div id="custom-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:#94a3b8;"><iconify-icon icon="solar:server-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
       <div>
         <h2 id="custom-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
         <p id="custom-modal-sub" style="color:#6b7280;font-size:0.8rem;"></p>
@@ -608,9 +633,22 @@
         <input id="custom-prov-url" type="url" placeholder="https://api.example.com/v1" autocomplete="off"
           style="width:100%;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.55rem 0.75rem;color:#e8e8e8;font-size:0.82rem;outline:none;font-family:monospace;" />
       </div>
+      <div>
+        <label id="custom-label-icon" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.5rem;"></label>
+        <input id="custom-prov-icon" type="hidden" value="" />
+        <div id="custom-icon-presets" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(2.6rem,1fr));gap:0.5rem;"></div>
+      </div>
+      <div>
+        <label id="custom-label-color" style="font-size:0.72rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:0.25rem;"></label>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <input id="custom-prov-color" type="color" value="#94a3b8" oninput="updateCustomIconPreview()"
+            style="width:3rem;height:2.4rem;background:#0d0d0d;border:1px solid #2a2a2a;border-radius:10px;padding:0.2rem;cursor:pointer;" />
+          <div id="custom-color-presets" style="display:flex;flex-wrap:wrap;gap:0.35rem;flex:1;"></div>
+        </div>
+      </div>
       <p id="custom-prov-error" style="font-size:0.8rem;color:#ef4444;display:none;"></p>
       <button class="btn-primary" id="custom-prov-submit" style="width:100%;justify-content:center;margin-top:0.25rem;" onclick="submitCustomProvider()">
-        <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+        <iconify-icon id="custom-btn-icon" icon="solar:add-circle-bold-duotone"></iconify-icon>
         <span id="custom-btn-label"></span>
       </button>
     </div>
@@ -675,6 +713,22 @@
         <div>
           <p id="modal-deprecation-title" style="font-size:0.82rem;font-weight:700;color:#ef4444;margin-bottom:0.15rem;">Qwen Code Free discontinued</p>
           <p id="modal-deprecation-reason" style="font-size:0.75rem;color:#9ca3af;line-height:1.5;"></p>
+        </div>
+      </div>
+      <div id="modal-credits-banner" class="hidden" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:0.875rem 1rem;margin-bottom:1rem;display:flex;gap:0.625rem;align-items:flex-start;">
+        <iconify-icon icon="solar:dollar-minimalistic-bold-duotone" style="color:#f59e0b;font-size:1.15rem;flex-shrink:0;margin-top:0.1rem;"></iconify-icon>
+        <div style="min-width:0;flex:1;">
+          <p id="modal-credits-title" style="font-size:0.82rem;font-weight:700;color:#f59e0b;margin-bottom:0.4rem;">KiloCode é "free" — mas atenção aos créditos</p>
+          <div style="display:flex;flex-direction:column;gap:0.45rem;font-size:0.75rem;color:#9ca3af;line-height:1.55;">
+            <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+              <span style="background:rgba(34,197,94,0.15);color:#22c55e;font-weight:700;font-size:0.6rem;padding:0.1rem 0.4rem;border-radius:4px;letter-spacing:0.05em;flex-shrink:0;margin-top:0.1rem;">FREE</span>
+              <p>Os 12 modelos com sufixo <code style="color:#e8e8e8;background:#0d0d0d;padding:0.05rem 0.3rem;border-radius:4px;">:free</code> (Owl Alpha, Grok Code Fast, Nemotron, Ling, Laguna, Step, etc.) são <strong style="color:#e8e8e8;">gratuitos sem limite de tempo</strong> — só com rate limit do upstream.</p>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:flex-start;">
+              <span style="background:rgba(245,158,11,0.15);color:#f59e0b;font-weight:700;font-size:0.6rem;padding:0.1rem 0.4rem;border-radius:4px;letter-spacing:0.05em;flex-shrink:0;margin-top:0.1rem;">$ CRÉDITOS</span>
+              <p>Os modelos <strong style="color:#e8e8e8;">Anthropic (Opus / Sonnet / Haiku)</strong> e <strong style="color:#e8e8e8;">kilo-auto/frontier</strong> consomem os <strong style="color:#e8e8e8;">~$20 de créditos grátis</strong> que vêm no signup. Esses créditos acabam rápido — <strong style="color:#e8e8e8;">Opus 4.6 custa $5/M input · $25/M output</strong>. Quando esgotar, só os <code style="color:#e8e8e8;background:#0d0d0d;padding:0.05rem 0.3rem;border-radius:4px;">:free</code> continuam funcionando até você recarregar em <a href="https://kilocode.ai" target="_blank" style="color:#0AB9DC;text-decoration:underline;">kilocode.ai</a>.</p>
+            </div>
+          </div>
         </div>
       </div>
       <p id="modal-desc" style="font-size:0.85rem;color:#6b7280;line-height:1.6;margin-bottom:1.25rem;">Click Start to request an authorization code. Open the link, enter the code, and the account will be added automatically.</p>
@@ -771,7 +825,7 @@
   <!-- Language + links -->
   <div style="padding:0.875rem;">
     <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
-      <iconify-icon icon="solar:global-bold-duotone" style="color:#6b7280;font-size:13px;flex-shrink:0;"></iconify-icon>
+      <iconify-icon id="lang-flag-mob" icon="circle-flags:us" style="font-size:15px;flex-shrink:0;border-radius:50%;"></iconify-icon>
       <select class="lang-select" style="width:100%;" id="lang-select-mob" onchange="setLang(this.value)">
         <option value="en">English</option>
         <option value="pt">PT-BR</option>
@@ -885,11 +939,19 @@ const I18N = {
     models_filter_all:'All Models',models_filter_free:'Free Only',
     models_view_title:'View models',
     custom_title:'Custom Provider',custom_sub:'Add any OpenAI-compatible API',
+    custom_edit_title:'Edit Custom Provider',custom_edit_sub:'Update name, URL, icon or color',
     custom_label_name:'Provider Name',custom_label_url:'API Base URL',
+    custom_label_icon:'Icon (Iconify ID)',custom_label_color:'Accent color',
+    custom_icon_hint:'e.g. solar:server-square-bold-duotone — browse icons at icon-sets.iconify.design',
     custom_placeholder_name:'e.g. My Remote API',custom_placeholder_url:'https://api.example.com/v1',
-    custom_btn_create:'Create Provider',
+    custom_placeholder_icon:'solar:server-square-bold-duotone',
+    custom_btn_create:'Create Provider',custom_btn_save:'Save changes',
+    custom_action_edit:'Edit',custom_action_delete:'Remove',
+    custom_confirm_delete:'Remove this custom provider?\nAll connections registered under it will be deleted.',
     custom_err_name:'Provider name is required.',custom_err_url:'API URL is required.',
     custom_err_url_format:'URL must start with http:// or https://',
+    custom_err_failed:'Failed: {err}',custom_err_network:'Network error: {err}',
+    providers_custom_title:'Custom Providers',providers_custom_add:'New',
     connect_apikey_required:'API key is required.',connect_failed:'Failed to connect.',
   },
   pt: {
@@ -959,11 +1021,19 @@ const I18N = {
     models_filter_all:'Todos os Modelos',models_filter_free:'Somente Gratis',
     models_view_title:'Ver modelos',
     custom_title:'Provedor Customizado',custom_sub:'Adicione qualquer API compativel com OpenAI',
+    custom_edit_title:'Editar Provedor Customizado',custom_edit_sub:'Atualize nome, URL, ícone ou cor',
     custom_label_name:'Nome do Provedor',custom_label_url:'URL Base da API',
+    custom_label_icon:'Ícone (ID Iconify)',custom_label_color:'Cor de destaque',
+    custom_icon_hint:'ex. solar:server-square-bold-duotone — navegue ícones em icon-sets.iconify.design',
     custom_placeholder_name:'ex. Minha API Remota',custom_placeholder_url:'https://api.exemplo.com/v1',
-    custom_btn_create:'Criar Provedor',
+    custom_placeholder_icon:'solar:server-square-bold-duotone',
+    custom_btn_create:'Criar Provedor',custom_btn_save:'Salvar alterações',
+    custom_action_edit:'Editar',custom_action_delete:'Remover',
+    custom_confirm_delete:'Remover este provedor customizado?\nTodas as conexões registradas nele serão apagadas.',
     custom_err_name:'Nome do provedor e obrigatorio.',custom_err_url:'URL da API e obrigatoria.',
     custom_err_url_format:'URL deve comecar com http:// ou https://',
+    custom_err_failed:'Falha: {err}',custom_err_network:'Erro de rede: {err}',
+    providers_custom_title:'Provedores Customizados',providers_custom_add:'Novo',
     connect_apikey_required:'API key e obrigatoria.',connect_failed:'Falha ao conectar.',
   },
   zh: {
@@ -1033,11 +1103,19 @@ const I18N = {
     models_filter_all:'所有模型',models_filter_free:'仅免费',
     models_view_title:'查看模型',
     custom_title:'自定义提供商',custom_sub:'添加任何 OpenAI 兼容 API',
+    custom_edit_title:'编辑自定义提供商',custom_edit_sub:'更新名称、URL、图标或颜色',
     custom_label_name:'提供商名称',custom_label_url:'API 基础 URL',
+    custom_label_icon:'图标 (Iconify ID)',custom_label_color:'强调色',
+    custom_icon_hint:'例如 solar:server-square-bold-duotone — 浏览 icon-sets.iconify.design',
     custom_placeholder_name:'例如 我的远程 API',custom_placeholder_url:'https://api.example.com/v1',
-    custom_btn_create:'创建提供商',
+    custom_placeholder_icon:'solar:server-square-bold-duotone',
+    custom_btn_create:'创建提供商',custom_btn_save:'保存更改',
+    custom_action_edit:'编辑',custom_action_delete:'移除',
+    custom_confirm_delete:'是否移除此自定义提供商？\n其下注册的所有连接将被删除。',
     custom_err_name:'提供商名称为必填项。',custom_err_url:'API URL 为必填项。',
     custom_err_url_format:'URL 必须以 http:// 或 https:// 开头',
+    custom_err_failed:'失败：{err}',custom_err_network:'网络错误：{err}',
+    providers_custom_title:'自定义提供商',providers_custom_add:'新建',
     connect_apikey_required:'API 密钥为必填项。',connect_failed:'连接失败。',
   }
 };
@@ -1072,6 +1150,8 @@ let lang = 'en', T = I18N.en, statusData = null;
 let modalPollTimer = null, refreshTimer = null;
 let _langVersion = 0;
 
+const LANG_FLAGS = { en: 'circle-flags:us', pt: 'circle-flags:br', zh: 'circle-flags:cn' };
+
 function setLang(l) {
   lang = l; T = I18N[l] || I18N.en;
   _langVersion++;
@@ -1081,6 +1161,11 @@ function setLang(l) {
   if (ls) ls.value = l;
   const mobLs = document.getElementById('lang-select-mob');
   if (mobLs) mobLs.value = l;
+  const flag = LANG_FLAGS[l] || LANG_FLAGS.en;
+  const f1 = document.getElementById('lang-flag-dash');
+  if (f1) f1.setAttribute('icon', flag);
+  const f2 = document.getElementById('lang-flag-mob');
+  if (f2) f2.setAttribute('icon', flag);
   applyI18n();
   if (statusData) {
     renderStatus(statusData);
@@ -1128,6 +1213,7 @@ function applyI18n() {
   s('cfg-maint-title',T.cfg_maint_title);
   s('cfg-unlock-label',T.cfg_unlock_label);s('cfg-unlock-hint',T.cfg_unlock_hint);s('cfg-unlock-btn-label',T.cfg_unlock_btn);
   s('prov-oauth-title',T.providers_oauth_title);s('prov-free-title',T.providers_free_title);s('prov-apikey-title',T.providers_apikey_title);
+  s('prov-custom-title',T.providers_custom_title);s('prov-custom-add-label',T.providers_custom_add);
   s('connect-existing-header',T.connect_existing_header);
   s('modal-deprecation-title',T.qwen_deprecated_title);
   s('modal-tryagain-btn',T.btn_try_again);s('modal-addanother-btn',T.btn_add_another);
@@ -1475,8 +1561,10 @@ function renderStatus(d) {
   if (mobDrSt)  { mobDrSt.textContent = lbl.textContent; mobDrSt.style.color = proxy.running?'#22c55e':'#6b7280'; }
   // Sync power button state (only if not mid-stop animation)
   const pwrBtn = document.getElementById('btn-server-power');
+  const rstBtn = document.getElementById('btn-server-restart');
+  const pwrGroup = document.getElementById('btn-server-group');
+  if (pwrGroup) pwrGroup.style.opacity = '1';
   if (pwrBtn && !pwrBtn.dataset.stopping) {
-    pwrBtn.style.opacity = '1';
     pwrBtn.classList.remove('power-on','power-off','power-confirming');
     if (proxy.running) {
       pwrBtn.classList.add('power-on');
@@ -1488,6 +1576,18 @@ function renderStatus(d) {
       pwrBtn.disabled = true;
       document.getElementById('server-power-label').textContent = T.status_stopped_btn || 'Stopped';
       document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
+    }
+  }
+  if (rstBtn && !rstBtn.dataset.restarting && !pwrBtn?.dataset.stopping) {
+    rstBtn.classList.remove('power-on','power-off','power-restarting');
+    if (proxy.running) {
+      rstBtn.classList.add('power-on');
+      rstBtn.disabled = false;
+      rstBtn.title = T.status_restart_btn || 'Restart server';
+    } else {
+      rstBtn.classList.add('power-off');
+      rstBtn.disabled = true;
+      rstBtn.title = T.status_stopped_btn || 'Stopped';
     }
   }
   document.getElementById('proxy-strategy').textContent = proxy.strategy+(proxy.strategy==='round-robin'?' (x'+proxy.stickyLimit+')':'');
@@ -1619,6 +1719,9 @@ async function _doStopServer(btn) {
   btn.classList.remove('power-confirming','power-on');
   document.getElementById('server-power-icon').setAttribute('icon','solar:power-bold-duotone');
 
+  const rstBtn = document.getElementById('btn-server-restart');
+  if (rstBtn) { rstBtn.disabled = true; rstBtn.classList.remove('power-on'); rstBtn.classList.add('power-off'); }
+
   // Kill auto-poll so we don't spam dead server
   if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
   const apBtn = document.getElementById('btn-autopoll');
@@ -1644,6 +1747,67 @@ async function _doStopServer(btn) {
     document.getElementById('server-power-label').textContent = T.status_stopped_btn || 'Stopped';
     delete btn.dataset.stopping;
   }, 1000);
+}
+
+// ── Server restart button ─────────────────────────────────────────────────────
+async function handleServerRestart() {
+  const btn = document.getElementById('btn-server-restart');
+  if (!btn || btn.disabled || btn.dataset.restarting) return;
+
+  const pwrBtn = document.getElementById('btn-server-power');
+  btn.dataset.restarting = '1';
+  btn.disabled = true;
+  btn.classList.remove('power-on','power-off');
+  btn.classList.add('power-restarting');
+  if (pwrBtn) {
+    pwrBtn.disabled = true;
+    pwrBtn.classList.remove('power-on','power-confirming');
+    document.getElementById('server-power-label').textContent = T.status_restarting || 'Restarting…';
+    document.getElementById('server-power-icon').setAttribute('icon','solar:refresh-bold-duotone');
+  }
+
+  // Pause auto-poll while the daemon is bouncing; resume after it's back.
+  const wasAutoPolling = !!autoPollTimer;
+  if (autoPollTimer) toggleAutoPoll();
+
+  // Animate the pill
+  const dot = document.getElementById('proxy-pill-dot');
+  const lbl = document.getElementById('proxy-pill-label');
+  if (dot && lbl) {
+    dot.className = 'dot dot-warn dot-pulse';
+    lbl.textContent = T.status_restarting || 'restarting…';
+    lbl.style.color = '#6b7280';
+  }
+
+  try { await fetch('/api/proxy/restart', { method: 'POST' }); } catch {}
+
+  // The daemon will exit ~300ms after responding; the helper kills it,
+  // waits for the port, and starts a fresh daemon. Poll /api/status until
+  // the new daemon is reachable, then refresh the UI.
+  const deadline = Date.now() + 25000;
+  const tryReconnect = async () => {
+    if (Date.now() > deadline) {
+      delete btn.dataset.restarting;
+      btn.classList.remove('power-restarting');
+      if (lbl) { lbl.textContent = T.status_stopped; lbl.style.color = '#ef4444'; }
+      return;
+    }
+    try {
+      const res = await fetch('/api/status', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.proxy?.running) {
+          delete btn.dataset.restarting;
+          btn.classList.remove('power-restarting');
+          await loadStatus();
+          if (wasAutoPolling) toggleAutoPoll();
+          return;
+        }
+      }
+    } catch {}
+    setTimeout(tryReconnect, 600);
+  };
+  setTimeout(tryReconnect, 800);
 }
 
 async function toggleAcc(id) { try { await fetch('/api/accounts/'+id+'/toggle',{method:'POST'}); await loadStatus(); } catch {} }
@@ -1788,13 +1952,19 @@ async function loadProviders() {
     const { providers } = await res.json();
     if (_langVersion !== lv) { applyI18n(); return; }
     _providersMap = Object.fromEntries(providers.map(p => [p.id, p]));
+    const customProviders = providers.filter(p => p.isCustom);
+    const apiKeyBuiltins   = providers.filter(p => p.category === 'apikey' && !p.isCustom);
     renderProviderGrid('prov-grid-oauth',  providers.filter(p => p.category === 'oauth'));
     renderProviderGrid('prov-grid-free',   providers.filter(p => p.category === 'free'));
-    renderProviderGrid('prov-grid-apikey', providers.filter(p => p.category === 'apikey'));
+    renderProviderGrid('prov-grid-apikey', apiKeyBuiltins);
+    renderProviderGrid('prov-grid-custom', customProviders, { custom: true });
     // Hide free section if empty
     const freeProviders = providers.filter(p => p.category === 'free');
     const freeSection = document.getElementById('prov-free-section');
     if (freeSection) freeSection.style.display = freeProviders.length ? '' : 'none';
+    // Show custom section only when there are saved custom providers
+    const customSection = document.getElementById('prov-custom-section');
+    if (customSection) customSection.style.display = customProviders.length ? '' : 'none';
   } catch {}
 }
 
@@ -1819,9 +1989,10 @@ function providerIconHtml(p) {
   return `<div class="provider-icon" style="background:${p.color};">${renderLogoInner(p)}</div>`;
 }
 
-function renderProviderGrid(gridId, providers) {
+function renderProviderGrid(gridId, providers, opts) {
   const el = document.getElementById(gridId);
   if (!el) return;
+  const isCustomGrid = !!(opts && opts.custom);
   if (!providers.length) { el.innerHTML = `<p style="font-size:0.82rem;color:#6b7280;">${tr('provider_meta_none')}</p>`; return; }
   el.innerHTML = providers.map(p => {
     const connected  = p.connections > 0;
@@ -1834,12 +2005,16 @@ function renderProviderGrid(gridId, providers) {
                        : tr('provider_status_none');
     const badge      = deprecated ? `<span class="provider-badge-deprecated">${tr('provider_badge_deprecated')}</span>`
                        : underConstruction ? `<span class="provider-badge-under-construction">${tr('provider_badge_under_construction')}</span>`
-                       : connected ? `<span class="provider-badge">${p.connections}</span>` : '';
+                       : (connected && !isCustomGrid) ? `<span class="provider-badge">${p.connections}</span>` : '';
     const freeBadge  = (p.freeTier && !underConstruction) ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
     const click      = locked ? '' : `onclick="openProviderCard('${p.id}')"`;
     const modelsBtn  = (p.id !== 'custom' && !locked)
-      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:list-bold-duotone" style="font-size:0.8rem;"></iconify-icon></button>`
+      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>`
       : '';
+    const customActions = isCustomGrid ? `
+      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();editCustomProvider('${p.id}')" title="${tr('custom_action_edit')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;color:#0AB9DC;border-color:rgba(10,185,220,0.3);"><iconify-icon icon="solar:pen-2-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>
+      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();deleteCustomProvider('${p.id}')" title="${tr('custom_action_delete')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;color:#ef4444;border-color:rgba(239,68,68,0.3);"><iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>` : '';
+    const customBadge = (isCustomGrid && connected) ? `<span class="provider-badge" style="top:0.5rem;right:5.6rem;">${p.connections}</span>` : '';
     const metaColor  = deprecated ? '#ef4444' : underConstruction ? '#f59e0b' : '#6b7280';
     const stateClass = deprecated ? ' deprecated' : underConstruction ? ' under-construction' : '';
     return `<div class="provider-card${connected?' connected':''}${stateClass}" ${click}>
@@ -1848,8 +2023,10 @@ function renderProviderGrid(gridId, providers) {
         <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
         <p style="font-size:0.68rem;color:${metaColor};margin-top:0.1rem;">${meta}</p>
       </div>
+      ${customActions}
       ${modelsBtn}
       ${freeBadge}
+      ${customBadge}
       ${badge}
     </div>`;
   }).join('');
@@ -2085,29 +2262,142 @@ function closeModelsModal() {
 }
 
 // ── Custom Provider Modal ─────────────────────────────────────────────
-function openCustomProviderModal() {
-  document.getElementById('custom-prov-name').value = '';
-  document.getElementById('custom-prov-url').value = '';
+const CUSTOM_ICON_PRESETS = [
+  'solar:server-square-bold-duotone',
+  'solar:cloud-bold-duotone',
+  'solar:cpu-bolt-bold-duotone',
+  'solar:rocket-2-bold-duotone',
+  'solar:bolt-circle-bold-duotone',
+  'solar:atom-bold-duotone',
+  'solar:database-bold-duotone',
+  'solar:cup-hot-bold-duotone',
+  'solar:planet-bold-duotone',
+  'solar:rocket-bold-duotone',
+  'solar:satellite-bold-duotone',
+  'solar:code-square-bold-duotone',
+  'solar:settings-bold-duotone',
+  'solar:key-minimalistic-square-bold-duotone',
+  'mdi:robot-happy',
+  'mdi:api',
+  'mdi:brain',
+  'mdi:lightning-bolt',
+];
+const CUSTOM_COLOR_PRESETS = [
+  '#0AB9DC','#22c55e','#f59e0b','#ef4444','#a855f7','#ec4899','#3b82f6','#94a3b8','#10b981','#eab308'
+];
+
+function renderCustomIconPresets() {
+  const host = document.getElementById('custom-icon-presets');
+  if (!host) return;
+  const current = (document.getElementById('custom-prov-icon').value || '').trim();
+  host.innerHTML = CUSTOM_ICON_PRESETS.map(icon => {
+    const selected = icon === current;
+    const border = selected ? '#0AB9DC' : '#2a2a2a';
+    const bg = selected ? 'rgba(10,185,220,0.1)' : '#0d0d0d';
+    return `<button type="button" data-icon="${icon}" onclick="setCustomIcon('${icon}')" title="${icon}"
+      style="aspect-ratio:1;border-radius:10px;background:${bg};border:2px solid ${border};display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#e8e8e8;transition:border-color 0.15s,background 0.15s;padding:0;"
+      onmouseover="if(this.dataset.icon!==(document.getElementById('custom-prov-icon').value||'').trim())this.style.borderColor='#6b7280';" onmouseout="if(this.dataset.icon!==(document.getElementById('custom-prov-icon').value||'').trim())this.style.borderColor='#2a2a2a';">
+      <iconify-icon icon="${icon}" style="font-size:1.4rem;"></iconify-icon>
+    </button>`;
+  }).join('');
+}
+
+function renderCustomColorPresets() {
+  const host = document.getElementById('custom-color-presets');
+  if (!host) return;
+  const current = (document.getElementById('custom-prov-color').value || '').toLowerCase();
+  host.innerHTML = CUSTOM_COLOR_PRESETS.map(c => {
+    const selected = c.toLowerCase() === current;
+    const border = selected ? '#ffffff' : '#2a2a2a';
+    return `<button type="button" data-color="${c}" onclick="setCustomColor('${c}')" title="${c}"
+      style="width:1.85rem;height:1.85rem;border-radius:9999px;background:${c};border:2px solid ${border};cursor:pointer;padding:0;transition:border-color 0.15s,transform 0.15s;${selected?'transform:scale(1.1);':''}"
+      onmouseover="if(this.dataset.color.toLowerCase()!==(document.getElementById('custom-prov-color').value||'').toLowerCase())this.style.borderColor='#9ca3af';" onmouseout="if(this.dataset.color.toLowerCase()!==(document.getElementById('custom-prov-color').value||'').toLowerCase())this.style.borderColor='#2a2a2a';"></button>`;
+  }).join('');
+}
+
+function setCustomIcon(icon) {
+  document.getElementById('custom-prov-icon').value = icon;
+  renderCustomIconPresets();
+  updateCustomIconPreview();
+}
+
+function setCustomColor(color) {
+  document.getElementById('custom-prov-color').value = color;
+  renderCustomColorPresets();
+  updateCustomIconPreview();
+}
+
+function updateCustomIconPreview() {
+  const iconEl = document.getElementById('custom-modal-icon');
+  if (!iconEl) return;
+  const icon = (document.getElementById('custom-prov-icon').value || '').trim() || 'solar:server-square-bold-duotone';
+  const color = document.getElementById('custom-prov-color').value || '#94a3b8';
+  iconEl.style.background = color;
+  iconEl.innerHTML = `<iconify-icon icon="${icon}" style="font-size:1.5rem;color:#fff;"></iconify-icon>`;
+}
+
+function openCustomProviderModal(prefill) {
+  const editing = !!prefill;
+  document.getElementById('custom-prov-edit-id').value = editing ? prefill.id : '';
+  document.getElementById('custom-prov-name').value = editing ? (prefill.name || '') : '';
+  document.getElementById('custom-prov-url').value  = editing ? (prefill.baseUrl || '') : '';
+  const initialIcon = editing ? (prefill.logo || '') : (CUSTOM_ICON_PRESETS[0] || '');
+  document.getElementById('custom-prov-icon').value = initialIcon;
+  document.getElementById('custom-prov-color').value = editing ? (prefill.color || '#94a3b8') : '#94a3b8';
   document.getElementById('custom-prov-error').style.display = 'none';
   document.getElementById('custom-prov-submit').disabled = false;
-  // Populate i18n strings
-  document.getElementById('custom-modal-title').textContent = tr('custom_title');
-  document.getElementById('custom-modal-sub').textContent = tr('custom_sub');
-  document.getElementById('custom-label-name').textContent = tr('custom_label_name');
-  document.getElementById('custom-label-url').textContent = tr('custom_label_url');
-  document.getElementById('custom-btn-label').textContent = tr('custom_btn_create');
+  // i18n
+  document.getElementById('custom-modal-title').textContent = tr(editing ? 'custom_edit_title' : 'custom_title');
+  document.getElementById('custom-modal-sub').textContent   = tr(editing ? 'custom_edit_sub'   : 'custom_sub');
+  document.getElementById('custom-label-name').textContent  = tr('custom_label_name');
+  document.getElementById('custom-label-url').textContent   = tr('custom_label_url');
+  document.getElementById('custom-label-icon').textContent  = tr('custom_label_icon');
+  document.getElementById('custom-label-color').textContent = tr('custom_label_color');
+  document.getElementById('custom-btn-label').textContent   = tr(editing ? 'custom_btn_save' : 'custom_btn_create');
+  document.getElementById('custom-btn-icon').setAttribute('icon', editing ? 'solar:diskette-bold-duotone' : 'solar:add-circle-bold-duotone');
   document.getElementById('custom-prov-name').placeholder = tr('custom_placeholder_name');
   document.getElementById('custom-prov-url').placeholder = tr('custom_placeholder_url');
+  renderCustomIconPresets();
+  renderCustomColorPresets();
+  updateCustomIconPreview();
   document.getElementById('custom-provider-modal').classList.remove('hidden');
 }
 
 function closeCustomProviderModal() {
   document.getElementById('custom-provider-modal').classList.add('hidden');
+  document.getElementById('custom-prov-edit-id').value = '';
+}
+
+function editCustomProvider(id) {
+  const p = _providersMap[id];
+  if (!p) return;
+  openCustomProviderModal(p);
+}
+
+async function deleteCustomProvider(id) {
+  const p = _providersMap[id];
+  if (!p) return;
+  if (!confirm(tr('custom_confirm_delete'))) return;
+  try {
+    const res = await fetch('/api/providers/custom/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(tr('custom_err_failed', { err: data.error || res.status }));
+      return;
+    }
+    loadProviders();
+    if (typeof refresh === 'function') refresh();
+  } catch (err) {
+    alert(tr('custom_err_network', { err }));
+  }
 }
 
 async function submitCustomProvider() {
+  const editId = document.getElementById('custom-prov-edit-id').value;
   const name = document.getElementById('custom-prov-name').value.trim();
   const url = document.getElementById('custom-prov-url').value.trim();
+  const logo = document.getElementById('custom-prov-icon').value.trim();
+  const color = document.getElementById('custom-prov-color').value;
   const errEl = document.getElementById('custom-prov-error');
   const btn = document.getElementById('custom-prov-submit');
 
@@ -2119,10 +2409,12 @@ async function submitCustomProvider() {
   errEl.style.display = 'none';
 
   try {
-    const res = await fetch('/api/providers/custom', {
-      method: 'POST',
+    const endpoint = editId ? '/api/providers/custom/' + encodeURIComponent(editId) : '/api/providers/custom';
+    const method = editId ? 'PATCH' : 'POST';
+    const res = await fetch(endpoint, {
+      method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, url })
+      body: JSON.stringify({ name, url, logo, color })
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
@@ -2134,8 +2426,8 @@ async function submitCustomProvider() {
     const p = await res.json();
     closeCustomProviderModal();
     loadProviders();
-    // Auto-open the connect modal for the new provider
-    setTimeout(() => openConnectModal(p), 300);
+    // Auto-open the connect modal only for newly created providers
+    if (!editId) setTimeout(() => openConnectModal(p), 300);
   } catch (err) {
     errEl.textContent = tr('custom_err_network', {err: err});
     errEl.style.display = '';
@@ -2252,6 +2544,13 @@ function openOAuthModal(p) {
     if (startBtn) { startBtn.disabled = true; startBtn.style.opacity = '0.5'; }
   } else {
     banner.classList.add('hidden');
+  }
+
+  // KiloCode-specific credit warning
+  const creditsBanner = document.getElementById('modal-credits-banner');
+  if (creditsBanner) {
+    if (p.id === 'kilocode') creditsBanner.classList.remove('hidden');
+    else creditsBanner.classList.add('hidden');
   }
 
   const desc = document.getElementById('modal-desc');

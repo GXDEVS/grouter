@@ -48,6 +48,13 @@ export async function fetchAndSaveProviderModels(
     throw new Error(`Unknown provider: ${providerId}`);
   }
 
+  // KiloCode exposes a public model catalog at /api/gateway/models with its own
+  // schema (data[].isFree, data[].pricing). It does NOT serve the OpenAI /v1/models
+  // shape, so we fetch and translate it here instead of going through the generic path.
+  if (providerId === "kilocode") {
+    return fetchKilocodeGatewayModels(provider);
+  }
+
   // Find an API key if not provided
   let key = apiKey;
   if (!key) {
@@ -157,6 +164,63 @@ export function getModelsForProvider(providerId: string): ProviderModelInfo[] {
 }
 
 // Helpers
+
+const KILOCODE_GATEWAY_URL = "https://api.kilo.ai/api/gateway/models";
+
+interface KilocodeGatewayModel {
+  id: string;
+  name?: string;
+  isFree?: boolean;
+  context_length?: number;
+  pricing?: ModelPricingShape;
+}
+
+async function fetchKilocodeGatewayModels(provider: Provider): Promise<FetchModelsResult> {
+  try {
+    const resp = await fetch(KILOCODE_GATEWAY_URL, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!resp.ok) {
+      console.error(`Model fetch failed for kilocode: ${resp.status} ${resp.statusText}`);
+      return saveFromRegistry(provider);
+    }
+    const body = (await resp.json()) as { data?: KilocodeGatewayModel[] };
+    const data = body.data ?? [];
+    if (!data.length) return saveFromRegistry(provider);
+
+    // Always include the registry-listed premium IDs even if KiloCode renames or
+    // moves them to a private catalog; they keep working as long as the gateway
+    // accepts them as model params.
+    const liveIds = new Set(data.map((m) => m.id));
+    const merged = [...data];
+    for (const m of provider.models) {
+      if (!liveIds.has(m.id)) {
+        merged.push({ id: m.id, name: m.name, isFree: false });
+      }
+    }
+
+    const models = merged.map((m) =>
+      buildModelInfo(provider, m.id, m.name || formatModelName(m.id), m.pricing),
+    );
+
+    saveProviderModels(
+      provider.id,
+      models.map((m) => ({
+        id: m.id,
+        name: m.name,
+        is_free: m.is_free,
+        free_source: m.free_source,
+        free_verified_at: m.last_verified_at,
+      })),
+    );
+
+    return { provider: provider.id, models, source: "api" };
+  } catch (err) {
+    console.error("Model fetch error for kilocode:", err);
+    return saveFromRegistry(provider);
+  }
+}
 
 function saveFromRegistry(provider: Provider): FetchModelsResult {
   const models = provider.models.map((m) => buildModelInfo(provider, m.id, m.name));

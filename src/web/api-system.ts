@@ -1,10 +1,11 @@
+import { openSync } from "node:fs";
 import { estimateCostUSD } from "../constants.ts";
 import { getConnectionCountByProvider, listAccounts } from "../db/accounts.ts";
 import { db, getProxyPort, getSetting, getStickyLimit, getStrategy, setSetting } from "../db/index.ts";
 import { getConnectionCountForPool, listProxyPools } from "../db/pools.ts";
 import { listProviderPorts } from "../db/ports.ts";
 import { getUsageByAccount, getUsageByModel, getUsageTotals } from "../db/usage.ts";
-import { isRunning, readPid, removePid } from "../daemon/index.ts";
+import { isRunning, LOG_FILE, readPid, removePid } from "../daemon/index.ts";
 import { PROVIDERS } from "../providers/registry.ts";
 import { clearModelLocks, getActiveModelLocks } from "../rotator/lock.ts";
 import { errorResponse, handleApiError, json, readJson } from "./api-http.ts";
@@ -159,6 +160,26 @@ export function handleProxyStop(): Response {
     }
     process.exit(0);
   }, 300);
+  return json({ ok: true });
+}
+
+export function handleProxyRestart(): Response {
+  // The dashboard runs inside the daemon, so we can't both kill ourselves
+  // and bring a new daemon up from the same process. Spawn a detached
+  // `serve restart` helper that owns the kill→wait→respawn dance, then
+  // exit shortly after responding so it can take over the port.
+  try {
+    const logFd = openSync(LOG_FILE, "a");
+    const child = Bun.spawn(["bun", Bun.main, "serve", "restart"], {
+      detached: true,
+      stdio: ["ignore", logFd, logFd],
+    });
+    child.unref();
+  } catch (err) {
+    return errorResponse(500, `Failed to spawn restart helper: ${(err as Error).message}`);
+  }
+
+  setTimeout(() => process.exit(0), 300);
   return json({ ok: true });
 }
 

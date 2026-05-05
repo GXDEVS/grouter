@@ -112,7 +112,7 @@ export async function pickProviderAndModel(
       .flatMap((p) => {
         const models = getModelsForProvider(p.id);
         return models.map((m) => ({
-          name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(p.name + " · " + m.name)}${m.is_free ? chalk.green(" FREE") : ""}`,
+          name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(p.name + " · " + m.name)}${freeBadgeFor(p.id, m.id, m.is_free)}`,
           value: `${p.id}/${m.id}`,
         }));
       });
@@ -130,12 +130,24 @@ export async function pickProviderAndModel(
   const port = getProviderPort(p.id) ?? routerPort;
   await fetchAndSaveProviderModels(p.id).catch(() => null);
   const modelChoices = getModelsForProvider(p.id).map((m) => ({
-    name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(m.name)}${m.is_free ? chalk.green(" FREE") : ""}`,
+    name: `${chalk.cyan(m.id.padEnd(42))} ${chalk.gray(m.name)}${freeBadgeFor(p.id, m.id, m.is_free)}`,
     value: m.id,
   }));
   const model = await pickModel(modelChoices, `Which ${p.name} model?`);
 
   return { providerId: p.id, port, model };
+}
+
+function isKilocodeTrueFreeId(id: string): boolean {
+  return id.endsWith(":free") || id === "kilo-auto/free" || id === "openrouter/free";
+}
+
+function freeBadgeFor(providerId: string, modelId: string, isFree: boolean): string {
+  if (!isFree) return "";
+  if (providerId === "kilocode" && !isKilocodeTrueFreeId(modelId)) {
+    return chalk.yellow(" $ credits");
+  }
+  return chalk.green(" FREE");
 }
 
 export interface UpOptions {
@@ -203,6 +215,28 @@ export function printActiveConfig(t: ResolvedTarget): void {
   console.log(`    ${chalk.gray("model")}    ${chalk.cyan(t.model)}`);
   console.log(`    ${chalk.gray("endpoint")} ${chalk.white(t.baseURL)}`);
   console.log(`    ${chalk.gray("api key")}  ${chalk.white(t.apiKey)}`);
+  printPaidModelWarning(t);
+}
+
+/**
+ * KiloCode markets a "free OAuth tier" but most premium models (Anthropic
+ * Claude family, kilo-auto/frontier, kilo-auto/balanced, etc.) actually
+ * consume the ~$20 of signup credits the account ships with — those balances
+ * burn fast on Opus/Sonnet. The genuinely free models end with ":free" or are
+ * "kilo-auto/free". We warn before the user wires the model into their tool.
+ */
+function printPaidModelWarning(t: ResolvedTarget): void {
+  if (t.providerId !== "kilocode") return;
+  const id = t.model;
+  const isTrueFreeId = id.endsWith(":free") || id === "kilo-auto/free" || id === "openrouter/free";
+  if (isTrueFreeId) return;
+  console.log("");
+  console.log(`  ${chalk.yellow("⚠")}  ${chalk.bold.yellow("KiloCode credits warning")}`);
+  console.log(`     ${chalk.gray("Apesar do badge")} ${chalk.green("FREE")}${chalk.gray(", o modelo")} ${chalk.cyan(id)} ${chalk.gray("não é gratuito por tempo")}`);
+  console.log(`     ${chalk.gray("ilimitado — ele consome os ~$20 de créditos que vêm no signup da")}`);
+  console.log(`     ${chalk.gray("KiloCode. O saldo termina rápido em modelos Anthropic.")}`);
+  console.log(`     ${chalk.gray("Para uso ilimitado, escolha modelos com sufixo")} ${chalk.cyan(":free")} ${chalk.gray("ou")}`);
+  console.log(`     ${chalk.cyan("kilo-auto/free")} ${chalk.gray("/ ")}${chalk.cyan("openrouter/free")}${chalk.gray(".")}`);
 }
 
 export function printWriteReport(report: WriteReport): void {

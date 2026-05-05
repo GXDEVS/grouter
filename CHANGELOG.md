@@ -28,6 +28,28 @@ to surface release notes and notify when a newer version is available.
     already configured one.
   Each adapter supports the same flags as `up openclaude` — `--provider`,
   `--model`, `--port`, `--no-interactive`, `--remove`.
+- **Restart server button** in the dashboard topbar — connected to the
+  existing Stop server control as a button group (refresh icon on the
+  right). Clicking it hits a new `POST /api/proxy/restart` endpoint that
+  spawns a detached `serve restart` helper (since the dashboard runs
+  inside the daemon and can't both kill itself and respawn). The button
+  spins, both controls disable, auto-poll pauses, and the UI polls
+  `/api/status` every 600ms (25s deadline) until the new daemon answers,
+  then resumes auto-poll.
+- **Custom Providers CRUD on the dashboard** — the existing "Add custom
+  provider" flow is now a full section under the Providers tab with
+  inline cards. Each custom provider can be edited (name, base URL,
+  iconify icon, accent color) or removed. Removing also drops every
+  connection registered under that provider and releases the per-provider
+  port. New endpoints: `PATCH /api/providers/custom/:id` and
+  `DELETE /api/providers/custom/:id`. Modal gains an icon-preset grid
+  (12 iconify IDs) plus a color picker with quick-swatch presets.
+- **KiloCode live model catalog** — `fetchAndSaveProviderModels("kilocode")`
+  now hits `https://api.kilo.ai/api/gateway/models` and translates the
+  upstream `{ data[].isFree, data[].pricing }` schema into our internal
+  shape (KiloCode does not serve OpenAI's `/v1/models`). Registry-listed
+  premium IDs (Anthropic Opus/Sonnet/Haiku, kilo-auto/frontier) are
+  always merged in even when missing from the gateway response.
 
 ### Changed
 - **`up` wizard refactor** — provider/model picker extracted into
@@ -35,6 +57,26 @@ to surface release notes and notify when a newer version is available.
   `printActiveConfig`, `printWriteReport`). Each platform adapter is now ~150
   lines focused only on its own config-file shape; `openclaude.ts` keeps the
   shell-rc / settings.json injection it always had.
+- **KiloCode credits warning** — KiloCode markets a "free OAuth tier"
+  but premium models (Anthropic Claude family, `kilo-auto/frontier`)
+  consume the ~$20 of signup credits, which burn fast on Opus/Sonnet. The
+  CLI picker now shows `$ credits` next to those entries instead of
+  `FREE`, `up <platform>` prints a yellow warning block before writing
+  the config, and the dashboard provider modal shows a credits banner
+  explaining which models stay free (`:free` suffix, `kilo-auto/free`,
+  `openrouter/free`) versus which consume credits. KiloCode's registry
+  list was also refreshed to reflect the 12 currently-free models plus
+  Opus/Sonnet/Haiku 4.6.
+- **Dashboard UI polish**:
+  - Language pickers (desktop sidebar + mobile drawer) now show the
+    country flag of the selected locale via `circle-flags:*` instead of
+    a generic globe — `us` for English, `br` for Portuguese, `cn` for
+    Chinese — and update on switch.
+  - The "view models" button in the Providers tab now uses
+    `solar:settings-bold-duotone` instead of the list icon.
+  - The footer version (`v5.6.0`) is now rendered as a pill badge with
+    the brand teal border + soft fill, so it reads as a tag rather than
+    inline text.
 
 ## [5.6.0] - 2026-05-04
 

@@ -3,17 +3,21 @@ import {
   addApiKeyConnection,
   getConnectionCountByProvider,
   listConnectionsByProvider,
+  removeAccount,
 } from "../db/accounts.ts";
-import { getProviderPort } from "../db/ports.ts";
+import { getProviderPort, releaseProviderPortIfEmpty } from "../db/ports.ts";
 import { getSetting, setSetting } from "../db/index.ts";
 import { clearModelsCache, ensureProviderServer } from "../proxy/server.ts";
 import { fetchAndSaveProviderModels, getModelsForProvider } from "../providers/model-fetcher.ts";
 import {
   getProviderLock,
   getTopFreeProviderRank,
+  isCustomProviderId,
   providerHasFreeModelsById,
   PROVIDERS,
+  removeCustomProvider,
   saveCustomProvider,
+  updateCustomProvider,
   type Provider,
 } from "../providers/registry.ts";
 import { errorResponse, handleApiError, json, readJson } from "./api-http.ts";
@@ -45,6 +49,8 @@ export function handleGetProviders(): Response {
       color: provider.color,
       logo: provider.logo ?? null,
       apiKeyUrl: provider.apiKeyUrl ?? null,
+      baseUrl: isCustomProviderId(provider.id) ? provider.baseUrl : null,
+      isCustom: isCustomProviderId(provider.id),
       deprecated: provider.deprecated ?? false,
       deprecationReason: provider.deprecationReason ?? null,
       underConstruction: provider.underConstruction ?? false,
@@ -84,9 +90,30 @@ export function handleGetProviderConnections(id: string): Response {
   });
 }
 
+function sanitizeColor(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const v = input.trim();
+  return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : null;
+}
+
+function sanitizeIcon(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const v = input.trim();
+  if (!v) return null;
+  // Allow URLs (http/https) or iconify id (e.g. "solar:server-bold-duotone").
+  if (v.startsWith("/") || v.startsWith("http")) return v;
+  if (/^[a-z0-9-]+:[a-z0-9._-]+$/i.test(v)) return v;
+  return null;
+}
+
 export async function handleCreateCustomProvider(req: Request): Promise<Response> {
   try {
-    const body = await readJson<{ name?: string; url?: string }>(req);
+    const body = await readJson<{
+      name?: string;
+      url?: string;
+      logo?: string;
+      color?: string;
+    }>(req);
     if (!body.name) return errorResponse(400, "name is required");
     if (!body.url) return errorResponse(400, "url is required");
 
@@ -97,8 +124,9 @@ export async function handleCreateCustomProvider(req: Request): Promise<Response
       description: "Custom provider",
       category: "apikey",
       authType: "apikey",
-      color: "#94a3b8",
+      color: sanitizeColor(body.color) ?? "#94a3b8",
       baseUrl: body.url,
+      logo: sanitizeIcon(body.logo) ?? "solar:server-square-bold-duotone",
       models: [{ id: "default", name: "Default" }],
     };
 
@@ -107,6 +135,54 @@ export async function handleCreateCustomProvider(req: Request): Promise<Response
   } catch (err) {
     return handleApiError(err);
   }
+}
+
+export async function handleUpdateCustomProvider(id: string, req: Request): Promise<Response> {
+  if (!isCustomProviderId(id)) return errorResponse(400, "Not a custom provider");
+  if (!PROVIDERS[id]) return errorResponse(404, `Unknown provider: ${id}`);
+  try {
+    const body = await readJson<{
+      name?: string;
+      url?: string;
+      logo?: string;
+      color?: string;
+    }>(req);
+
+    const patch: Partial<Pick<Provider, "name" | "baseUrl" | "color" | "logo">> = {};
+    if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim();
+    if (typeof body.url === "string" && body.url.trim()) {
+      if (!body.url.startsWith("http")) return errorResponse(400, "url must start with http:// or https://");
+      patch.baseUrl = body.url.trim();
+    }
+    const color = sanitizeColor(body.color);
+    if (color) patch.color = color;
+    if (body.logo !== undefined) {
+      const logo = sanitizeIcon(body.logo);
+      patch.logo = logo ?? "solar:server-square-bold-duotone";
+    }
+
+    const updated = updateCustomProvider(id, patch);
+    if (!updated) return errorResponse(404, `Custom provider not found: ${id}`);
+    clearModelsCache();
+    return json(updated);
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
+
+export function handleDeleteCustomProvider(id: string): Response {
+  if (!isCustomProviderId(id)) return errorResponse(400, "Not a custom provider");
+  if (!PROVIDERS[id]) return errorResponse(404, `Unknown provider: ${id}`);
+
+  // Drop any connections registered under this custom provider.
+  const connections = listConnectionsByProvider(id);
+  for (const conn of connections) removeAccount(conn.id);
+  releaseProviderPortIfEmpty(id);
+
+  const ok = removeCustomProvider(id);
+  if (!ok) return errorResponse(404, `Custom provider not found: ${id}`);
+  clearModelsCache();
+  return json({ ok: true, removed: id, removedConnections: connections.length });
 }
 
 export async function handleAddConnection(req: Request): Promise<Response> {
