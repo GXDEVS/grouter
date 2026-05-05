@@ -38,6 +38,28 @@
     .btn-server-group .btn-server.in-group-right.power-restarting { border-color: #0AB9DC !important; color: #0AB9DC !important; background: rgba(10,185,220,0.1) !important; cursor: default; }
     .btn-server-group .btn-server.in-group-right.power-restarting iconify-icon { animation: spin 0.85s linear infinite; }
     @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+    /* Update banner card (sidebar / mobile drawer) */
+    .upd-card { display: flex; flex-direction: column; gap: 0.5rem; aspect-ratio: 1 / 1; padding: 0.7rem; margin-bottom: 0.75rem; border-radius: 14px; background: linear-gradient(155deg, rgba(245,158,11,0.10), rgba(245,158,11,0.03) 60%, rgba(15,15,15,0.4)); border: 1px solid rgba(245,158,11,0.35); position: relative; box-shadow: 0 0 0 1px rgba(245,158,11,0.05) inset; }
+    .upd-card .upd-dismiss { position: absolute; top: 0.35rem; right: 0.35rem; background: transparent; border: none; color: #6b7280; cursor: pointer; padding: 0.1rem; line-height: 0; transition: color 0.15s; }
+    .upd-card .upd-dismiss:hover { color: #fbbf24; }
+    .upd-card .upd-dismiss iconify-icon { font-size: 0.95rem; }
+    .upd-icon-wrap { width: 2rem; height: 2rem; border-radius: 10px; background: rgba(245,158,11,0.18); display: inline-flex; align-items: center; justify-content: center; color: #f59e0b; }
+    .upd-icon-wrap iconify-icon { font-size: 1.2rem; animation: upd-pulse 2.4s ease-in-out infinite; }
+    @keyframes upd-pulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+    .upd-title { font-size: 0.74rem; font-weight: 700; color: #fbbf24; line-height: 1.2; }
+    .upd-version { font-size: 0.62rem; color: #9ca3af; font-family: 'Courier New', monospace; line-height: 1.2; margin-top: 0.15rem; letter-spacing: 0.02em; }
+    .upd-version .upd-arrow { color: #f59e0b; padding: 0 0.2rem; }
+    .upd-version .upd-latest { color: #22c55e; font-weight: 700; }
+    .upd-tabs { display: flex; gap: 0.25rem; }
+    .upd-tab { flex: 1; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; padding: 0.22rem 0.3rem; border-radius: 6px; cursor: pointer; border: 1px solid #2a2a2a; background: transparent; color: #6b7280; transition: all 0.15s; }
+    .upd-tab:hover { color: #e8e8e8; border-color: #3a3a3a; }
+    .upd-tab.upd-tab-active { background: rgba(245,158,11,0.12); color: #fbbf24; border-color: rgba(245,158,11,0.45); }
+    .upd-cmd-row { display: flex; align-items: center; gap: 0.3rem; background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 8px; padding: 0.35rem 0.45rem; min-height: 1.85rem; }
+    .upd-cmd { flex: 1; min-width: 0; font-size: 0.62rem; color: #e8e8e8; font-family: 'Courier New', monospace; word-break: break-all; line-height: 1.25; user-select: all; }
+    .upd-copy { background: transparent; border: none; color: #6b7280; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0.15rem; transition: color 0.15s; }
+    .upd-copy:hover { color: #0AB9DC; }
+    .upd-copy.copied { color: #22c55e; }
+    .upd-copy iconify-icon { font-size: 0.95rem; }
     @keyframes power-pulse { from { box-shadow: 0 0 0 0 rgba(239,68,68,0.25); } to { box-shadow: 0 0 0 6px rgba(239,68,68,0); } }
     @keyframes spin-once { to { transform: rotate(360deg); } }
     .spin-once iconify-icon { display:inline-flex; animation: spin-once 0.5s ease-out; }
@@ -170,14 +192,7 @@
 </head>
 <body>
 
-<!-- UPDATE BANNER -->
-<div id="dash-update-banner" class="hidden" style="position:fixed;top:0;left:0;right:0;z-index:100;background:#1a1a0a;border-bottom:1px solid rgba(245,158,11,0.4);padding:0.5rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
-  <div style="display:flex;align-items:center;gap:0.625rem;">
-    <iconify-icon icon="solar:bell-bold-duotone" style="color:#f59e0b;font-size:1rem;flex-shrink:0;"></iconify-icon>
-    <span id="dash-update-msg" style="font-size:0.8rem;color:#fbbf24;font-weight:500;"></span>
-  </div>
-  <button onclick="document.getElementById('dash-update-banner').classList.add('hidden')" style="background:transparent;border:none;color:#6b7280;cursor:pointer;font-size:1.1rem;line-height:1;flex-shrink:0;">✕</button>
-</div>
+<!-- (Update banner now lives inside the sidebar; see #upd-card-dash / #upd-card-mob) -->
 
 <!-- LOADING OVERLAY -->
 <div id="dash-loading" style="position:fixed;inset:0;background:#121212;z-index:9999;display:flex;align-items:center;justify-content:center;">
@@ -208,6 +223,35 @@
       </button>
     </nav>
     <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
+      <!-- Update card (square; shown only when a newer version is available) -->
+      <div id="upd-card-dash" class="upd-card hidden" data-surface="dash">
+        <button class="upd-dismiss" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">
+          <iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon>
+        </button>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
+          <div style="min-width:0;">
+            <p class="upd-title" data-i18n="update_title">Update available</p>
+            <p class="upd-version" data-upd-version>
+              <span data-upd-current>—</span>
+              <span class="upd-arrow">→</span>
+              <span class="upd-latest" data-upd-latest>—</span>
+            </p>
+          </div>
+        </div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:0.4rem;">
+          <div class="upd-tabs" role="tablist">
+            <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
+            <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
+          </div>
+          <div class="upd-cmd-row">
+            <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
+            <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
+              <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
+            </button>
+          </div>
+        </div>
+      </div>
       <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
         <iconify-icon id="lang-flag-dash" icon="circle-flags:us" style="font-size:15px;flex-shrink:0;border-radius:50%;"></iconify-icon>
         <select class="lang-select" style="width:100%;" id="lang-select-dash" onchange="setLang(this.value)">
@@ -824,6 +868,35 @@
   <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
   <!-- Language + links -->
   <div style="padding:0.875rem;">
+    <!-- Update card (square; shown only when a newer version is available) -->
+    <div id="upd-card-mob" class="upd-card hidden" data-surface="mob" style="max-width:14rem;">
+      <button class="upd-dismiss" onclick="dismissUpdateBanner()" title="Dismiss" aria-label="Dismiss">
+        <iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon>
+      </button>
+      <div style="display:flex;align-items:center;gap:0.5rem;">
+        <span class="upd-icon-wrap"><iconify-icon icon="solar:cloud-arrow-down-bold-duotone"></iconify-icon></span>
+        <div style="min-width:0;">
+          <p class="upd-title" data-i18n="update_title">Update available</p>
+          <p class="upd-version">
+            <span data-upd-current>—</span>
+            <span class="upd-arrow">→</span>
+            <span class="upd-latest" data-upd-latest>—</span>
+          </p>
+        </div>
+      </div>
+      <div style="margin-top:auto;display:flex;flex-direction:column;gap:0.4rem;">
+        <div class="upd-tabs" role="tablist">
+          <button class="upd-tab upd-tab-active" data-upd-tab="bun" onclick="setUpdateTab('bun')">BUN</button>
+          <button class="upd-tab" data-upd-tab="npm" onclick="setUpdateTab('npm')">NPM</button>
+        </div>
+        <div class="upd-cmd-row">
+          <code class="upd-cmd" data-upd-cmd>bun install -g grouter-auth@latest</code>
+          <button class="upd-copy" onclick="copyUpdateCmd(this)" title="Copy command" aria-label="Copy command">
+            <iconify-icon icon="solar:copy-bold-duotone"></iconify-icon>
+          </button>
+        </div>
+      </div>
+    </div>
     <div style="display:flex;align-items:center;gap:0.4rem;margin-bottom:0.75rem;">
       <iconify-icon id="lang-flag-mob" icon="circle-flags:us" style="font-size:15px;flex-shrink:0;border-radius:50%;"></iconify-icon>
       <select class="lang-select" style="width:100%;" id="lang-select-mob" onchange="setLang(this.value)">
@@ -953,6 +1026,7 @@ const I18N = {
     custom_err_failed:'Failed: {err}',custom_err_network:'Network error: {err}',
     providers_custom_title:'Custom Providers',providers_custom_add:'New',
     connect_apikey_required:'API key is required.',connect_failed:'Failed to connect.',
+    update_title:'Update available',update_copy_tip:'Copy command',update_dismiss:'Dismiss',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -1035,6 +1109,7 @@ const I18N = {
     custom_err_failed:'Falha: {err}',custom_err_network:'Erro de rede: {err}',
     providers_custom_title:'Provedores Customizados',providers_custom_add:'Novo',
     connect_apikey_required:'API key e obrigatoria.',connect_failed:'Falha ao conectar.',
+    update_title:'Atualização disponível',update_copy_tip:'Copiar comando',update_dismiss:'Dispensar',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -1117,10 +1192,82 @@ const I18N = {
     custom_err_failed:'失败：{err}',custom_err_network:'网络错误：{err}',
     providers_custom_title:'自定义提供商',providers_custom_add:'新建',
     connect_apikey_required:'API 密钥为必填项。',connect_failed:'连接失败。',
+    update_title:'有可用更新',update_copy_tip:'复制命令',update_dismiss:'关闭',
   }
 };
 
-// ── Version update banner in dashboard ───────────────────────────────────────
+// ── Version update banner in sidebar ─────────────────────────────────────────
+const UPD_DISMISS_KEY = 'grouter-upd-dismissed';
+const UPD_TAB_KEY = 'grouter-upd-tab';
+const UPD_CMDS = {
+  bun: 'bun install -g grouter-auth@latest',
+  npm: 'npm install -g grouter-auth@latest',
+};
+let _updLatest = null;
+
+function _updEachCard(fn) {
+  ['upd-card-dash', 'upd-card-mob'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) fn(el);
+  });
+}
+
+function _updCurrentTab() {
+  try { return localStorage.getItem(UPD_TAB_KEY) || 'bun'; } catch { return 'bun'; }
+}
+
+function setUpdateTab(which) {
+  if (which !== 'bun' && which !== 'npm') return;
+  try { localStorage.setItem(UPD_TAB_KEY, which); } catch {}
+  const cmd = UPD_CMDS[which] || UPD_CMDS.bun;
+  _updEachCard((card) => {
+    card.querySelectorAll('[data-upd-tab]').forEach((tab) => {
+      tab.classList.toggle('upd-tab-active', tab.dataset.updTab === which);
+    });
+    const cmdEl = card.querySelector('[data-upd-cmd]');
+    if (cmdEl) cmdEl.textContent = cmd;
+    const copyBtn = card.querySelector('.upd-copy');
+    if (copyBtn) {
+      copyBtn.classList.remove('copied');
+      const icon = copyBtn.querySelector('iconify-icon');
+      if (icon) icon.setAttribute('icon', 'solar:copy-bold-duotone');
+    }
+  });
+}
+
+async function copyUpdateCmd(btn) {
+  const cmd = UPD_CMDS[_updCurrentTab()] || UPD_CMDS.bun;
+  try {
+    await navigator.clipboard.writeText(cmd);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = cmd;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch {}
+    document.body.removeChild(ta);
+  }
+  if (btn) {
+    btn.classList.add('copied');
+    const icon = btn.querySelector('iconify-icon');
+    if (icon) icon.setAttribute('icon', 'solar:check-circle-bold-duotone');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      const ic = btn.querySelector('iconify-icon');
+      if (ic) ic.setAttribute('icon', 'solar:copy-bold-duotone');
+    }, 1600);
+  }
+}
+
+function dismissUpdateBanner() {
+  if (_updLatest) {
+    try { localStorage.setItem(UPD_DISMISS_KEY, _updLatest); } catch {}
+  }
+  _updEachCard((card) => card.classList.add('hidden'));
+}
+
 async function checkDashboardVersion() {
   try {
     const res = await fetch('/api/version');
@@ -1136,13 +1283,26 @@ async function checkDashboardVersion() {
       }
     } catch {}
 
-    if (!latest || latest === current) return;
-    const banner = document.getElementById('dash-update-banner');
-    const msg    = document.getElementById('dash-update-msg');
-    if (banner && msg) {
-      msg.textContent = tr('update_available', {latest, current});
-      banner.classList.remove('hidden');
+    if (!latest || latest === current) {
+      _updLatest = null;
+      _updEachCard((card) => card.classList.add('hidden'));
+      return;
     }
+
+    _updLatest = latest;
+    let dismissed = null;
+    try { dismissed = localStorage.getItem(UPD_DISMISS_KEY); } catch {}
+    if (dismissed === latest) return;
+
+    const fmt = (v) => (v && String(v).startsWith('v') ? String(v) : `v${v}`);
+    _updEachCard((card) => {
+      const cur = card.querySelector('[data-upd-current]');
+      const lat = card.querySelector('[data-upd-latest]');
+      if (cur) cur.textContent = fmt(current);
+      if (lat) lat.textContent = fmt(latest);
+      card.classList.remove('hidden');
+    });
+    setUpdateTab(_updCurrentTab());
   } catch {}
 }
 
@@ -1184,6 +1344,10 @@ function tr(key, vars) {
 
 function applyI18n() {
   const s = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+  // Update card titles + copy-tooltip across both surfaces
+  document.querySelectorAll('.upd-card .upd-title').forEach((el) => { el.textContent = tr('update_title'); });
+  document.querySelectorAll('.upd-card .upd-copy').forEach((el) => { el.title = tr('update_copy_tip'); });
+  document.querySelectorAll('.upd-card .upd-dismiss').forEach((el) => { el.title = tr('update_dismiss'); });
   s('nav-overview-label',T.nav_overview);s('nav-accounts-label',T.nav_accounts);s('nav-settings-label',T.nav_settings);
   s('btn-add-acc',T.btn_add_acc);s('btn-add-acc-sm',T.btn_add_acc);s('btn-add-acc-full',T.btn_add_acc);
   s('kpi-lbl-accounts',T.kpi_accounts);s('kpi-lbl-active',T.kpi_active);

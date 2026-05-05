@@ -79,6 +79,12 @@ to surface release notes and notify when a newer version is available.
   - The footer version (`v5.6.0`) is now rendered as a pill badge with
     the brand teal border + soft fill, so it reads as a tag rather than
     inline text.
+  - **Update banner relocated** — the old fixed top bar is gone. Now a
+    1:1 square card in the sidebar (above the language picker) with a
+    Solar bold-duotone download icon, `vCURRENT → vLATEST` line, a
+    BUN/NPM tab toggle, and a copy button that ships the right install
+    command for the selected runtime. Dismiss is per-version (a new
+    `latest` re-shows the card). Mirrored in the mobile drawer.
 
 ## [5.6.0] - 2026-05-04
 
