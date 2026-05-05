@@ -24,6 +24,7 @@ export {
   handleAddConnection,
   handleCreateCustomProvider,
   handleCreateProxyPool,
+  handleDeleteCustomProvider,
   handleDeleteProxyPool,
   handleGetProviderConnections,
   handleGetProviderModels,
@@ -33,11 +34,13 @@ export {
   handleRefreshProviderModels,
   handleRefreshProviderModelsBatch,
   handleTestProxyPool,
+  handleUpdateCustomProvider,
   handleUpdateProxyPool,
 } from "./api-providers.ts";
 
 export {
   handleGetConfig,
+  handleProxyRestart,
   handleProxyStop,
   handleSetConfig,
   handleSetupDone,
