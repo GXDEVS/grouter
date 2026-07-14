@@ -373,6 +373,10 @@
             <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">RTK Savings</p>
             <p id="stats-rtk" style="font-size:1.5rem;font-weight:800;color:#a855f7;">—</p>
           </div>
+          <div style="text-align:center;">
+            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Caveman</p>
+            <p id="stats-caveman" style="font-size:1.5rem;font-weight:800;color:#ef4444;">—</p>
+          </div>
         </div>
         <div id="stats-providers" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
       </div>
@@ -593,6 +597,41 @@
                 <input id="cost-warn" type="number" step="0.01" min="0" value="0.10" onchange="saveCostConfig()"
                   style="width:5rem;height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.85rem;text-align:center;outline:none;" />
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Caveman -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+            <iconify-icon icon="solar:fire-bold-duotone" style="color:#ef4444;font-size:1.1rem;"></iconify-icon>
+            <h3 style="font-weight:600;font-size:0.95rem;">Caveman</h3>
+          </div>
+          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Compress prose in prompts to save ~75% tokens while keeping technical accuracy.</p>
+          
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
+            <div>
+              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p style="font-size:0.75rem;color:#6b7280;">Remove filler words, hedge phrases, and verbose prose.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleCaveman()">
+              <div id="caveman-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
+                <div id="caveman-knob" style="width:1rem;height:1rem;border-radius:50%;background:#fff;position:absolute;top:0.125rem;left:1.25rem;transition:all 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Intensity</p>
+                <p style="font-size:0.75rem;color:#6b7280;">How aggressively to compress prose.</p>
+              </div>
+              <select id="caveman-intensity" onchange="saveCavemanConfig()" style="height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.85rem;padding:0 0.5rem;outline:none;">
+                <option value="lite">Lite</option>
+                <option value="full" selected>Full</option>
+                <option value="ultra">Ultra</option>
+              </select>
             </div>
           </div>
         </div>
@@ -2195,6 +2234,7 @@ async function savePort() {
 
 let rtkEnabled = true;
 let costPredictorEnabled = true;
+let cavemanEnabled = false;
 
 function toggleRTK() {
   rtkEnabled = !rtkEnabled;
@@ -2243,6 +2283,29 @@ function saveCostConfig() {
   });
 }
 
+function toggleCaveman() {
+  cavemanEnabled = !cavemanEnabled;
+  const toggle = document.getElementById('caveman-toggle');
+  const knob = document.getElementById('caveman-knob');
+  if (cavemanEnabled) {
+    toggle.style.background = '#22c55e';
+    knob.style.left = '1.25rem';
+  } else {
+    toggle.style.background = '#2a2a2a';
+    knob.style.left = '0.125rem';
+  }
+  saveCavemanConfig();
+}
+
+function saveCavemanConfig() {
+  const intensity = document.getElementById('caveman-intensity').value;
+  fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ caveman: cavemanEnabled ? 'on' : 'off', cavemanIntensity: intensity })
+  });
+}
+
 async function loadStats() {
   const days = document.getElementById('stats-period').value;
   try {
@@ -2256,7 +2319,8 @@ async function loadStats() {
     document.getElementById('stats-requests').textContent = summary.totalRequests.toLocaleString();
     document.getElementById('stats-tokens').textContent = summary.totalTokens >= 1000000 ? (summary.totalTokens / 1000000).toFixed(1) + 'M' : summary.totalTokens.toLocaleString();
     document.getElementById('stats-cost').textContent = '$' + summary.totalCost.toFixed(2);
-    document.getElementById('stats-rtk').textContent = '—';
+    document.getElementById('stats-rtk').textContent = (summary.rtkSavings || 0) >= 1000 ? ((summary.rtkSavings || 0) / 1000).toFixed(1) + 'K' : (summary.rtkSavings || 0).toLocaleString();
+    document.getElementById('stats-caveman').textContent = (summary.cavemanSavings || 0) >= 1000 ? ((summary.cavemanSavings || 0) / 1000).toFixed(1) + 'K' : (summary.cavemanSavings || 0).toLocaleString();
     
     const providersDiv = document.getElementById('stats-providers');
     if (providers.length === 0) {

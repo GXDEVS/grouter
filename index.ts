@@ -254,7 +254,9 @@ program.command("config")
   .option("--cost-predictor <on|off>", "Enable/disable Cost Predictor")
   .option("--cost-threshold <number>", "Cost threshold for suggestions (dollars)")
   .option("--cost-warn <number>", "Cost warning threshold (dollars)")
-  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string }) => {
+  .option("--caveman <on|off>", "Enable/disable Caveman prose compression")
+  .option("--caveman-intensity <level>", "Caveman intensity: lite | full | ultra")
+  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string; caveman?: string; cavemanIntensity?: string }) => {
     const options: Parameters<typeof configCommand>[0] = {};
     if (opts.strategy === "fill-first" || opts.strategy === "round-robin") options.strategy = opts.strategy;
     if (opts.port) options.port = parseInt(opts.port, 10);
@@ -264,6 +266,8 @@ program.command("config")
     if (opts.costPredictor === "on" || opts.costPredictor === "off") options.costPredictor = opts.costPredictor;
     if (opts.costThreshold) options.costThreshold = parseFloat(opts.costThreshold);
     if (opts.costWarn) options.costWarn = parseFloat(opts.costWarn);
+    if (opts.caveman === "on" || opts.caveman === "off") options.caveman = opts.caveman;
+    if (opts.cavemanIntensity === "lite" || opts.cavemanIntensity === "full" || opts.cavemanIntensity === "ultra") options.cavemanIntensity = opts.cavemanIntensity;
     configCommand(options);
   });
 

@@ -27,6 +27,7 @@ import {
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
 import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk";
+import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT, type CavemanConfig } from "./caveman";
 import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor";
 
 export interface UpstreamRequest {
@@ -34,6 +35,7 @@ export interface UpstreamRequest {
   headers: Record<string, string>;
   body: Record<string, unknown>;
   rtkSavings?: number;
+  cavemanSavings?: number;
   costEstimate?: number;
 }
 
@@ -217,6 +219,17 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
     if (rtkResult.totalSaved > 0) {
       ctx.body = { ...ctx.body, messages: rtkResult.compressedMessages };
       rtkSavings = rtkResult.totalSaved;
+    }
+  }
+
+  // ── Caveman: compress prose to save tokens ─────────────────────────────────
+  let cavemanSavings = 0;
+  if (CAVEMAN_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const cavemanResult = cavemanCompress(messages, CAVEMAN_CONFIG_DEFAULT);
+    if (cavemanResult.totalSaved > 0) {
+      ctx.body = { ...ctx.body, messages: cavemanResult.compressedMessages };
+      cavemanSavings = cavemanResult.totalSaved;
     }
   }
 

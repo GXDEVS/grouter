@@ -468,6 +468,8 @@ export async function handleChatCompletions(req: Request, pinnedProvider?: strin
     const upstreamUrl = dispatch.req.url;
     const upstreamHeaders = dispatch.req.headers;
     const upstreamBody = dispatch.req.body;
+    const rtkSavings = dispatch.req.rtkSavings ?? 0;
+    const cavemanSavings = dispatch.req.cavemanSavings ?? 0;
     if (provider === "codex" && usedCodex401AccountHeaderRetry) {
       delete upstreamHeaders["ChatGPT-Account-ID"];
     }
@@ -1029,7 +1031,7 @@ fetchOptions.signal = abortController.signal;
             : extractUsageFromSSE(tail);
           logReq("POST", "/v1/chat/completions", 200, ms, { model: rawModel, account: label, rotated: rotations, tokens: usage?.total || undefined });
           if (usage) {
-            recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total });
+            recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: usage.prompt, completion_tokens: usage.completion, total_tokens: usage.total, provider, rtk_savings: rtkSavings, caveman_savings: cavemanSavings });
             if (clientKey) updateClientKeyUsage(clientKey.api_key, usage.total);
           }
         },
@@ -1143,7 +1145,7 @@ fetchOptions.signal = abortController.signal;
     const completionTok = rawUsage?.completion_tokens ?? 0;
     const totalTok = rawUsage?.total_tokens ?? (promptTok + completionTok);
     if (totalTok > 0) {
-      recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: promptTok, completion_tokens: completionTok, total_tokens: totalTok });
+      recordUsage({ account_id: selected.id, model: rawModel ?? "", prompt_tokens: promptTok, completion_tokens: completionTok, total_tokens: totalTok, provider, rtk_savings: rtkSavings, caveman_savings: cavemanSavings });
       if (clientKey) updateClientKeyUsage(clientKey.api_key, totalTok);
     }
     logReq("POST", "/v1/chat/completions", 200, Date.now() - start, { model: rawModel, account: label, rotated: rotations, tokens: totalTok || undefined });

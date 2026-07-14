@@ -48,9 +48,11 @@ export function formatStatsOutput(
     '',
     '📊 Usage Summary',
     '─'.repeat(50),
-    `  Requests:    ${formatNumber(summary.totalRequests)}`,
-    `  Tokens:      ${formatTokens(summary.totalTokens)} (prompt: ${formatTokens(summary.promptTokens)}, completion: ${formatTokens(summary.completionTokens)})`,
-    `  Cost:        ${formatCost(summary.totalCost)}`,
+    `  Requests:        ${formatNumber(summary.totalRequests)}`,
+    `  Tokens:          ${formatTokens(summary.totalTokens)} (prompt: ${formatTokens(summary.promptTokens)}, completion: ${formatTokens(summary.completionTokens)})`,
+    `  Cost:            ${formatCost(summary.totalCost)}`,
+    `  RTK Savings:     ${formatTokens(summary.rtkSavings)} tokens`,
+    `  Caveman Savings: ${formatTokens(summary.cavemanSavings)} tokens`,
     '',
   ];
 

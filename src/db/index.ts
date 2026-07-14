@@ -141,6 +141,10 @@ export function db(): Database {
     _db.exec(`ALTER TABLE usage_logs ADD COLUMN provider TEXT NOT NULL DEFAULT ''`);
   if (!usageCols.includes("cost"))
     _db.exec(`ALTER TABLE usage_logs ADD COLUMN cost REAL NOT NULL DEFAULT 0`);
+  if (!usageCols.includes("rtk_savings"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN rtk_savings INTEGER NOT NULL DEFAULT 0`);
+  if (!usageCols.includes("caveman_savings"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN caveman_savings INTEGER NOT NULL DEFAULT 0`);
 
   _db.exec(`
     CREATE TABLE IF NOT EXISTS client_keys (

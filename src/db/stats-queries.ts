@@ -8,6 +8,8 @@ export interface UsageSummary {
   totalCost: number;
   promptTokens: number;
   completionTokens: number;
+  rtkSavings: number;
+  cavemanSavings: number;
 }
 
 export interface DailyUsage {
@@ -37,13 +39,15 @@ export function getUsageSummary(days: number): UsageSummary {
   const since = new Date();
   since.setDate(since.getDate() - days);
   
-  const result = db.query(`
+  const result = db().query(`
     SELECT 
       COUNT(*) as totalRequests,
       COALESCE(SUM(prompt_tokens + completion_tokens), 0) as totalTokens,
       COALESCE(SUM(cost), 0) as totalCost,
       COALESCE(SUM(prompt_tokens), 0) as promptTokens,
-      COALESCE(SUM(completion_tokens), 0) as completionTokens
+      COALESCE(SUM(completion_tokens), 0) as completionTokens,
+      COALESCE(SUM(rtk_savings), 0) as rtkSavings,
+      COALESCE(SUM(caveman_savings), 0) as cavemanSavings
     FROM usage_logs
     WHERE created_at >= ?
   `).get(since.toISOString()) as any;
@@ -54,6 +58,8 @@ export function getUsageSummary(days: number): UsageSummary {
     totalCost: result?.totalCost || 0,
     promptTokens: result?.promptTokens || 0,
     completionTokens: result?.completionTokens || 0,
+    rtkSavings: result?.rtkSavings || 0,
+    cavemanSavings: result?.cavemanSavings || 0,
   };
 }
 
@@ -61,7 +67,7 @@ export function getDailyUsage(days: number): DailyUsage[] {
   const since = new Date();
   since.setDate(since.getDate() - days);
   
-  const results = db.query(`
+  const results = db().query(`
     SELECT 
       DATE(created_at) as date,
       COUNT(*) as requests,
@@ -85,7 +91,7 @@ export function getProviderBreakdown(days: number): ProviderBreakdown[] {
   const since = new Date();
   since.setDate(since.getDate() - days);
   
-  const totalResult = db.query(`
+  const totalResult = db().query(`
     SELECT COALESCE(SUM(cost), 0) as total
     FROM usage_logs
     WHERE created_at >= ?
@@ -93,7 +99,7 @@ export function getProviderBreakdown(days: number): ProviderBreakdown[] {
   
   const totalCost = totalResult?.total || 0;
   
-  const results = db.query(`
+  const results = db().query(`
     SELECT 
       provider,
       COUNT(*) as requests,
@@ -118,7 +124,7 @@ export function getModelBreakdown(days: number): ModelBreakdown[] {
   const since = new Date();
   since.setDate(since.getDate() - days);
   
-  const results = db.query(`
+  const results = db().query(`
     SELECT 
       model,
       provider,
