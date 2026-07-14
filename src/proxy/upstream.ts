@@ -17,7 +17,7 @@
 import { arch } from "node:os";
 import type { Connection } from "../types.ts";
 import { parseProviderData, decodeJwtPayload, mapPlatformOs } from "../utils.ts";
-import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG } from "../constants.ts";
+import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG, estimateCostUSD } from "../constants.ts";
 import { getProvider } from "../providers/registry.ts";
 import {
   openaiToClaude,
@@ -26,11 +26,15 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
+import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk";
+import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor";
 
 export interface UpstreamRequest {
   url: string;
   headers: Record<string, string>;
   body: Record<string, unknown>;
+  rtkSavings?: number;
+  costEstimate?: number;
 }
 
 export type UpstreamResult =
@@ -203,6 +207,29 @@ function buildGithub(ctx: BuildContext): UpstreamResult {
 
 export function buildUpstream(ctx: BuildContext): UpstreamResult {
   const provider = ctx.account.provider;
+  const model = (ctx.body.model as string) ?? "unknown";
+
+  // ── RTK Token Saver: compress tool_result content ──────────────────────────
+  let rtkSavings = 0;
+  if (RTK_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const rtkResult = compressMessages(messages, RTK_CONFIG_DEFAULT);
+    if (rtkResult.totalSaved > 0) {
+      ctx.body = { ...ctx.body, messages: rtkResult.compressedMessages };
+      rtkSavings = rtkResult.totalSaved;
+    }
+  }
+
+  // ── Cost Predictor: estimate cost before sending ───────────────────────────
+  let costEstimate = 0;
+  if (COST_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const estimate = estimateCost(messages, model, provider);
+    costEstimate = estimate.estimatedCost;
+    if (estimate.estimatedCost > COST_CONFIG_DEFAULT.warnThreshold) {
+      console.log(`[Cost] High cost estimate: $${estimate.estimatedCost.toFixed(4)} for ${model} on ${provider}`);
+    }
+  }
 
   // API key providers → plain OpenAI-compat
   if (ctx.account.auth_type === "apikey") {
