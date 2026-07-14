@@ -132,6 +132,16 @@ export function db(): Database {
   if (!cols.includes("provider_data"))
     _db.exec(`ALTER TABLE accounts ADD COLUMN provider_data TEXT`);
 
+  // Usage logs migrations for v6.0 features
+  const usageCols = _db.query<{ name: string }, [string]>(
+    "SELECT name FROM pragma_table_info(?)"
+  ).all("usage_logs").map(r => r.name);
+
+  if (!usageCols.includes("provider"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN provider TEXT NOT NULL DEFAULT ''`);
+  if (!usageCols.includes("cost"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN cost REAL NOT NULL DEFAULT 0`);
+
   _db.exec(`
     CREATE TABLE IF NOT EXISTS client_keys (
       api_key           TEXT PRIMARY KEY,
