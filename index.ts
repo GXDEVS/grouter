@@ -25,6 +25,7 @@ import { upOpenclaudeCommand, upOpenclaudeRemoveCommand } from "./src/commands/o
 import { upOpencodeCommand, upOpencodeRemoveCommand } from "./src/commands/opencode.ts";
 import { upClineCommand, upClineRemoveCommand } from "./src/commands/cline.ts";
 import { upOpenclawCommand, upOpenclawRemoveCommand } from "./src/commands/openclaw.ts";
+import { statsCommand } from "./src/commands/stats.ts";
 import { printUpdateBannerSync, scheduleUpdateCheck, CURRENT_VERSION } from "./src/update/checker.ts";
 
 const program = new Command()
@@ -234,6 +235,14 @@ program.command("_daemon", { hidden: true })
 program.command("status")
   .description("Show accounts health, rotation state, and active locks")
   .action(statusCommand);
+
+program.command("stats")
+  .description("Show usage statistics and cost breakdown")
+  .option("-p, --period <period>", "day | week | month", "week")
+  .option("--provider <provider>", "Filter by provider")
+  .option("--model <model>", "Filter by model")
+  .option("--json", "Output as JSON")
+  .action(statsCommand);
 
 program.command("config")
   .description("Show or update proxy configuration")
