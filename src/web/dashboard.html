@@ -348,7 +348,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
           <div style="display:flex;align-items:center;gap:0.5rem;">
             <iconify-icon icon="solar:chart-square-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
-            <h3 style="font-weight:600;font-size:0.95rem;">Usage Analytics</h3>
+            <h3 id="v6-usage-title" style="font-weight:600;font-size:0.95rem;">Usage Analytics</h3>
           </div>
           <select id="stats-period" onchange="loadStats()" style="background:#222;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.75rem;color:#e8e8e8;font-size:0.82rem;cursor:pointer;outline:none;">
             <option value="1">Last 24h</option>
@@ -370,11 +370,11 @@
             <p id="stats-cost" style="font-size:1.5rem;font-weight:800;color:#22c55e;">—</p>
           </div>
           <div style="text-align:center;">
-            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">RTK Savings</p>
+            <p id="v6-stats-rtk-label" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">RTK Savings</p>
             <p id="stats-rtk" style="font-size:1.5rem;font-weight:800;color:#a855f7;">—</p>
           </div>
           <div style="text-align:center;">
-            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Caveman</p>
+            <p id="v6-stats-caveman-label" style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Caveman</p>
             <p id="stats-caveman" style="font-size:1.5rem;font-weight:800;color:#ef4444;">—</p>
           </div>
         </div>
@@ -526,14 +526,14 @@
         <div class="card">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
             <iconify-icon icon="solar:compress-bold-duotone" style="color:#22c55e;font-size:1.1rem;"></iconify-icon>
-            <h3 style="font-weight:600;font-size:0.95rem;">RTK Token Saver</h3>
+            <h3 id="v6-rtk-title" style="font-weight:600;font-size:0.95rem;">RTK Token Saver</h3>
           </div>
-          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Auto-compress tool_result content to save 20-40% tokens per request.</p>
+          <p id="v6-rtk-desc" style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Auto-compress tool_result content to save 20-40% tokens per request.</p>
           
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
             <div>
-              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
-              <p style="font-size:0.75rem;color:#6b7280;">Compress tool outputs before sending to provider.</p>
+              <p id="v6-rtk-enabled" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p id="v6-rtk-enabled-desc" style="font-size:0.75rem;color:#6b7280;">Compress tool outputs before sending to provider.</p>
             </div>
             <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleRTK()">
               <div id="rtk-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
@@ -544,13 +544,13 @@
           
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
             <div>
-              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Aggressiveness</p>
+              <p id="v6-rtk-agg" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Aggressiveness</p>
               <p style="font-size:0.75rem;color:#6b7280;">Compression level for tool outputs.</p>
             </div>
             <select id="rtk-aggressiveness" onchange="saveRTKConfig()" style="background:#222;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.75rem;color:#e8e8e8;font-size:0.82rem;cursor:pointer;outline:none;">
-              <option value="conservative">Conservative</option>
-              <option value="balanced" selected>Balanced</option>
-              <option value="aggressive">Aggressive</option>
+              <option id="v6-rtk-opt-conservative" value="conservative">Conservative</option>
+              <option id="v6-rtk-opt-balanced" value="balanced" selected>Balanced</option>
+              <option id="v6-rtk-opt-aggressive" value="aggressive">Aggressive</option>
             </select>
           </div>
         </div>
@@ -559,14 +559,14 @@
         <div class="card">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
             <iconify-icon icon="solar:wallet-money-bold-duotone" style="color:#f59e0b;font-size:1.1rem;"></iconify-icon>
-            <h3 style="font-weight:600;font-size:0.95rem;">Cost Predictor</h3>
+            <h3 id="v6-cost-title" style="font-weight:600;font-size:0.95rem;">Cost Predictor</h3>
           </div>
-          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Estimate request cost before sending and suggest cheaper alternatives.</p>
+          <p id="v6-cost-desc" style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Estimate request cost before sending and suggest cheaper alternatives.</p>
           
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
             <div>
-              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
-              <p style="font-size:0.75rem;color:#6b7280;">Estimate cost and warn on expensive requests.</p>
+              <p id="v6-cost-enabled" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p id="v6-cost-enabled-desc" style="font-size:0.75rem;color:#6b7280;">Estimate cost and warn on expensive requests.</p>
             </div>
             <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleCostPredictor()">
               <div id="cost-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
@@ -578,8 +578,8 @@
           <div style="display:flex;flex-direction:column;gap:0.75rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
               <div>
-                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Suggestion Threshold</p>
-                <p style="font-size:0.75rem;color:#6b7280;">Suggest cheaper alternative above this cost.</p>
+                <p id="v6-cost-suggest" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Suggestion Threshold</p>
+                <p id="v6-cost-suggest-desc" style="font-size:0.75rem;color:#6b7280;">Suggest cheaper alternative above this cost.</p>
               </div>
               <div style="display:flex;align-items:center;gap:0.25rem;">
                 <span style="color:#6b7280;">$</span>
@@ -589,8 +589,8 @@
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
               <div>
-                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Warning Threshold</p>
-                <p style="font-size:0.75rem;color:#6b7280;">Log warning above this cost.</p>
+                <p id="v6-cost-warn" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Warning Threshold</p>
+                <p id="v6-cost-warn-desc" style="font-size:0.75rem;color:#6b7280;">Log warning above this cost.</p>
               </div>
               <div style="display:flex;align-items:center;gap:0.25rem;">
                 <span style="color:#6b7280;">$</span>
@@ -605,14 +605,14 @@
         <div class="card">
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
             <iconify-icon icon="solar:fire-bold-duotone" style="color:#ef4444;font-size:1.1rem;"></iconify-icon>
-            <h3 style="font-weight:600;font-size:0.95rem;">Caveman</h3>
+            <h3 id="v6-caveman-title" style="font-weight:600;font-size:0.95rem;">Caveman</h3>
           </div>
-          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Compress prose in prompts to save ~75% tokens while keeping technical accuracy.</p>
+          <p id="v6-caveman-desc" style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Compress prose in prompts to save ~75% tokens while keeping technical accuracy.</p>
           
           <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
             <div>
-              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
-              <p style="font-size:0.75rem;color:#6b7280;">Remove filler words, hedge phrases, and verbose prose.</p>
+              <p id="v6-caveman-enabled" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p id="v6-caveman-enabled-desc" style="font-size:0.75rem;color:#6b7280;">Remove filler words, hedge phrases, and verbose prose.</p>
             </div>
             <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleCaveman()">
               <div id="caveman-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
@@ -624,13 +624,13 @@
           <div style="display:flex;flex-direction:column;gap:0.75rem;">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
               <div>
-                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Intensity</p>
+                <p id="v6-caveman-intensity" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Intensity</p>
                 <p style="font-size:0.75rem;color:#6b7280;">How aggressively to compress prose.</p>
               </div>
               <select id="caveman-intensity" onchange="saveCavemanConfig()" style="height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.85rem;padding:0 0.5rem;outline:none;">
-                <option value="lite">Lite</option>
-                <option value="full" selected>Full</option>
-                <option value="ultra">Ultra</option>
+                <option id="v6-caveman-opt-lite" value="lite">Lite</option>
+                <option id="v6-caveman-opt-full" value="full" selected>Full</option>
+                <option id="v6-caveman-opt-ultra" value="ultra">Ultra</option>
               </select>
             </div>
           </div>
@@ -1167,6 +1167,17 @@ const I18N = {
     providers_custom_title:'Custom Providers',providers_custom_add:'New',
     connect_apikey_required:'API key is required.',connect_failed:'Failed to connect.',
     update_title:'Update available',update_copy_tip:'Copy command',update_dismiss:'Dismiss',
+    // v6.0 features
+    v6_usage_analytics:'Usage Analytics',v6_rtk_savings:'RTK Savings',v6_caveman_savings:'Caveman',
+    v6_rtk_title:'RTK Token Saver',v6_rtk_desc:'Compress tool responses to reduce token count.',
+    v6_rtk_enabled:'Enabled',v6_rtk_agg:'Aggressiveness',v6_rtk_balanced:'Balanced',v6_rtk_aggressive:'Aggressive',v6_rtk_conservative:'Conservative',
+    v6_cost_title:'Cost Predictor',v6_cost_desc:'Estimate request cost before sending and suggest cheaper alternatives.',
+    v6_cost_enabled:'Enabled',v6_cost_enabled_desc:'Estimate cost and warn on expensive requests.',
+    v6_cost_suggest:'Suggestion Threshold',v6_cost_suggest_desc:'Suggest cheaper alternative above this cost.',
+    v6_cost_warn:'Warning Threshold',v6_cost_warn_desc:'Log warning above this cost.',
+    v6_caveman_title:'Caveman',v6_caveman_desc:'Compress prose in prompts to save ~75% tokens while keeping technical accuracy.',
+    v6_caveman_enabled:'Enabled',v6_caveman_enabled_desc:'Remove filler words, hedge phrases, and verbose prose.',
+    v6_caveman_intensity:'Intensity',v6_caveman_lite:'Lite',v6_caveman_full:'Full',v6_caveman_ultra:'Ultra',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -1250,6 +1261,17 @@ const I18N = {
     providers_custom_title:'Provedores Customizados',providers_custom_add:'Novo',
     connect_apikey_required:'API key e obrigatoria.',connect_failed:'Falha ao conectar.',
     update_title:'Atualização disponível',update_copy_tip:'Copiar comando',update_dismiss:'Dispensar',
+    // v6.0 features
+    v6_usage_analytics:'Análise de Uso',v6_rtk_savings:'Economia RTK',v6_caveman_savings:'Caveman',
+    v6_rtk_title:'RTK Token Saver',v6_rtk_desc:'Comprime respostas de ferramentas para reduzir contagem de tokens.',
+    v6_rtk_enabled:'Ativado',v6_rtk_agg:'Agressividade',v6_rtk_balanced:'Balanceado',v6_rtk_aggressive:'Agressivo',v6_rtk_conservative:'Conservador',
+    v6_cost_title:'Preditor de Custo',v6_cost_desc:'Estima custo da requisição antes de enviar e sugere alternativas mais baratas.',
+    v6_cost_enabled:'Ativado',v6_cost_enabled_desc:'Estimar custo e avisar em requisições caras.',
+    v6_cost_suggest:'Limite de Sugestão',v6_cost_suggest_desc:'Sugerir alternativa mais barata acima deste custo.',
+    v6_cost_warn:'Limite de Aviso',v6_cost_warn_desc:'Registrar aviso acima deste custo.',
+    v6_caveman_title:'Caveman',v6_caveman_desc:'Comprime texto em prompts para economizar ~75% dos tokens mantendo precisão técnica.',
+    v6_caveman_enabled:'Ativado',v6_caveman_enabled_desc:'Remove palavras de preenchimento, frases de hedge e texto verboso.',
+    v6_caveman_intensity:'Intensidade',v6_caveman_lite:'Leve',v6_caveman_full:'Completo',v6_caveman_ultra:'Ultra',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -1333,6 +1355,18 @@ const I18N = {
     providers_custom_title:'自定义提供商',providers_custom_add:'新建',
     connect_apikey_required:'API 密钥为必填项。',connect_failed:'连接失败。',
     update_title:'有可用更新',update_copy_tip:'复制命令',update_dismiss:'关闭',
+    // v6.0 features
+    v6_usage_analytics:'使用分析',v6_rtk_savings:'RTK 节省',v6_caveman_savings:'Caveman',
+    v6_rtk_title:'RTK Token Saver',v6_rtk_desc:'压缩工具响应以减少 token 数量。',
+    v6_rtk_enabled:'启用',v6_rtk_agg:'激进程度',v6_rtk_balanced:'平衡',v6_rtk_aggressive:'激进',v6_rtk_conservative:'保守',
+    v6_cost_title:'成本预测器',v6_cost_desc:'在发送前估算请求成本并建议更便宜的替代方案。',
+    v6_cost_enabled:'启用',v6_cost_enabled_desc:'估算成本并对昂贵请求发出警告。',
+    v6_cost_suggest:'建议阈值',v6_cost_suggest_desc:'超过此成本时建议更便宜的替代方案。',
+    v6_cost_warn:'警告阈值',v6_cost_warn_desc:'超过此成本时记录警告。',
+    v6_caveman_title:'Caveman',v6_caveman_desc:'压缩提示词中的文本以节省约75%的token，同时保持技术准确性。',
+    v6_caveman_enabled:'启用',v6_caveman_enabled_desc:'移除填充词、对冲短语和冗长文本。',
+    v6_caveman_intensity:'强度',v6_caveman_lite:'轻度',v6_caveman_full:'完全',v6_caveman_ultra:'极致',
+  }
   }
 };
 
@@ -1573,6 +1607,26 @@ function applyI18n() {
   if (keyNameInput) keyNameInput.placeholder = T.label_optional || 'Label (optional)';
   const apiKeyInput = document.getElementById('connect-apikey-input');
   if (apiKeyInput) apiKeyInput.placeholder = T.paste_token || 'Paste token here…';
+  // v6.0 features
+  s('v6-usage-title', T.v6_usage_analytics);
+  s('v6-stats-rtk-label', T.v6_rtk_savings);
+  s('v6-stats-caveman-label', T.v6_caveman_savings);
+  s('v6-rtk-title', T.v6_rtk_title);s('v6-rtk-desc', T.v6_rtk_desc);
+  s('v6-rtk-enabled', T.v6_rtk_enabled);s('v6-rtk-enabled-desc', T.v6_rtk_desc);
+  s('v6-rtk-agg', T.v6_rtk_agg);
+  const rtkOptC = document.getElementById('v6-rtk-opt-conservative');if(rtkOptC)rtkOptC.textContent=T.v6_rtk_conservative;
+  const rtkOptB = document.getElementById('v6-rtk-opt-balanced');if(rtkOptB)rtkOptB.textContent=T.v6_rtk_balanced;
+  const rtkOptA = document.getElementById('v6-rtk-opt-aggressive');if(rtkOptA)rtkOptA.textContent=T.v6_rtk_aggressive;
+  s('v6-cost-title', T.v6_cost_title);s('v6-cost-desc', T.v6_cost_desc);
+  s('v6-cost-enabled', T.v6_cost_enabled);s('v6-cost-enabled-desc', T.v6_cost_enabled_desc);
+  s('v6-cost-suggest', T.v6_cost_suggest);s('v6-cost-suggest-desc', T.v6_cost_suggest_desc);
+  s('v6-cost-warn', T.v6_cost_warn);s('v6-cost-warn-desc', T.v6_cost_warn_desc);
+  s('v6-caveman-title', T.v6_caveman_title);s('v6-caveman-desc', T.v6_caveman_desc);
+  s('v6-caveman-enabled', T.v6_caveman_enabled);s('v6-caveman-enabled-desc', T.v6_caveman_enabled_desc);
+  s('v6-caveman-intensity', T.v6_caveman_intensity);
+  const cavOptL = document.getElementById('v6-caveman-opt-lite');if(cavOptL)cavOptL.textContent=T.v6_caveman_lite;
+  const cavOptF = document.getElementById('v6-caveman-opt-full');if(cavOptF)cavOptF.textContent=T.v6_caveman_full;
+  const cavOptU = document.getElementById('v6-caveman-opt-ultra');if(cavOptU)cavOptU.textContent=T.v6_caveman_ultra;
 }
 
 // ── Dashboard nav ─────────────────────────────────────────────────────
