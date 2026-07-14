@@ -342,6 +342,40 @@
         </div>
         <div id="accounts-list"></div>
       </div>
+
+      <!-- Usage Analytics -->
+      <div class="card" style="margin-top:1rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <iconify-icon icon="solar:chart-square-bold-duotone" style="color:#0AB9DC;font-size:1.1rem;"></iconify-icon>
+            <h3 style="font-weight:600;font-size:0.95rem;">Usage Analytics</h3>
+          </div>
+          <select id="stats-period" onchange="loadStats()" style="background:#222;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.75rem;color:#e8e8e8;font-size:0.82rem;cursor:pointer;outline:none;">
+            <option value="1">Last 24h</option>
+            <option value="7" selected>Last 7 days</option>
+            <option value="30">Last 30 days</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1rem;">
+          <div style="text-align:center;">
+            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Requests</p>
+            <p id="stats-requests" style="font-size:1.5rem;font-weight:800;color:#0AB9DC;">—</p>
+          </div>
+          <div style="text-align:center;">
+            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Tokens</p>
+            <p id="stats-tokens" style="font-size:1.5rem;font-weight:800;color:#f59e0b;">—</p>
+          </div>
+          <div style="text-align:center;">
+            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Cost</p>
+            <p id="stats-cost" style="font-size:1.5rem;font-weight:800;color:#22c55e;">—</p>
+          </div>
+          <div style="text-align:center;">
+            <p style="font-size:0.7rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">RTK Savings</p>
+            <p id="stats-rtk" style="font-size:1.5rem;font-weight:800;color:#a855f7;">—</p>
+          </div>
+        </div>
+        <div id="stats-providers" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+      </div>
     </div>
 
     <!-- Providers tab -->
@@ -480,6 +514,85 @@
             <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
               <p id="cfg-endpoint-label" style="font-size:0.85rem;color:#6b7280;">Endpoint</p>
               <code id="cfg-endpoint-val" style="color:#0AB9DC;font-size:0.75rem;">http://localhost:3099/v1</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- RTK Token Saver -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+            <iconify-icon icon="solar:compress-bold-duotone" style="color:#22c55e;font-size:1.1rem;"></iconify-icon>
+            <h3 style="font-weight:600;font-size:0.95rem;">RTK Token Saver</h3>
+          </div>
+          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Auto-compress tool_result content to save 20-40% tokens per request.</p>
+          
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
+            <div>
+              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p style="font-size:0.75rem;color:#6b7280;">Compress tool outputs before sending to provider.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleRTK()">
+              <div id="rtk-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
+                <div id="rtk-knob" style="width:1rem;height:1rem;border-radius:50%;background:#fff;position:absolute;top:0.125rem;left:1.25rem;transition:all 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+            <div>
+              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Aggressiveness</p>
+              <p style="font-size:0.75rem;color:#6b7280;">Compression level for tool outputs.</p>
+            </div>
+            <select id="rtk-aggressiveness" onchange="saveRTKConfig()" style="background:#222;border:1px solid #2a2a2a;border-radius:8px;padding:0.4rem 0.75rem;color:#e8e8e8;font-size:0.82rem;cursor:pointer;outline:none;">
+              <option value="conservative">Conservative</option>
+              <option value="balanced" selected>Balanced</option>
+              <option value="aggressive">Aggressive</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Cost Predictor -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;">
+            <iconify-icon icon="solar:wallet-money-bold-duotone" style="color:#f59e0b;font-size:1.1rem;"></iconify-icon>
+            <h3 style="font-weight:600;font-size:0.95rem;">Cost Predictor</h3>
+          </div>
+          <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.25rem;">Estimate request cost before sending and suggest cheaper alternatives.</p>
+          
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;margin-bottom:0.75rem;">
+            <div>
+              <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Enabled</p>
+              <p style="font-size:0.75rem;color:#6b7280;">Estimate cost and warn on expensive requests.</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleCostPredictor()">
+              <div id="cost-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#22c55e;position:relative;transition:all 0.3s;pointer-events:none;">
+                <div id="cost-knob" style="width:1rem;height:1rem;border-radius:50%;background:#fff;position:absolute;top:0.125rem;left:1.25rem;transition:all 0.3s;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Suggestion Threshold</p>
+                <p style="font-size:0.75rem;color:#6b7280;">Suggest cheaper alternative above this cost.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.25rem;">
+                <span style="color:#6b7280;">$</span>
+                <input id="cost-threshold" type="number" step="0.01" min="0" value="0.05" onchange="saveCostConfig()"
+                  style="width:5rem;height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.85rem;text-align:center;outline:none;" />
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Warning Threshold</p>
+                <p style="font-size:0.75rem;color:#6b7280;">Log warning above this cost.</p>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.25rem;">
+                <span style="color:#6b7280;">$</span>
+                <input id="cost-warn" type="number" step="0.01" min="0" value="0.10" onchange="saveCostConfig()"
+                  style="width:5rem;height:2rem;border-radius:8px;border:1px solid #2a2a2a;background:#222;color:#e8e8e8;font-size:0.85rem;text-align:center;outline:none;" />
+              </div>
             </div>
           </div>
         </div>
@@ -2080,6 +2193,85 @@ async function savePort() {
   } catch { saveBtn.textContent = T.cfg_port_save || 'Save'; }
 }
 
+let rtkEnabled = true;
+let costPredictorEnabled = true;
+
+function toggleRTK() {
+  rtkEnabled = !rtkEnabled;
+  const toggle = document.getElementById('rtk-toggle');
+  const knob = document.getElementById('rtk-knob');
+  if (rtkEnabled) {
+    toggle.style.background = '#22c55e';
+    knob.style.left = '1.25rem';
+  } else {
+    toggle.style.background = '#2a2a2a';
+    knob.style.left = '0.125rem';
+  }
+  saveRTKConfig();
+}
+
+function saveRTKConfig() {
+  const aggressiveness = document.getElementById('rtk-aggressiveness').value;
+  fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rtk: rtkEnabled ? 'on' : 'off', rtkAggressiveness: aggressiveness })
+  });
+}
+
+function toggleCostPredictor() {
+  costPredictorEnabled = !costPredictorEnabled;
+  const toggle = document.getElementById('cost-toggle');
+  const knob = document.getElementById('cost-knob');
+  if (costPredictorEnabled) {
+    toggle.style.background = '#22c55e';
+    knob.style.left = '1.25rem';
+  } else {
+    toggle.style.background = '#2a2a2a';
+    knob.style.left = '0.125rem';
+  }
+  saveCostConfig();
+}
+
+function saveCostConfig() {
+  const threshold = parseFloat(document.getElementById('cost-threshold').value) || 0.05;
+  const warn = parseFloat(document.getElementById('cost-warn').value) || 0.10;
+  fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ costPredictor: costPredictorEnabled ? 'on' : 'off', costThreshold: threshold, costWarn: warn })
+  });
+}
+
+async function loadStats() {
+  const days = document.getElementById('stats-period').value;
+  try {
+    const [summaryRes, providerRes] = await Promise.all([
+      fetch(`/api/stats/summary?days=${days}`),
+      fetch(`/api/stats/provider?days=${days}`)
+    ]);
+    const summary = await summaryRes.json();
+    const providers = await providerRes.json();
+    
+    document.getElementById('stats-requests').textContent = summary.totalRequests.toLocaleString();
+    document.getElementById('stats-tokens').textContent = summary.totalTokens >= 1000000 ? (summary.totalTokens / 1000000).toFixed(1) + 'M' : summary.totalTokens.toLocaleString();
+    document.getElementById('stats-cost').textContent = '$' + summary.totalCost.toFixed(2);
+    document.getElementById('stats-rtk').textContent = '—';
+    
+    const providersDiv = document.getElementById('stats-providers');
+    if (providers.length === 0) {
+      providersDiv.innerHTML = '<p style="font-size:0.85rem;color:#6b7280;">No usage data yet.</p>';
+    } else {
+      providersDiv.innerHTML = providers.map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-radius:8px;background:#1a1a1a;">
+          <span style="font-size:0.82rem;color:#e8e8e8;">${p.provider}</span>
+          <span style="font-size:0.82rem;color:#6b7280;">${p.requests} reqs · $${p.cost.toFixed(2)}</span>
+        </div>
+      `).join('');
+    }
+  } catch {}
+}
+
 async function unlockAll() {
   const btn = document.getElementById('cfg-unlock-btn');
   const lbl = document.getElementById('cfg-unlock-btn-label');
@@ -3254,7 +3446,7 @@ window.addEventListener('load', () => {
   applyI18n();
   document.getElementById('dashboard').style.opacity = '0';
   startLoadingAnim();
-  Promise.all([loadStatus(), loadProxyPools()]).finally(() => stopLoadingAnim());
+  Promise.all([loadStatus(), loadProxyPools(), loadStats()]).finally(() => stopLoadingAnim());
   toggleAutoPoll();
   checkDashboardVersion();
   // Fire-and-forget: surfaces the "New" badge in the sidebar without blocking boot.
