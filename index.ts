@@ -249,11 +249,21 @@ program.command("config")
   .option("--strategy <strategy>", "fill-first | round-robin")
   .option("--port <number>", "Default proxy port")
   .option("--sticky-limit <number>", "Round-robin consecutive-use limit")
-  .action((opts: { strategy?: string; port?: string; stickyLimit?: string }) => {
+  .option("--rtk <on|off>", "Enable/disable RTK Token Saver")
+  .option("--rtk-aggressiveness <level>", "RTK aggressiveness: balanced | aggressive | conservative")
+  .option("--cost-predictor <on|off>", "Enable/disable Cost Predictor")
+  .option("--cost-threshold <number>", "Cost threshold for suggestions (dollars)")
+  .option("--cost-warn <number>", "Cost warning threshold (dollars)")
+  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string }) => {
     const options: Parameters<typeof configCommand>[0] = {};
     if (opts.strategy === "fill-first" || opts.strategy === "round-robin") options.strategy = opts.strategy;
     if (opts.port) options.port = parseInt(opts.port, 10);
     if (opts.stickyLimit) options.stickyLimit = parseInt(opts.stickyLimit, 10);
+    if (opts.rtk === "on" || opts.rtk === "off") options.rtk = opts.rtk;
+    if (opts.rtkAggressiveness === "balanced" || opts.rtkAggressiveness === "aggressive" || opts.rtkAggressiveness === "conservative") options.rtkAggressiveness = opts.rtkAggressiveness;
+    if (opts.costPredictor === "on" || opts.costPredictor === "off") options.costPredictor = opts.costPredictor;
+    if (opts.costThreshold) options.costThreshold = parseFloat(opts.costThreshold);
+    if (opts.costWarn) options.costWarn = parseFloat(opts.costWarn);
     configCommand(options);
   });
 

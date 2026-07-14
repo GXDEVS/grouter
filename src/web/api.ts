@@ -50,3 +50,10 @@ export {
 } from "./api-system.ts";
 
 export { handleChangelog } from "./api-changelog.ts";
+
+export {
+  handleStatsSummary,
+  handleStatsDaily,
+  handleStatsProvider,
+  handleStatsModel,
+} from "./api-stats.ts";
