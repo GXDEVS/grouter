@@ -26,9 +26,9 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
-import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk";
-import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT, type CavemanConfig } from "./caveman";
-import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor";
+import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk.ts";
+import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT, type CavemanConfig } from "./caveman.ts";
+import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor.ts";
 
 export interface UpstreamRequest {
   url: string;
@@ -272,6 +272,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       modal:      "https://api.us-west-2.modal.direct/v1/chat/completions",
       sambanova:  "https://api.sambanova.ai/v1/chat/completions",
+      tokenrouter: "https://api.tokenrouter.com/v1/chat/completions",
     };
     const url = urls[provider];
     if (url) {

@@ -57,3 +57,9 @@ export {
   handleStatsProvider,
   handleStatsModel,
 } from "./api-stats.ts";
+
+export {
+  handleGetCLIStatus,
+  handleSetupCLI,
+  handleRemoveCLI,
+} from "./api-cli.ts";

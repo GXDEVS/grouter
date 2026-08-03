@@ -47,6 +47,9 @@ import {
   handleStatsDaily,
   handleStatsProvider,
   handleStatsModel,
+  handleGetCLIStatus,
+  handleSetupCLI,
+  handleRemoveCLI,
 } from "../web/api.ts";
 import { serveLogo } from "../web/logos.ts";
 import {
@@ -211,6 +214,11 @@ export function startServer(port: number) {
       "/api/stats/daily": { GET: (req: Request) => handleStatsDaily(new URL(req.url).pathname + new URL(req.url).search) },
       "/api/stats/provider": { GET: (req: Request) => handleStatsProvider(new URL(req.url).pathname + new URL(req.url).search) },
       "/api/stats/model": { GET: (req: Request) => handleStatsModel(new URL(req.url).pathname + new URL(req.url).search) },
+
+      // CLI Integrations API.
+      "/api/cli/status": { GET: () => handleGetCLIStatus() },
+      "/api/cli/setup": { POST: (req: Request) => handleSetupCLI(req) },
+      "/api/cli/remove": { POST: (req: Request) => handleRemoveCLI(req) },
 
       // Proxy API.
       "/health": {

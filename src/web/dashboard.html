@@ -103,22 +103,41 @@
     .footer-link { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:12px; border:1px solid #2a2a2a; background:#222; text-decoration:none; color:#6b7280; transition:border-color 0.2s,background 0.2s; }
     .footer-link:hover { border-color:#0AB9DC; background:rgba(10,185,220,0.06); }
     .footer-link iconify-icon { color:#0AB9DC; }
-    .provider-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.75rem; }
-    .provider-card { background:#1e1e1e; border:1px solid #2a2a2a; border-radius:14px; padding:1rem; display:flex; align-items:center; gap:0.75rem; cursor:pointer; transition:border-color 0.2s, background 0.2s; position:relative; }
-    .provider-card:hover { border-color:#0AB9DC; background:rgba(10,185,220,0.04); }
-    .provider-card.connected { border-color:rgba(34,197,94,0.35); }
-    .provider-card.deprecated { opacity:0.55; cursor:not-allowed; border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.03); }
-    .provider-card.deprecated:hover { border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.04); }
-    .provider-card.under-construction { opacity:0.7; cursor:not-allowed; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.04); }
-    .provider-card.under-construction:hover { border-color:rgba(245,158,11,0.45); background:rgba(245,158,11,0.05); }
-    .provider-icon { width:2.25rem; height:2.25rem; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; letter-spacing:0.03em; color:#121212; flex-shrink:0; overflow:hidden; }
-    .provider-icon iconify-icon { font-size:1.5rem; color:#fff; }
-    .provider-icon.logo-light { background:#ffffff; }
-    .provider-icon.logo-light iconify-icon { color:inherit; }
-    .provider-badge { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(34,197,94,0.15); color:#22c55e; }
-    .provider-badge-deprecated { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(239,68,68,0.18); color:#ef4444; text-transform:uppercase; letter-spacing:0.05em; }
-    .provider-badge-under-construction { position:absolute; top:0.5rem; right:0.5rem; font-size:0.58rem; font-weight:700; padding:0.1rem 0.45rem; border-radius:9999px; background:rgba(245,158,11,0.2); color:#f59e0b; text-transform:uppercase; letter-spacing:0.05em; }
-    .provider-badge-free { position:absolute; top:0.5rem; left:0.5rem; font-size:0.56rem; font-weight:800; padding:0.1rem 0.4rem; border-radius:9999px; background:linear-gradient(135deg,#10b981,#22c55e); color:#0a0a0a; text-transform:uppercase; letter-spacing:0.06em; box-shadow:0 0 6px rgba(34,197,94,0.3); }
+    .provider-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:0.875rem; }
+    .provider-card { background:#141416; border:1px solid #242428; border-radius:16px; padding:1.25rem 0.75rem 0.875rem; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; aspect-ratio:1 / 1; min-height:165px; position:relative; overflow:hidden; cursor:pointer; transition:background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s; }
+    .provider-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:transparent; transition:background 0.2s; }
+    .provider-card:hover { background:#1a1a1e; border-color:#383842; transform:translateY(-2px); box-shadow:0 10px 24px rgba(0,0,0,0.4); }
+    .provider-card:hover::before { background:var(--prov-color, #0AB9DC); }
+    .provider-card.has-top-banner { padding-top:1.75rem; }
+    .provider-card.connected { border-color:rgba(52,211,153,0.3); background:#121a15; }
+    .provider-card.connected::before { background:#34d399; }
+    .provider-card.connected:hover { border-color:rgba(52,211,153,0.5); background:#15221b; box-shadow:0 10px 24px rgba(0,0,0,0.5); }
+    .provider-card.deprecated { opacity:0.5; cursor:not-allowed; border-color:#2a1c1c; background:#161212; }
+    .provider-card.deprecated::before { background:#f87171; }
+    .provider-card.deprecated:hover { transform:none; box-shadow:none; border-color:#2a1c1c; background:#161212; }
+    .provider-card.under-construction { opacity:0.6; cursor:not-allowed; border-color:#2e2416; background:#171410; }
+    .provider-card.under-construction::before { background:#fbbf24; }
+    .provider-card.under-construction:hover { transform:none; box-shadow:none; border-color:#2e2416; background:#171410; }
+    .provider-icon { width:3.25rem; height:3.25rem; border-radius:14px; background:#1c1c20; border:1px solid #282830; display:flex; align-items:center; justify-content:center; flex-shrink:0; padding:0.55rem; transition:border-color 0.2s, background 0.2s, transform 0.2s; margin-bottom:0.4rem; z-index:2; }
+    .provider-card:hover .provider-icon { border-color:#3a3a44; background:#222228; transform:scale(1.04); }
+    .provider-status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    .provider-status-dot.active { background:#34d399; box-shadow:0 0 6px rgba(52,211,153,0.4); }
+    .provider-status-dot.idle { background:#52525b; }
+    .provider-status-dot.error { background:#f87171; box-shadow:0 0 6px rgba(248,113,113,0.4); }
+    .provider-banner-free { position:absolute; top:0; left:0; right:0; width:100%; height:1.35rem; display:flex; align-items:center; justify-content:center; background:#11261d; border-bottom:1px solid #1a402e; z-index:3; }
+    .provider-banner-free span { font-size:0.56rem; font-weight:700; color:#34d399; text-transform:uppercase; letter-spacing:0.08em; }
+    .provider-banner-custom { position:absolute; top:0; left:0; right:0; width:100%; height:1.35rem; display:flex; align-items:center; justify-content:center; background:#0c252d; border-bottom:1px solid #144453; z-index:3; }
+    .provider-banner-custom span { font-size:0.54rem; font-weight:800; color:#0AB9DC; text-transform:uppercase; letter-spacing:0.08em; }
+    .provider-banner-deprecated { position:absolute; top:0; left:0; right:0; width:100%; height:1.35rem; display:flex; align-items:center; justify-content:center; background:#281414; border-bottom:1px solid #401d1d; z-index:3; }
+    .provider-banner-deprecated span { font-size:0.54rem; font-weight:700; color:#f87171; text-transform:uppercase; letter-spacing:0.08em; }
+    .provider-banner-under-construction { position:absolute; top:0; left:0; right:0; width:100%; height:1.35rem; display:flex; align-items:center; justify-content:center; background:#281d12; border-bottom:1px solid #443019; z-index:3; }
+    .provider-banner-under-construction span { font-size:0.54rem; font-weight:700; color:#fbbf24; text-transform:uppercase; letter-spacing:0.08em; }
+    .provider-card.is-custom-add-card { border:1px dashed rgba(10,185,220,0.4); background:linear-gradient(145deg, rgba(10,185,220,0.04) 0%, #141416 100%); }
+    .provider-card.is-custom-add-card:hover { border-color:#0AB9DC; border-style:solid; background:rgba(10,185,220,0.08); box-shadow:0 10px 24px rgba(10,185,220,0.2); }
+    .provider-card.is-custom-add-card .provider-icon { background:rgba(10,185,220,0.12); border-color:rgba(10,185,220,0.3); }
+    .provider-badge-connected { position:absolute; top:0.4rem; right:0.4rem; font-size:0.6rem; font-weight:700; min-width:1.15rem; height:1.15rem; padding:0 0.3rem; border-radius:9999px; background:#34d399; color:#091510; display:flex; align-items:center; justify-content:center; z-index:4; }
+    .provider-card-actions { position:absolute; bottom:0.4rem; right:0.4rem; display:flex; align-items:center; gap:0.2rem; z-index:4; opacity:0.5; transition:opacity 0.2s; }
+    .provider-card:hover .provider-card-actions { opacity:1; }
     .provider-port-tag { display:inline-flex; align-items:center; gap:0.25rem; font-size:0.6rem; font-weight:600; padding:0.1rem 0.4rem; border-radius:6px; background:#0d0d0d; color:#0AB9DC; font-family:monospace; }
     .apikey-row { display:flex; align-items:center; gap:0.625rem; padding:0.625rem 0.75rem; border-radius:10px; background:#0d0d0d; border:1px solid #1f1f1f; }
     .apikey-row:not(:last-child) { margin-bottom:0.5rem; }
@@ -134,7 +153,8 @@
     .pool-status-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
     .connected-providers-strip { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem; }
     .cp-pill { display:inline-flex; align-items:center; gap:0.5rem; padding:0.35rem 0.75rem 0.35rem 0.35rem; border-radius:9999px; background:#1a1a1a; border:1px solid #2a2a2a; font-size:0.75rem; font-weight:600; color:#e8e8e8; }
-    .cp-icon { width:1.5rem; height:1.5rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.55rem; font-weight:800; color:#121212; flex-shrink:0; }
+    .cp-icon { width:1.5rem; height:1.5rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.55rem; font-weight:800; color:#121212; flex-shrink:0; overflow:hidden; }
+    .cp-icon img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
     /* ── Mobile navbar ──────────────────────────────────────────────── */
     .mob-navbar { display:none; position:fixed; top:0; left:0; right:0; z-index:30; height:56px; background:rgba(18,18,18,0.82); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); border-bottom:1px solid rgba(255,255,255,0.06); padding:0 1rem; align-items:center; justify-content:space-between; gap:0.75rem; }
     .mob-logo { font-family:'Courier New',Courier,monospace; color:#0AB9DC; font-size:0.75rem; font-weight:700; letter-spacing:0.1em; }
@@ -150,6 +170,23 @@
     .mob-tab iconify-icon { font-size:1.5rem; transition:color 0.15s; }
     .mob-tab.active { color:#0AB9DC; }
     .mob-tab.active::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:2.25rem; height:3px; border-radius:0 0 4px 4px; background:#0AB9DC; }
+    /* ── Custom tour ────────────────────────────────────────────────── */
+    .gr-tour-box { position:fixed;z-index:9999;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,0.8);padding:1.25rem;max-width:360px;min-width:280px;color:#e8e8e8;transition:all .25s ease; }
+    .gr-tour-title { font-weight:700;font-size:0.95rem;margin-bottom:0.5rem; }
+    .gr-tour-desc { color:#9ca3af;font-size:0.82rem;line-height:1.5; }
+    .gr-tour-footer { display:flex;align-items:center;justify-content:space-between;margin-top:1rem;padding-top:0.75rem;border-top:1px solid #2a2a2a;gap:0.5rem; }
+    .gr-tour-progress { flex:1;height:3px;background:#2a2a2a;border-radius:9999px;overflow:hidden;margin:0 0.5rem; }
+    .gr-tour-progress-fill { height:100%;background:#0AB9DC;border-radius:9999px;transition:width .25s ease; }
+    .gr-tour-btn { display:inline-flex;align-items:center;justify-content:center;gap:0.35rem;border:none;border-radius:9999px;height:2rem;padding:0 0.875rem;font-weight:700;font-size:0.75rem;cursor:pointer;transition:background .15s,transform .1s;white-space:nowrap;line-height:1; }
+    .gr-tour-btn-next { background:#0AB9DC;color:#0d0d0d; }
+    .gr-tour-btn-next:hover { background:#0891b0;transform:scale(1.03); }
+    .gr-tour-btn-prev { background:transparent;color:#6b7280;border:1px solid #2a2a2a; }
+    .gr-tour-btn-prev:hover { border-color:#0AB9DC;color:#e8e8e8; }
+    .gr-tour-btn-done { background:#10b981;color:#0d0d0d; }
+    .gr-tour-btn-done:hover { background:#059669;transform:scale(1.03); }
+    .gr-tour-close { position:absolute;right:0.5rem;top:0.5rem;background:none;border:none;color:#4b5563;cursor:pointer;font-size:0.85rem;padding:0.25rem;line-height:1; }
+    .gr-tour-close:hover { color:#e8e8e8; }
+    .gr-tour-highlight { position:fixed;z-index:9998;border:2px solid #0AB9DC;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.88),0 0 20px rgba(10,185,220,0.3);pointer-events:none;transition:all .25s ease; }
     /* ── Responsive breakpoints ─────────────────────────────────────── */
     @media (max-width: 768px) {
       /* layout */
@@ -213,6 +250,7 @@
     <nav style="flex:1;padding:0.75rem;display:flex;flex-direction:column;gap:0.25rem;">
       <button class="nav-item active" id="nav-overview" onclick="showTab('overview')"><iconify-icon icon="solar:chart-2-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-overview-label">Overview</span></button>
       <button class="nav-item" id="nav-providers" onclick="showTab('providers')"><iconify-icon icon="solar:planet-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-providers-label">Providers</span></button>
+      <button class="nav-item" id="nav-cli" onclick="showTab('cli')" style="position:relative;"><iconify-icon icon="solar:code-square-bold-duotone" style="font-size:1rem;flex-shrink:0;color:#0AB9DC;"></iconify-icon><span id="nav-cli-label">Integrar CLI</span><span style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:rgba(10,185,220,0.15);color:#0AB9DC;font-size:0.55rem;font-weight:700;padding:0.1rem 0.35rem;border-radius:9999px;letter-spacing:0.04em;">NEW</span></button>
       <button class="nav-item" id="nav-accounts" onclick="showTab('accounts')"><iconify-icon icon="solar:users-group-rounded-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-accounts-label">Accounts</span></button>
       <button class="nav-item" id="nav-keys" onclick="showTab('keys')"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-keys-label">API Keys</span></button>
       <button class="nav-item" id="nav-settings" onclick="showTab('settings')"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:1rem;flex-shrink:0;"></iconify-icon><span id="nav-settings-label">Settings</span></button>
@@ -222,6 +260,12 @@
         <span id="nav-changelog-badge" class="hidden" style="position:absolute;right:0.625rem;top:50%;transform:translateY(-50%);background:#0AB9DC;color:#0d0d0d;font-size:0.6rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:9999px;letter-spacing:0.04em;text-transform:uppercase;">New</span>
       </button>
     </nav>
+    <div style="padding:0 0.75rem 0.75rem;">
+      <button id="tour-btn" onclick="startTour()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:#0AB9DC;color:#0d0d0d;border:none;border-radius:9999px;height:2.25rem;font-weight:700;font-size:0.8rem;cursor:pointer;transition:background 0.2s,transform 0.1s;">
+        <iconify-icon icon="solar:lightbulb-bold-duotone" style="font-size:1rem;"></iconify-icon>
+        <span id="tour-btn-label">Tour</span>
+      </button>
+    </div>
     <div style="padding:0.875rem;border-top:1px solid #1e1e1e;">
       <!-- Update card (square; shown only when a newer version is available) -->
       <div id="upd-card-dash" class="upd-card hidden" data-surface="dash">
@@ -386,33 +430,129 @@
     <!-- Providers tab -->
     <div id="tab-providers" class="hidden">
       <div style="display:flex;flex-direction:column;gap:1.25rem;">
-        <!-- OAuth Providers -->
+        <!-- 1. Custom / Generic API Section at VERY TOP -->
+        <div class="card" id="prov-custom-top-section">
+          <div class="section-divider" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+              <iconify-icon icon="solar:tuning-square-bold-duotone" style="color:#0AB9DC;font-size:1.15rem;"></iconify-icon>
+              <h3 id="prov-custom-top-title" style="color:#0AB9DC;font-weight:700;">⚡ API Customizada & Servidores Próprios</h3>
+            </div>
+            <button class="btn-sm btn-sm-ghost" onclick="openCustomProviderModal()" title="Criar Nova API Customizada"
+              style="padding:0 0.65rem;height:1.85rem;font-size:0.72rem;display:inline-flex;align-items:center;gap:0.35rem;color:#0AB9DC;border-color:rgba(10,185,220,0.3);">
+              <iconify-icon icon="solar:add-circle-bold-duotone" style="font-size:0.95rem;"></iconify-icon>
+              <span id="prov-custom-add-label">Criar Nova API</span>
+            </button>
+          </div>
+          <div id="prov-grid-custom-top" class="provider-grid"></div>
+        </div>
+
+        <!-- 2. TOP Providers do Momento (NVIDIA NIM, KIMI, TOKENROUTER, GROQ) -->
+        <div class="card" id="prov-top-trending-section">
+          <div class="section-divider">
+            <div style="display:flex;align-items:center;gap:0.4rem;">
+              <iconify-icon icon="solar:fire-bold-duotone" style="color:#f97316;font-size:1.15rem;"></iconify-icon>
+              <h3 id="prov-top-trending-title" style="color:#f97316;font-weight:700;">🔥 TOP Providers do Momento</h3>
+            </div>
+          </div>
+          <div id="prov-grid-top-trending" class="provider-grid"></div>
+        </div>
+
+        <!-- 3. OAuth Providers -->
         <div class="card">
           <div class="section-divider"><h3 id="prov-oauth-title">OAuth Providers</h3></div>
           <div id="prov-grid-oauth" class="provider-grid"></div>
         </div>
-        <!-- Free Providers -->
+
+        <!-- 4. Free Providers -->
         <div class="card" id="prov-free-section">
           <div class="section-divider"><h3 id="prov-free-title">Free Providers</h3></div>
           <div id="prov-grid-free" class="provider-grid"></div>
         </div>
-        <!-- API Key Providers -->
+
+        <!-- 5. API Key Providers -->
         <div class="card">
           <div class="section-divider"><h3 id="prov-apikey-title">API Key Providers</h3></div>
           <div id="prov-grid-apikey" class="provider-grid"></div>
         </div>
-        <!-- Custom Providers -->
-        <div class="card" id="prov-custom-section" style="display:none;">
-          <div class="section-divider" style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-            <h3 id="prov-custom-title">Custom Providers</h3>
-            <button class="btn-sm btn-sm-ghost" onclick="openCustomProviderModal()" title="Add custom provider"
-              style="padding:0 0.625rem;height:1.85rem;font-size:0.7rem;display:inline-flex;align-items:center;gap:0.35rem;">
-              <iconify-icon icon="solar:add-circle-bold-duotone" style="font-size:0.95rem;"></iconify-icon>
-              <span id="prov-custom-add-label">New</span>
-            </button>
+      </div>
+    </div>
+
+    <!-- CLI tab (Interactive grouter up Wizard) -->
+    <div id="tab-cli" class="hidden">
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+        
+        <!-- Main Wizard Card -->
+        <div class="card" style="background:#141416;border:1px solid #242428;border-radius:18px;padding:1.5rem;">
+          
+          <!-- Step 1: Select CLI Tool -->
+          <div style="margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+              <span style="width:1.6rem;height:1.6rem;border-radius:50%;background:#0AB9DC;color:#0b0f14;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;">1</span>
+              <h4 style="font-size:0.95rem;font-weight:700;color:#f3f4f6;margin:0;">Selecione a Ferramenta CLI</h4>
+            </div>
+            <div id="cli-wizard-tools" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:0.75rem;"></div>
           </div>
-          <div id="prov-grid-custom" class="provider-grid"></div>
+
+          <!-- Step 2: Select Provider -->
+          <div style="margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+              <span style="width:1.6rem;height:1.6rem;border-radius:50%;background:#0AB9DC;color:#0b0f14;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;">2</span>
+              <h4 style="font-size:0.95rem;font-weight:700;color:#f3f4f6;margin:0;">Selecione o Provedor (Provider)</h4>
+            </div>
+            <div id="cli-wizard-providers" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));gap:0.75rem;"></div>
+          </div>
+
+          <!-- Step 3: Select Model -->
+          <div style="margin-bottom:1.5rem;">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+              <span style="width:1.6rem;height:1.6rem;border-radius:50%;background:#0AB9DC;color:#0b0f14;font-size:0.8rem;font-weight:800;display:flex;align-items:center;justify-content:center;">3</span>
+              <h4 style="font-size:0.95rem;font-weight:700;color:#f3f4f6;margin:0;">Selecione o Modelo (Model ID)</h4>
+            </div>
+            <div style="background:#18181c;padding:1rem;border-radius:14px;border:1px solid #242428;display:flex;flex-direction:column;gap:0.75rem;">
+              <div>
+                <label style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.35rem;">Modelos Disponíveis do Provedor</label>
+                <select id="cli-wizard-model-select" onchange="onCLIWizardModelSelectChange(this.value)" style="width:100%;background:#111113;border:1px solid #282830;border-radius:10px;padding:0.5rem 0.75rem;color:#f3f4f6;font-size:0.85rem;outline:none;cursor:pointer;">
+                  <option value="">Carregando modelos...</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.68rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:0.35rem;">Ou Digite um Modelo Customizado</label>
+                <input id="cli-wizard-model-custom" type="text" placeholder="ex. moonshotai/kimi-k3-free" oninput="onCLIWizardModelCustomInput(this.value)" style="width:100%;background:#111113;border:1px solid #282830;border-radius:10px;padding:0.5rem 0.75rem;color:#f3f4f6;font-size:0.85rem;outline:none;font-family:monospace;" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Summary & Apply -->
+          <div style="background:#18181c;border:1px solid rgba(10,185,220,0.3);border-radius:14px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;">
+              <div>
+                <h4 style="font-size:0.9rem;font-weight:700;color:#0AB9DC;margin:0;">Resumo da Conexão</h4>
+                <p id="cli-wizard-summary-text" style="font-size:0.8rem;color:#d1d5db;margin:0.25rem 0 0 0;">Ferramenta: <b id="wiz-sum-tool">OpenClaude</b> · Provedor: <b id="wiz-sum-prov">Main Router (:3099)</b> · Modelo: <b id="wiz-sum-model">default</b></p>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <button class="btn-primary" style="background:#0AB9DC;color:#0b0f14;font-weight:800;font-size:0.85rem;padding:0.55rem 1.25rem;border-radius:10px;border:none;cursor:pointer;" onclick="applyCLIWizardSetup()">
+                  <iconify-icon icon="solar:bolt-bold-duotone" style="font-size:1.1rem;"></iconify-icon> Conectar &amp; Aplicar
+                </button>
+                <button class="btn-sm btn-sm-ghost" style="color:#9ca3af;padding:0.55rem 0.85rem;border-radius:10px;" onclick="copyCLIWizardCommand()">
+                  <iconify-icon icon="solar:copy-bold-duotone" style="font-size:1rem;"></iconify-icon> Copiar Comando CLI
+                </button>
+              </div>
+            </div>
+            <div style="font-size:0.75rem;color:#6b7280;font-family:monospace;background:#111113;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid #242428;">
+              Comando CLI equivalente: <span id="cli-wizard-cmd-preview" style="color:#0AB9DC;">grouter up openclaude</span>
+            </div>
+          </div>
+
         </div>
+
+        <!-- Active Integrations Status Grid -->
+        <div>
+          <h4 style="font-size:0.95rem;font-weight:700;color:#f3f4f6;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem;">
+            <iconify-icon icon="solar:shield-check-bold-duotone" style="color:#22c55e;"></iconify-icon> Configurações Ativas no Sistema
+          </h4>
+          <div id="cli-tools-active-status" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));gap:1rem;"></div>
+        </div>
+
       </div>
     </div>
 
@@ -513,6 +653,18 @@
               <div style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleClientAuth(this)">
                 <div id="cfg-clientauth-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#2a2a2a;position:relative;transition:all 0.3s;pointer-events:none;">
                   <div id="cfg-clientauth-knob" style="width:1rem;height:1rem;border-radius:50%;background:#e8e8e8;position:absolute;top:0.125rem;left:0.125rem;transition:all 0.3s;"></div>
+                </div>
+              </div>
+            </div>
+            <div id="cfg-autostart-row" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-radius:12px;background:#1a1a1a;border:1px solid #2a2a2a;">
+              <div>
+                <p id="cfg-autostart-label" style="font-size:0.85rem;font-weight:600;color:#e8e8e8;margin-bottom:0.15rem;">Auto-start on boot</p>
+                <p id="cfg-autostart-hint" style="font-size:0.75rem;color:#6b7280;">Start proxy automatically when the system boots (Linux systemd).</p>
+                <p id="cfg-autostart-docker-warn" style="font-size:0.75rem;color:#f59e0b;margin-top:0.25rem;display:none;">Docker containers handle restart via restart policy. Auto-start is not needed.</p>
+              </div>
+              <div id="cfg-autostart-toggle-wrap" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;" onclick="toggleAutoStart(this)">
+                <div id="cfg-autostart-toggle" style="width:2.5rem;height:1.25rem;border-radius:999px;background:#2a2a2a;position:relative;transition:all 0.3s;pointer-events:none;">
+                  <div id="cfg-autostart-knob" style="width:1rem;height:1rem;border-radius:50%;background:#e8e8e8;position:absolute;top:0.125rem;left:0.125rem;transition:all 0.3s;"></div>
                 </div>
               </div>
             </div>
@@ -732,7 +884,7 @@
   <div class="modal-box" style="max-width:520px;">
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeConnectModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <div id="connect-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;"></div>
+      <div id="connect-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;"></div>
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;gap:0.5rem;">
           <h2 id="connect-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
@@ -778,7 +930,7 @@
   <div class="modal-box" style="max-width:560px;">
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeModelsModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-      <div id="models-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;"></div>
+      <div id="models-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;"></div>
       <div style="flex:1;min-width:0;">
         <h2 id="models-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
         <p id="models-modal-sub" style="color:#6b7280;font-size:0.75rem;"></p>
@@ -807,7 +959,7 @@
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCustomProviderModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
     <input type="hidden" id="custom-prov-edit-id" value="" />
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-      <div id="custom-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:#94a3b8;"><iconify-icon icon="solar:server-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
+      <div id="custom-modal-icon" class="provider-icon" style="width:2.75rem;height:2.75rem;background:#94a3b8;"><iconify-icon icon="solar:server-square-bold-duotone" style="font-size:1.5rem;color:#fff;"></iconify-icon></div>
       <div>
         <h2 id="custom-modal-title" style="font-weight:700;font-size:1.1rem;"></h2>
         <p id="custom-modal-sub" style="color:#6b7280;font-size:0.8rem;"></p>
@@ -850,7 +1002,7 @@
   <div class="modal-box" style="max-width:480px;">
     <button class="btn-icon" style="position:absolute;top:1rem;right:1rem;" onclick="closeCreateKeyModal()"><iconify-icon icon="solar:close-circle-bold-duotone"></iconify-icon></button>
     <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.25rem;">
-      <div class="provider-icon" style="width:2.75rem;height:2.75rem;border-radius:12px;background:rgba(10,185,220,0.1);"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1.5rem;color:#0AB9DC;"></iconify-icon></div>
+      <div class="provider-icon" style="width:2.75rem;height:2.75rem;background:rgba(10,185,220,0.1);"><iconify-icon icon="solar:key-minimalistic-square-bold-duotone" style="font-size:1.5rem;color:#0AB9DC;"></iconify-icon></div>
       <div>
         <h2 id="create-key-title" style="font-weight:700;font-size:1.1rem;">Create Client Key</h2>
         <p style="color:#6b7280;font-size:0.8rem;">Generate a key for API consumers.</p>
@@ -1002,6 +1154,15 @@
   </nav>
   <!-- Divider -->
   <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
+  <!-- Tour button -->
+  <div style="padding:0.75rem;">
+    <button onclick="startTour();toggleDrawer()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:0.5rem;background:#0AB9DC;color:#0d0d0d;border:none;border-radius:9999px;height:2.25rem;font-weight:700;font-size:0.8rem;cursor:pointer;">
+      <iconify-icon icon="solar:lightbulb-bold-duotone" style="font-size:1rem;"></iconify-icon>
+      <span id="mob-tour-label">Tour</span>
+    </button>
+  </div>
+  <!-- Divider -->
+  <div style="border-top:1px solid #1e1e1e;margin:0 0.75rem;"></div>
   <!-- Quick actions -->
   <div style="padding:0.75rem;">
     <p style="font-size:0.65rem;color:#4b5563;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;padding-left:0.25rem;">Quick actions</p>
@@ -1110,6 +1271,7 @@ const I18N = {
     cfg_unlock_btn:'Unlock',cfg_unlocked:'Unlocked!',
     // Providers section
     providers_oauth_title:'OAuth Providers',providers_free_title:'Free Providers',providers_apikey_title:'API Key Providers',
+    providers_custom_top_title:'⚡ Custom API & Generic Endpoints',providers_top_trending_title:'🔥 TOP Trending Providers',
     provider_badge_free:'Free',provider_badge_deprecated:'Deprecated',provider_badge_under_construction:'Soon',
     provider_meta_none:'None configured yet.',
     provider_status_connected:'{n} connected',provider_status_none:'No connections',provider_status_discontinued:'Discontinued',provider_status_under_construction:'Under construction',
@@ -1179,6 +1341,21 @@ const I18N = {
     v6_caveman_title:'Caveman',v6_caveman_desc:'Compress prose in prompts to save ~75% tokens while keeping technical accuracy.',
     v6_caveman_enabled:'Enabled',v6_caveman_enabled_desc:'Remove filler words, hedge phrases, and verbose prose.',
     v6_caveman_intensity:'Intensity',v6_caveman_lite:'Lite',v6_caveman_full:'Full',v6_caveman_ultra:'Ultra',
+    tour_btn:'Tour',tour_next:'Next',tour_prev:'Back',tour_done:'Done',
+    tour_s1_title:'Overview',tour_s1_desc:'Real-time proxy status. See active accounts, requests, tokens, and estimated cost savings at a glance.',
+    tour_s2_title:'Key Metrics',tour_s2_desc:'Accounts, active connections, total requests, and token usage — all updated live.',
+    tour_s3_title:'Usage Analytics',tour_s3_desc:'Track requests, tokens, cost, RTK savings, and Caveman compression over time. Filter by 24h, 7 days, or 30 days.',
+    tour_s4_title:'Connected Providers',tour_s4_desc:'Each provider gets a dedicated port for isolated routing. The router on :3099 picks from all active accounts.',
+    tour_s5_title:'Providers',tour_s5_desc:'Browse all 15+ supported providers — OAuth and API key. Add connections with a guided wizard per provider.',
+    tour_s6_title:'Accounts',tour_s6_desc:'Manage all your connections. Enable/disable, test connectivity, set priority, and view token status.',
+    tour_s7_title:'API Keys',tour_s7_desc:'Create client API keys so other tools can route through grouter. Each key is rotatable independently.',
+    tour_s8_title:'Settings',tour_s8_desc:'Configure rotation strategy, proxy port, RTK Token Saver, Cost Predictor, and Caveman compression.',
+    tour_s9_title:'Welcome!',tour_s9_desc:'Click here anytime to relaunch this tour. No certificates, no MITM — just a smart local proxy.',
+    cfg_autostart_label:'Auto-start on boot',cfg_autostart_hint:'Start proxy automatically when the system boots (Linux systemd).',
+    cfg_autostart_docker_warn:'Docker containers handle restart via restart policy.',
+    cfg_autostart_enabling:'Enabling…',cfg_autostart_disabling:'Disabling…',
+    cfg_autostart_enabled:'Auto-start enabled',cfg_autostart_disabled:'Auto-start disabled',
+    cfg_autostart_fail:'Failed to toggle auto-start',cfg_autostart_not_linux:'Auto-start is only supported on Linux.',
   },
   pt: {
     nav_overview:'Visão Geral',nav_accounts:'Contas',nav_settings:'Configurações',
@@ -1210,6 +1387,7 @@ const I18N = {
     cfg_unlock_label:'Desbloquear todas as contas',cfg_unlock_hint:'Limpa todos os bloqueios e reseta o estado de backoff.',
     cfg_unlock_btn:'Desbloquear',cfg_unlocked:'Desbloqueado!',
     providers_oauth_title:'Provedores OAuth',providers_free_title:'Provedores Gratuitos',providers_apikey_title:'Provedores com API Key',
+    providers_custom_top_title:'⚡ API Customizada & Servidores Próprios',providers_top_trending_title:'🔥 TOP Providers do Momento',
     provider_badge_free:'Grátis',provider_badge_deprecated:'Descontinuado',provider_badge_under_construction:'Em breve',
     provider_meta_none:'Nenhum configurado ainda.',
     provider_status_connected:'{n} conectado(s)',provider_status_none:'Sem conexões',provider_status_discontinued:'Descontinuado',provider_status_under_construction:'Em construção',
@@ -1273,6 +1451,21 @@ const I18N = {
     v6_caveman_title:'Caveman',v6_caveman_desc:'Comprime texto em prompts para economizar ~75% dos tokens mantendo precisão técnica.',
     v6_caveman_enabled:'Ativado',v6_caveman_enabled_desc:'Remove palavras de preenchimento, frases de hedge e texto verboso.',
     v6_caveman_intensity:'Intensidade',v6_caveman_lite:'Leve',v6_caveman_full:'Completo',v6_caveman_ultra:'Ultra',
+    tour_btn:'Tour',tour_next:'Próximo',tour_prev:'Voltar',tour_done:'Concluir',
+    tour_s1_title:'Visão Geral',tour_s1_desc:'Status do proxy em tempo real. Contas ativas, requisições, tokens e economia estimada de custos.',
+    tour_s2_title:'Métricas Principais',tour_s2_desc:'Contas, conexões ativas, total de requisições e uso de tokens — tudo atualizado ao vivo.',
+    tour_s3_title:'Análise de Uso',tour_s3_desc:'Acompanhe requisições, tokens, custo, economia RTK e compressão Caveman ao longo do tempo.',
+    tour_s4_title:'Provedores Conectados',tour_s4_desc:'Cada provedor tem uma porta dedicada para roteamento isolado. O router em :3099 escolhe entre todas as contas ativas.',
+    tour_s5_title:'Provedores',tour_s5_desc:'Navegue por 15+ provedores suportados — OAuth e API key. Adicione conexões com um assistente guiado.',
+    tour_s6_title:'Contas',tour_s6_desc:'Gerencie todas as suas conexões. Ative/desative, teste a conectividade e defina prioridades.',
+    tour_s7_title:'Chaves de API',tour_s7_desc:'Crie chaves de API para que outras ferramentas usem o grouter. Cada chave pode ser rotacionada.',
+    tour_s8_title:'Configurações',tour_s8_desc:'Configure estratégia de rotação, porta do proxy, RTK Token Saver, Cost Predictor e Caveman.',
+    tour_s9_title:'Bem-vindo!',tour_s9_desc:'Clique aqui a qualquer momento para refazer o tour. Sem certificados, sem MITM — apenas um proxy local inteligente.',
+    cfg_autostart_label:'Iniciar automaticamente na inicialização',cfg_autostart_hint:'Iniciar o proxy automaticamente quando o sistema inicia (Linux systemd).',
+    cfg_autostart_docker_warn:'Containers Docker já reiniciam via política de reinicialização.',
+    cfg_autostart_enabling:'Ativando…',cfg_autostart_disabling:'Desativando…',
+    cfg_autostart_enabled:'Auto-start ativado',cfg_autostart_disabled:'Auto-start desativado',
+    cfg_autostart_fail:'Falha ao alternar auto-start',cfg_autostart_not_linux:'Auto-start só é suportado no Linux.',
   },
   zh: {
     nav_overview:'概览',nav_accounts:'账户',nav_settings:'设置',
@@ -1304,6 +1497,7 @@ const I18N = {
     cfg_unlock_label:'解锁所有账户',cfg_unlock_hint:'清除所有限速锁定并重置退避状态。',
     cfg_unlock_btn:'解锁',cfg_unlocked:'已解锁！',
     providers_oauth_title:'OAuth 提供商',providers_free_title:'免费提供商',providers_apikey_title:'API 密钥提供商',
+    providers_custom_top_title:'⚡ 自定义 API 与 自建 Endpoint',providers_top_trending_title:'🔥 热门推荐提供商',
     provider_badge_free:'免费',provider_badge_deprecated:'已弃用',provider_badge_under_construction:'即将推出',
     provider_meta_none:'尚未配置。',
     provider_status_connected:'已连接 {n} 个',provider_status_none:'无连接',provider_status_discontinued:'已停用',provider_status_under_construction:'建设中',
@@ -1367,6 +1561,21 @@ const I18N = {
     v6_caveman_title:'Caveman',v6_caveman_desc:'压缩提示词中的文本以节省约75%的token，同时保持技术准确性。',
     v6_caveman_enabled:'启用',v6_caveman_enabled_desc:'移除填充词、对冲短语和冗长文本。',
     v6_caveman_intensity:'强度',v6_caveman_lite:'轻度',v6_caveman_full:'完全',v6_caveman_ultra:'极致',
+    tour_btn:'导览',tour_next:'下一步',tour_prev:'返回',tour_done:'完成',
+    tour_s1_title:'概览',tour_s1_desc:'实时代理状态。一览活跃账户、请求、Token 用量和预估成本节省。',
+    tour_s2_title:'关键指标',tour_s2_desc:'账户、活跃连接、总请求数和 Token 用量——全部实时更新。',
+    tour_s3_title:'使用分析',tour_s3_desc:'跟踪请求、Token、成本、RTK 节省和 Caveman 压缩。按 24 小时、7 天或 30 天筛选。',
+    tour_s4_title:'已连接提供商',tour_s4_desc:'每个提供商都有专用端口用于隔离路由。:3099 上的路由器从所有活跃账户中选择。',
+    tour_s5_title:'提供商',tour_s5_desc:'浏览 15+ 支持的提供商——OAuth 和 API 密钥。通过引导向导添加连接。',
+    tour_s6_title:'账户',tour_s6_desc:'管理所有连接。启用/禁用、测试连接、设置优先级和查看 Token 状态。',
+    tour_s7_title:'API 密钥',tour_s7_desc:'创建客户端 API 密钥，让其他工具通过 grouter 路由。每个密钥可独立轮换。',
+    tour_s8_title:'设置',tour_s8_desc:'配置轮换策略、代理端口、RTK Token Saver、Cost Predictor 和 Caveman 压缩。',
+    tour_s9_title:'欢迎！',tour_s9_desc:'随时点击此处重新开始导览。无证书，无 MITM——只是一个智能的本地代理。',
+    cfg_autostart_label:'开机自动启动',cfg_autostart_hint:'系统启动时自动启动代理（Linux systemd）。',
+    cfg_autostart_docker_warn:'Docker 容器通过重启策略处理重启。',
+    cfg_autostart_enabling:'启用中…',cfg_autostart_disabling:'禁用中…',
+    cfg_autostart_enabled:'自动启动已启用',cfg_autostart_disabled:'自动启动已禁用',
+    cfg_autostart_fail:'切换自动启动失败',cfg_autostart_not_linux:'自动启动仅支持 Linux。',
   }
 };
 
@@ -1522,7 +1731,7 @@ function applyI18n() {
   document.querySelectorAll('.upd-card .upd-title').forEach((el) => { el.textContent = tr('update_title'); });
   document.querySelectorAll('.upd-card .upd-copy').forEach((el) => { el.title = tr('update_copy_tip'); });
   document.querySelectorAll('.upd-card .upd-dismiss').forEach((el) => { el.title = tr('update_dismiss'); });
-  s('nav-overview-label',T.nav_overview);s('nav-accounts-label',T.nav_accounts);s('nav-settings-label',T.nav_settings);
+  s('nav-overview-label',T.nav_overview);s('nav-cli-label',T.nav_cli||'Integrar CLI');s('nav-accounts-label',T.nav_accounts);s('nav-settings-label',T.nav_settings);
   s('btn-add-acc',T.btn_add_acc);s('btn-add-acc-sm',T.btn_add_acc);s('btn-add-acc-full',T.btn_add_acc);
   s('kpi-lbl-accounts',T.kpi_accounts);s('kpi-lbl-active',T.kpi_active);
   s('kpi-lbl-reqs',T.kpi_reqs);s('kpi-lbl-tokens',T.kpi_tokens);
@@ -1551,7 +1760,7 @@ function applyI18n() {
   s('cfg-maint-title',T.cfg_maint_title);
   s('cfg-unlock-label',T.cfg_unlock_label);s('cfg-unlock-hint',T.cfg_unlock_hint);s('cfg-unlock-btn-label',T.cfg_unlock_btn);
   s('prov-oauth-title',T.providers_oauth_title);s('prov-free-title',T.providers_free_title);s('prov-apikey-title',T.providers_apikey_title);
-  s('prov-custom-title',T.providers_custom_title);s('prov-custom-add-label',T.providers_custom_add);
+  s('prov-custom-top-title',T.providers_custom_top_title);s('prov-top-trending-title',T.providers_top_trending_title);s('prov-custom-add-label',T.providers_custom_add);
   s('connect-existing-header',T.connect_existing_header);
   s('modal-deprecation-title',T.qwen_deprecated_title);
   s('modal-tryagain-btn',T.btn_try_again);s('modal-addanother-btn',T.btn_add_another);
@@ -1627,11 +1836,13 @@ function applyI18n() {
   const cavOptL = document.getElementById('v6-caveman-opt-lite');if(cavOptL)cavOptL.textContent=T.v6_caveman_lite;
   const cavOptF = document.getElementById('v6-caveman-opt-full');if(cavOptF)cavOptF.textContent=T.v6_caveman_full;
   const cavOptU = document.getElementById('v6-caveman-opt-ultra');if(cavOptU)cavOptU.textContent=T.v6_caveman_ultra;
+  // Auto-start labels
+  s('cfg-autostart-label',T.cfg_autostart_label);s('cfg-autostart-hint',T.cfg_autostart_hint);
+  s('cfg-autostart-docker-warn',T.cfg_autostart_docker_warn);
 }
 
-// ── Dashboard nav ─────────────────────────────────────────────────────
 function showTab(tab) {
-  ['overview','providers','accounts','keys','settings','changelog'].forEach(t => {
+  ['overview','providers','cli','accounts','keys','settings','changelog'].forEach(t => {
     const hidden = document.getElementById('tab-'+t)?.classList.toggle('hidden', t!==tab);
     const navEl = document.getElementById('nav-'+t);
     if (navEl) navEl.classList.toggle('active', t===tab);
@@ -1649,6 +1860,10 @@ function showTab(tab) {
     document.getElementById('page-title').textContent = T.page_providers || 'Providers';
     document.getElementById('page-sub').textContent   = T.page_providers_sub || 'Manage your AI provider connections';
     loadProviders();
+  } else if (tab==='cli') {
+    document.getElementById('page-title').textContent = T.page_cli || 'Integrar CLI';
+    document.getElementById('page-sub').textContent   = T.page_cli_sub || 'Controle visual e instalação de provedores em OpenClaude, OpenClaw, OpenCode e Cline';
+    loadCLIWizard();
   } else if (tab==='accounts') {
     document.getElementById('page-title').textContent = T.page_accounts;
     document.getElementById('page-sub').textContent   = T.page_accounts_sub;
@@ -1668,6 +1883,325 @@ function showTab(tab) {
     loadConfig();
     loadProxyPools();
   }
+}
+
+// ── CLI Tools Integration Functions (grouter up Visual Wizard) ───────────────
+let cliWizardState = {
+  toolId: 'claude',
+  providerId: 'router',
+  model: ''
+};
+
+const CLI_TOOLS_DATA = [
+  { id: 'claude', name: 'Claude Code', sub: 'Anthropic Official CLI', logo: '/public/logos/claude-code-antrophic.png', config: '~/.claude/settings.json' },
+  { id: 'openclaude', name: 'OpenClaude', sub: 'Claude Code (OpenAI mode)', logo: '/public/logos/openclaude.png', config: '~/.claude/settings.json' },
+  { id: 'openclaw', name: 'OpenClaw', sub: 'OpenClaw CLI', logo: '/public/logos/openclaw.png', config: '~/.openclaw/openclaw.json' },
+  { id: 'opencode', name: 'OpenCode', sub: 'sst terminal tool', logo: '/public/logos/opencode.png', config: '~/.config/opencode/opencode.json' },
+  { id: 'cline', name: 'Cline', sub: 'VSCode & CLI', logo: '/public/logos/Cline.png', config: '~/.config/cline' }
+];
+
+async function loadCLIWizard() {
+  renderCLIWizardTools();
+  await renderCLIWizardProviders();
+  await refreshCLIWizardModels();
+  renderCLIWizardActiveStatus();
+  updateCLIWizardSummary();
+}
+
+function renderCLIWizardTools() {
+  const container = document.getElementById('cli-wizard-tools');
+  if (!container) return;
+  container.innerHTML = CLI_TOOLS_DATA.map(t => {
+    const isSelected = cliWizardState.toolId === t.id;
+    return `<div onclick="selectCLIWizardTool('${t.id}')" style="background:${isSelected ? 'rgba(10,185,220,0.1)' : '#18181c'};border:2px solid ${isSelected ? '#0AB9DC' : '#242428'};border-radius:14px;padding:1rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:0.875rem;">
+      <div style="width:3rem;height:3rem;border-radius:12px;background:#111113;border:1px solid #282830;display:flex;align-items:center;justify-content:center;padding:0.4rem;flex-shrink:0;">
+        <img src="${t.logo}" alt="${t.name}" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));" />
+      </div>
+      <div style="min-width:0;">
+        <h5 style="font-size:0.95rem;font-weight:700;color:#f3f4f6;margin:0;">${t.name}</h5>
+        <p style="font-size:0.72rem;color:#6b7280;margin:0.15rem 0 0 0;">${t.sub}</p>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function selectCLIWizardTool(toolId) {
+  cliWizardState.toolId = toolId;
+  renderCLIWizardTools();
+  updateCLIWizardSummary();
+}
+
+async function renderCLIWizardProviders() {
+  const container = document.getElementById('cli-wizard-providers');
+  if (!container) return;
+  
+  try {
+    const res = await fetch('/api/providers');
+    const { providers } = await res.json();
+    
+    const routerProvider = {
+      id: 'router',
+      name: 'Main Router',
+      logo: 'solar:alt-arrow-right-bold-duotone',
+      badge: ':3099'
+    };
+
+    const allProviders = [
+      routerProvider,
+      ...providers
+    ];
+
+    container.innerHTML = allProviders.map(p => {
+      const isSelected = cliWizardState.providerId === p.id;
+      const logoInnerHtml = renderLogoInner(p, '1.25rem', isSelected ? '#0AB9DC' : '#6b7280');
+      const badgeText = p.badge || (p.connections > 0 ? `${p.connections} contas` : p.hasFreeModels ? 'GRÁTIS' : '');
+
+      return `<div onclick="selectCLIWizardProvider('${p.id}')" style="background:${isSelected ? 'rgba(10,185,220,0.1)' : '#18181c'};border:2px solid ${isSelected ? '#0AB9DC' : '#242428'};border-radius:14px;padding:0.875rem 1rem;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">
+          <div style="width:2.25rem;height:2.25rem;border-radius:10px;background:#111113;border:1px solid #282830;display:flex;align-items:center;justify-content:center;padding:0.3rem;flex-shrink:0;">
+            ${logoInnerHtml}
+          </div>
+          <span style="font-size:0.85rem;font-weight:700;color:#f3f4f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</span>
+        </div>
+        ${badgeText ? `<span style="font-size:0.62rem;font-weight:700;padding:0.15rem 0.45rem;border-radius:9999px;background:rgba(10,185,220,0.15);color:#0AB9DC;flex-shrink:0;">${badgeText}</span>` : ''}
+      </div>`;
+    }).join('');
+  } catch {
+    container.innerHTML = `<p style="font-size:0.8rem;color:#ef4444;">Erro ao carregar provedores.</p>`;
+  }
+}
+
+async function selectCLIWizardProvider(providerId) {
+  cliWizardState.providerId = providerId;
+  cliWizardState.model = '';
+  await renderCLIWizardProviders();
+  await refreshCLIWizardModels();
+  updateCLIWizardSummary();
+}
+
+async function refreshCLIWizardModels() {
+  const selectEl = document.getElementById('cli-wizard-model-select');
+  const customEl = document.getElementById('cli-wizard-model-custom');
+  if (!selectEl) return;
+
+  if (cliWizardState.providerId === 'router') {
+    const defaultModels = [
+      'default',
+      'moonshotai/kimi-k3-free',
+      'meta/llama-3.3-70b-instruct',
+      'claude-3-7-sonnet',
+      'qwen-max'
+    ];
+    selectEl.innerHTML = defaultModels.map(m => `<option value="${m}">${m}</option>`).join('');
+    cliWizardState.model = defaultModels[0];
+    if (customEl) customEl.value = '';
+    return;
+  }
+
+  selectEl.innerHTML = `<option value="">Carregando modelos do provedor...</option>`;
+  try {
+    const res = await fetch(`/api/providers/${cliWizardState.providerId}/models`);
+    const data = await res.json();
+    const models = data.models || data.data || [];
+    if (models.length > 0) {
+      selectEl.innerHTML = models.map(m => {
+        const id = typeof m === 'string' ? m : (m.id || m.name);
+        return `<option value="${id}">${id}</option>`;
+      }).join('');
+      cliWizardState.model = typeof models[0] === 'string' ? models[0] : (models[0].id || models[0].name);
+    } else {
+      selectEl.innerHTML = `<option value="default">default (modelo padrão)</option>`;
+      cliWizardState.model = 'default';
+    }
+  } catch {
+    selectEl.innerHTML = `<option value="default">default (modelo padrão)</option>`;
+    cliWizardState.model = 'default';
+  }
+  if (customEl) customEl.value = '';
+}
+
+function onCLIWizardModelSelectChange(val) {
+  if (val) {
+    cliWizardState.model = val;
+    const customEl = document.getElementById('cli-wizard-model-custom');
+    if (customEl) customEl.value = '';
+    updateCLIWizardSummary();
+  }
+}
+
+function onCLIWizardModelCustomInput(val) {
+  cliWizardState.model = val.trim();
+  updateCLIWizardSummary();
+}
+
+function updateCLIWizardSummary() {
+  const sumTool = document.getElementById('wiz-sum-tool');
+  const sumProv = document.getElementById('wiz-sum-prov');
+  const sumModel = document.getElementById('wiz-sum-model');
+  const cmdPreview = document.getElementById('cli-wizard-cmd-preview');
+
+  const toolObj = CLI_TOOLS_DATA.find(t => t.id === cliWizardState.toolId) || CLI_TOOLS_DATA[0];
+  const modelStr = cliWizardState.model || 'default';
+
+  if (sumTool) sumTool.textContent = toolObj.name;
+  if (sumProv) sumProv.textContent = cliWizardState.providerId;
+  if (sumModel) sumModel.textContent = modelStr;
+
+  let cmd = `grouter up ${cliWizardState.toolId}`;
+  if (cliWizardState.providerId && cliWizardState.providerId !== 'router') {
+    cmd += ` --provider ${cliWizardState.providerId}`;
+  }
+  if (modelStr && modelStr !== 'default') {
+    cmd += ` --model ${modelStr}`;
+  }
+
+  if (cmdPreview) cmdPreview.textContent = cmd;
+}
+
+async function applyCLIWizardSetup() {
+  try {
+    const res = await fetch('/api/cli/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        toolId: cliWizardState.toolId,
+        providerId: cliWizardState.providerId === 'router' ? '' : cliWizardState.providerId,
+        model: cliWizardState.model || 'default'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao aplicar');
+    alert(`⚡ ${data.message || 'Configurado com sucesso!'}`);
+    renderCLIWizardActiveStatus();
+  } catch (err) {
+    alert(`Erro ao configurar: ${err.message}`);
+  }
+}
+
+function copyCLIWizardCommand() {
+  let cmd = `grouter up ${cliWizardState.toolId}`;
+  if (cliWizardState.providerId && cliWizardState.providerId !== 'router') {
+    cmd += ` --provider ${cliWizardState.providerId}`;
+  }
+  const modelStr = cliWizardState.model || 'default';
+  if (modelStr && modelStr !== 'default') {
+    cmd += ` --model ${modelStr}`;
+  }
+  navigator.clipboard.writeText(cmd).then(() => {
+    alert(`Comando copiado:\n${cmd}`);
+  });
+}
+
+async function renderCLIWizardActiveStatus() {
+  const container = document.getElementById('cli-tools-active-status');
+  if (!container) return;
+  try {
+    const res = await fetch('/api/cli/status');
+    const { tools } = await res.json();
+    container.innerHTML = tools.map(t => {
+      const toolMeta = CLI_TOOLS_DATA.find(item => item.id === t.id) || CLI_TOOLS_DATA[0];
+      return `<div style="background:#18181c;border:1px solid #242428;border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:0.875rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:10px;background:#111113;border:1px solid #282830;display:flex;align-items:center;justify-content:center;padding:0.35rem;flex-shrink:0;">
+            <img src="${toolMeta.logo}" alt="${t.name}" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));" />
+          </div>
+          <div style="min-width:0;">
+            <h5 style="font-size:0.9rem;font-weight:700;color:#f3f4f6;margin:0;">${t.name}</h5>
+            <p style="font-size:0.72rem;color:#0AB9DC;margin:0.15rem 0 0 0;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.configPath}</p>
+          </div>
+        </div>
+        ${t.isConfigured ? `<button class="btn-sm btn-sm-ghost" style="color:#ef4444;border-color:rgba(239,68,68,0.3);font-size:0.72rem;padding:0.35rem 0.65rem;border-radius:8px;flex-shrink:0;" onclick="removeCLITool('${t.id}')">Remover</button>` : `<span style="font-size:0.7rem;color:#6b7280;flex-shrink:0;">Inativo</span>`}
+      </div>`;
+    }).join('');
+  } catch {}
+}
+
+async function removeCLITool(toolId) {
+  if (!confirm(`Deseja remover a integração em ${toolId}?`)) return;
+  try {
+    const res = await fetch('/api/cli/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toolId })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao remover');
+    alert(`Integração com ${toolId} removida.`);
+    renderCLIWizardActiveStatus();
+  } catch (err) {
+    alert(`Erro ao remover: ${err.message}`);
+  }
+}
+
+// ── Tour ───────────────────────────────────────────────────────────────
+function startTour() {
+  const L = (k, d) => T[k] || d;
+  const steps = [
+    { el: '#nav-overview', title: L('tour_s1_title','Overview'), desc: L('tour_s1_desc','Real-time proxy status. See active accounts, requests, tokens, and estimated cost savings at a glance.') },
+    { el: '#kpi-grid', title: L('tour_s2_title','Key Metrics'), desc: L('tour_s2_desc','Accounts, active connections, total requests, and token usage — all updated live.') },
+    { el: '#stats-period', title: L('tour_s3_title','Usage Analytics'), desc: L('tour_s3_desc','Track requests, tokens, cost, RTK savings, and Caveman compression over time. Filter by 24h, 7 days, or 30 days.') },
+    { el: '#overview-providers-row', title: L('tour_s4_title','Connected Providers'), desc: L('tour_s4_desc','Each provider gets a dedicated port for isolated routing. The router on :3099 picks from all active accounts.') },
+    { el: '#nav-providers', title: L('tour_s5_title','Providers'), desc: L('tour_s5_desc','Browse all 15+ supported providers — OAuth and API key. Add connections with a guided wizard per provider.') },
+    { el: '#nav-accounts', title: L('tour_s6_title','Accounts'), desc: L('tour_s6_desc','Manage all your connections. Enable/disable, test connectivity, set priority, and view token status.') },
+    { el: '#nav-keys', title: L('tour_s7_title','API Keys'), desc: L('tour_s7_desc','Create client API keys so other tools can route through grouter. Each key is rotatable independently.') },
+    { el: '#nav-settings', title: L('tour_s8_title','Settings'), desc: L('tour_s8_desc','Configure rotation strategy, proxy port, RTK Token Saver, Cost Predictor, and Caveman compression.') },
+    { el: '#tour-btn', title: L('tour_s9_title','Welcome!'), desc: L('tour_s9_desc','Click here anytime to relaunch this tour. No certificates, no MITM — just a smart local proxy.') },
+  ];
+  let idx = 0;
+  const highlight = document.createElement('div');
+  highlight.className = 'gr-tour-highlight';
+  const box = document.createElement('div');
+  box.className = 'gr-tour-box';
+  document.body.appendChild(highlight);
+  document.body.appendChild(box);
+
+  function close() {
+    highlight.remove(); box.remove();
+    document.removeEventListener('keydown', onKey);
+  }
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowRight' || e.key === 'Enter') next();
+    if (e.key === 'ArrowLeft') prev();
+  }
+  document.addEventListener('keydown', onKey);
+
+  function render() {
+    const s = steps[idx];
+    const el = document.querySelector(s.el);
+    if (!el) { idx < steps.length - 1 ? (idx++, render()) : close(); return; }
+    const r = el.getBoundingClientRect();
+    const pad = 8;
+    highlight.style.top = (r.top - pad) + 'px';
+    highlight.style.left = (r.left - pad) + 'px';
+    highlight.style.width = (r.width + pad * 2) + 'px';
+    highlight.style.height = (r.height + pad * 2) + 'px';
+    const isLast = idx === steps.length - 1;
+    const prevBtn = isLast && idx === 0 ? '' : '<button class="gr-tour-btn gr-tour-btn-prev" onclick="grTourPrev()">←</button>';
+    const nextBtn = isLast
+      ? '<button class="gr-tour-btn gr-tour-btn-done" onclick="grTourClose()">✓ ' + L('tour_done','Done') + '</button>'
+      : '<button class="gr-tour-btn gr-tour-btn-next" onclick="grTourNext()">' + L('tour_next','Next') + ' →</button>';
+    const pct = ((idx + 1) / steps.length * 100).toFixed(0);
+    box.innerHTML = '<button class="gr-tour-close" onclick="grTourClose()">✕</button>' +
+      '<div class="gr-tour-title">' + s.title + '</div>' +
+      '<div class="gr-tour-desc">' + s.desc + '</div>' +
+      '<div class="gr-tour-footer">' + prevBtn +
+      '<div class="gr-tour-progress"><div class="gr-tour-progress-fill" style="width:' + pct + '%"></div></div>' +
+      nextBtn + '</div>';
+    const bw = 320, bh = box.offsetHeight || 160;
+    let top = r.top - bh - 12;
+    let left = r.left + r.width / 2 - bw / 2;
+    if (top < 8) top = r.bottom + 12;
+    if (left < 8) left = 8;
+    if (left + bw > window.innerWidth - 8) left = window.innerWidth - bw - 8;
+    box.style.top = top + 'px';
+    box.style.left = left + 'px';
+    box.style.width = bw + 'px';
+  }
+  window.grTourNext = () => { if (idx < steps.length - 1) { idx++; render(); } };
+  window.grTourPrev = () => { if (idx > 0) { idx--; render(); } };
+  window.grTourClose = close;
+  render();
 }
 
 // ── Mobile drawer ──────────────────────────────────────────────────────
@@ -1896,7 +2430,7 @@ function renderStatus(d) {
       const iconBg    = isLogoUrl(p.logo) ? '#fff' : p.color;
       const portTag   = p.port ? `<span style="color:#0AB9DC;font-weight:600;font-family:monospace;font-size:0.7rem;">:${p.port}</span>` : '';
       return `<div class="cp-pill">
-        <div class="cp-icon" style="background:${iconBg};padding:${isLogoUrl(p.logo)?'0.15rem':'0'};">${iconInner}</div>
+        <div class="cp-icon" style="background:${iconBg};">${iconInner}</div>
         <span>${p.name}</span>
         <span style="color:#6b7280;font-weight:500;">${p.connections}</span>
         ${portTag}
@@ -2183,6 +2717,7 @@ function animN(id, target) {
 // ── Config ────────────────────────────────────────────────────────────
 let cfgStrategy = 'fill-first', cfgStickyLimit = 3;
 let cfgRequireClientAuth = false;
+let cfgAutoStart = false, cfgIsDocker = false;
 
 async function loadConfig() {
   const lv = _langVersion;
@@ -2203,6 +2738,9 @@ function renderConfig(d) {
   document.getElementById('cfg-endpoint-val').textContent = 'http://localhost:'+port+'/v1';
   cfgRequireClientAuth = d.require_client_auth === "true";
   renderClientAuthToggle();
+  cfgAutoStart = d.auto_start === true;
+  cfgIsDocker = d.is_docker === true;
+  renderAutoStartToggle();
 }
 
 function renderClientAuthToggle() {
@@ -2226,6 +2764,38 @@ function toggleClientAuth() {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ require_client_auth: cfgRequireClientAuth ? "true" : "false" })
   }).catch(console.error);
+}
+
+// ── Auto-start toggle ────────────────────────────────────────────────
+function renderAutoStartToggle() {
+  const knob = document.getElementById('cfg-autostart-knob');
+  const bg   = document.getElementById('cfg-autostart-toggle');
+  const warn = document.getElementById('cfg-autostart-docker-warn');
+  const wrap = document.getElementById('cfg-autostart-toggle-wrap');
+  if (!knob || !bg) return;
+  if (cfgAutoStart) {
+    bg.style.background = '#22c55e';
+    knob.style.transform = 'translateX(1.25rem)';
+  } else {
+    bg.style.background = '#2a2a2a';
+    knob.style.transform = 'translateX(0)';
+  }
+  if (warn) warn.style.display = cfgIsDocker ? 'block' : 'none';
+  if (wrap) wrap.style.opacity = cfgIsDocker ? '0.4' : '1';
+}
+
+async function toggleAutoStart() {
+  if (cfgIsDocker) return;
+  cfgAutoStart = !cfgAutoStart;
+  renderAutoStartToggle();
+  try {
+    const r = await fetch('/api/config', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ auto_start: cfgAutoStart })
+    });
+    const d = await r.json();
+    if (!d.ok) { cfgAutoStart = !cfgAutoStart; renderAutoStartToggle(); }
+  } catch { cfgAutoStart = !cfgAutoStart; renderAutoStartToggle(); }
 }
 
 function selectStrategy(s, silent) {
@@ -2414,19 +2984,34 @@ async function loadProviders() {
     const { providers } = await res.json();
     if (_langVersion !== lv) { applyI18n(); return; }
     _providersMap = Object.fromEntries(providers.map(p => [p.id, p]));
-    const customProviders = providers.filter(p => p.isCustom);
-    const apiKeyBuiltins   = providers.filter(p => p.category === 'apikey' && !p.isCustom);
+
+    // 1. Custom Providers Section at TOP (Base custom provider + user-created custom providers)
+    const customBaseProvider = providers.find(p => p.id === 'custom');
+    const customUserProviders = providers.filter(p => p.isCustom);
+    const customTopGridItems = customBaseProvider 
+      ? [customBaseProvider, ...customUserProviders] 
+      : customUserProviders;
+    renderProviderGrid('prov-grid-custom-top', customTopGridItems, { customTop: true });
+
+    // 2. TOP Providers do Momento (NVIDIA NIM, KIMI/Moonshot, TOKENROUTER, GROQ)
+    const trendingIds = ['nvidia', 'moonshot', 'tokenrouter', 'groq'];
+    const topTrendingProviders = trendingIds
+      .map(id => providers.find(p => p.id === id))
+      .filter(Boolean);
+    renderProviderGrid('prov-grid-top-trending', topTrendingProviders);
+
+    // 3. OAuth Providers
     renderProviderGrid('prov-grid-oauth',  providers.filter(p => p.category === 'oauth'));
-    renderProviderGrid('prov-grid-free',   providers.filter(p => p.category === 'free'));
-    renderProviderGrid('prov-grid-apikey', apiKeyBuiltins);
-    renderProviderGrid('prov-grid-custom', customProviders, { custom: true });
-    // Hide free section if empty
+
+    // 4. Free Providers
     const freeProviders = providers.filter(p => p.category === 'free');
+    renderProviderGrid('prov-grid-free', freeProviders);
     const freeSection = document.getElementById('prov-free-section');
     if (freeSection) freeSection.style.display = freeProviders.length ? '' : 'none';
-    // Show custom section only when there are saved custom providers
-    const customSection = document.getElementById('prov-custom-section');
-    if (customSection) customSection.style.display = customProviders.length ? '' : 'none';
+
+    // 5. API Key Providers (excluding custom base & custom user providers)
+    const apiKeyBuiltins = providers.filter(p => p.category === 'apikey' && !p.isCustom && p.id !== 'custom');
+    renderProviderGrid('prov-grid-apikey', apiKeyBuiltins);
   } catch {}
 }
 
@@ -2435,20 +3020,17 @@ function isLogoUrl(logo) { return !!logo && (logo.startsWith('/') || logo.starts
 /** Render the inner bit of a logo (img OR iconify OR initials). fontSize/color only apply to iconify. */
 function renderLogoInner(p, fontSize, color) {
   const initials = p.name.split(' ').map(w => w[0]).join('').slice(0,3).toUpperCase();
-  if (!p.logo) return initials;
+  if (!p.logo) return `<span style="font-size:0.85rem;font-weight:700;color:#9ca3af;">${initials}</span>`;
   if (isLogoUrl(p.logo)) {
-    return `<img src="${p.logo}" alt="${p.name}" style="width:100%;height:100%;object-fit:contain;"/>`;
+    return `<img src="${p.logo}" alt="${p.name}" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.4));"/>`;
   }
-  const f = fontSize || '1.5rem';
-  const c = color || '#fff';
+  const f = fontSize || '1.75rem';
+  const c = color || '#e8e8e8';
   return `<iconify-icon icon="${p.logo}" style="font-size:${f};color:${c};"></iconify-icon>`;
 }
 
 function providerIconHtml(p) {
-  if (p.logo && isLogoUrl(p.logo)) {
-    return `<div class="provider-icon" style="background:#fff;padding:0.2rem;">${renderLogoInner(p)}</div>`;
-  }
-  return `<div class="provider-icon" style="background:${p.color};">${renderLogoInner(p)}</div>`;
+  return `<div class="provider-icon">${renderLogoInner(p)}</div>`;
 }
 
 function renderProviderGrid(gridId, providers, opts) {
@@ -2461,35 +3043,56 @@ function renderProviderGrid(gridId, providers, opts) {
     const deprecated = !!p.deprecated;
     const underConstruction = !!p.underConstruction;
     const locked     = deprecated || underConstruction;
+    const isCustomBaseCard = (p.id === 'custom' && !isCustomGrid);
+
+    const displayName = isCustomBaseCard ? 'API Customizada' : p.name;
     const meta       = deprecated ? tr('provider_status_discontinued')
                        : underConstruction ? tr('provider_status_under_construction')
                        : connected ? (tr('provider_status_connected',{n:p.connections}) + (p.port ? ' · :' + p.port : ''))
+                       : isCustomBaseCard ? 'LM Studio, Local, etc.'
                        : tr('provider_status_none');
-    const badge      = deprecated ? `<span class="provider-badge-deprecated">${tr('provider_badge_deprecated')}</span>`
-                       : underConstruction ? `<span class="provider-badge-under-construction">${tr('provider_badge_under_construction')}</span>`
-                       : (connected && !isCustomGrid) ? `<span class="provider-badge">${p.connections}</span>` : '';
-    const freeBadge  = (p.freeTier && !underConstruction) ? `<span class="provider-badge-free" title="${p.freeTier.notice || tr('provider_badge_free')}">${tr('provider_badge_free')}</span>` : '';
+    const statusDot  = deprecated ? ' error' : connected ? ' active' : ' idle';
+    
+    // Top banner for GRATIS / DEPRECATED / UNDER CONSTRUCTION / CUSTOM
+    const topBanner  = deprecated ? `<div class="provider-banner-deprecated"><span>${tr('provider_badge_deprecated')}</span></div>`
+                       : underConstruction ? `<div class="provider-banner-under-construction"><span>${tr('provider_badge_under_construction')}</span></div>`
+                       : isCustomBaseCard ? `<div class="provider-banner-custom"><span>+ API CUSTOM</span></div>`
+                       : (p.freeTier) ? `<div class="provider-banner-free" title="${p.freeTier.notice || tr('provider_badge_free')}"><span>${tr('provider_badge_free')}</span></div>`
+                       : '';
+
+    // Connected badge count
+    const connectedBadge = (connected) ? `<div class="provider-badge-connected" title="${p.connections} active connection(s)">${p.connections}</div>` : '';
+
     const click      = locked ? '' : `onclick="openProviderCard('${p.id}')"`;
     const modelsBtn  = (p.id !== 'custom' && !locked)
-      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>`
+      ? `<button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();openModelsModal('${p.id}')" title="${tr('models_view_title')}" style="padding:0;height:1.75rem;width:1.75rem;border-radius:8px;font-size:0.68rem;display:inline-flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);border-color:rgba(255,255,255,0.1);"><iconify-icon icon="solar:settings-bold-duotone" style="font-size:0.9rem;"></iconify-icon></button>`
       : '';
     const customActions = isCustomGrid ? `
-      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();editCustomProvider('${p.id}')" title="${tr('custom_action_edit')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;color:#0AB9DC;border-color:rgba(10,185,220,0.3);"><iconify-icon icon="solar:pen-2-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>
-      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();deleteCustomProvider('${p.id}')" title="${tr('custom_action_delete')}" style="padding:0 0.5rem;height:1.75rem;font-size:0.68rem;color:#ef4444;border-color:rgba(239,68,68,0.3);"><iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.85rem;"></iconify-icon></button>` : '';
-    const customBadge = (isCustomGrid && connected) ? `<span class="provider-badge" style="top:0.5rem;right:5.6rem;">${p.connections}</span>` : '';
-    const metaColor  = deprecated ? '#ef4444' : underConstruction ? '#f59e0b' : '#6b7280';
+      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();editCustomProvider('${p.id}')" title="${tr('custom_action_edit')}" style="padding:0;width:1.75rem;height:1.75rem;border-radius:8px;font-size:0.68rem;color:#0AB9DC;border-color:rgba(10,185,220,0.3);background:rgba(0,0,0,0.4);display:inline-flex;align-items:center;justify-content:center;"><iconify-icon icon="solar:pen-2-bold-duotone" style="font-size:0.9rem;"></iconify-icon></button>
+      <button class="btn-sm btn-sm-ghost" onclick="event.stopPropagation();deleteCustomProvider('${p.id}')" title="${tr('custom_action_delete')}" style="padding:0;width:1.75rem;height:1.75rem;border-radius:8px;font-size:0.68rem;color:#ef4444;border-color:rgba(239,68,68,0.3);background:rgba(0,0,0,0.4);display:inline-flex;align-items:center;justify-content:center;"><iconify-icon icon="solar:trash-bin-trash-bold-duotone" style="font-size:0.9rem;"></iconify-icon></button>` : '';
+
     const stateClass = deprecated ? ' deprecated' : underConstruction ? ' under-construction' : '';
-    return `<div class="provider-card${connected?' connected':''}${stateClass}" ${click}>
+    const hasTopBannerClass = (p.freeTier || deprecated || underConstruction || isCustomBaseCard) ? ' has-top-banner' : '';
+    const customAddCardClass = isCustomBaseCard ? ' is-custom-add-card' : '';
+    const metaColor  = deprecated ? '#ef4444' : underConstruction ? '#f59e0b' : connected ? '#34d399' : isCustomBaseCard ? '#0AB9DC' : '#6b7280';
+    const provColor  = p.color || '#0AB9DC';
+    const provGlow   = provColor.startsWith('#') && provColor.length === 7 ? provColor + '40' : 'rgba(10,185,220,0.25)';
+
+    return `<div class="provider-card${connected?' connected':''}${stateClass}${hasTopBannerClass}${customAddCardClass}" ${click} style="--prov-color:${provColor};--prov-glow:${provGlow};">
+      ${topBanner}
+      ${connectedBadge}
       ${providerIconHtml(p)}
-      <div style="min-width:0;flex:1;">
-        <p style="font-size:0.82rem;font-weight:600;color:#e8e8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.name}</p>
-        <p style="font-size:0.68rem;color:${metaColor};margin-top:0.1rem;">${meta}</p>
+      <div style="min-width:0;width:100%;z-index:2;margin-top:0.25rem;">
+        <p style="font-size:0.85rem;font-weight:700;color:#f3f4f6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0;line-height:1.2;">${displayName}</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.3rem;margin-top:0.35rem;">
+          <span class="provider-status-dot${statusDot}"></span>
+          <p style="font-size:0.68rem;font-weight:500;color:${metaColor};margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${meta}</p>
+        </div>
       </div>
-      ${customActions}
-      ${modelsBtn}
-      ${freeBadge}
-      ${customBadge}
-      ${badge}
+      <div class="provider-card-actions">
+        ${customActions}
+        ${modelsBtn}
+      </div>
     </div>`;
   }).join('');
 }

@@ -1,6 +1,6 @@
 // RTK Token Saver - Content Compressors
 
-import { CompressResult } from './rtk-types';
+import type { CompressResult } from './rtk-types.ts';
 
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);

@@ -171,6 +171,8 @@ export function db(): Database {
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sticky_limit', '3')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('proxy_port', '3099')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('require_client_auth', 'false')`);
+  _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_start', 'false')`);
+  _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_start_type', 'systemd')`);
 
   return _db;
 }

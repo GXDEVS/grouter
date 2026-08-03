@@ -1,6 +1,6 @@
 // Cost Predictor - Estimate request cost before sending
 
-import { estimateCostUSD } from '../constants';
+import { estimateCostUSD } from '../constants.ts';
 
 export interface CostEstimate {
   provider: string;

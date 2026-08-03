@@ -3,6 +3,7 @@ import { setSetting, getStrategy, getStickyLimit, getProxyPort, getSetting } fro
 import { RTK_CONFIG_DEFAULT } from "../proxy/rtk-types";
 import { COST_CONFIG_DEFAULT } from "../proxy/cost-predictor";
 import { CAVEMAN_CONFIG_DEFAULT } from "../proxy/caveman";
+import { installAutoStart, uninstallAutoStart } from "./autostart.ts";
 
 export function configCommand(options: {
   strategy?: "fill-first" | "round-robin";
@@ -15,11 +16,12 @@ export function configCommand(options: {
   costWarn?: number;
   caveman?: string;
   cavemanIntensity?: string;
+  autoStart?: "on" | "off";
 }): void {
   if (!options.strategy && options.port === undefined && options.stickyLimit === undefined &&
       !options.rtk && !options.rtkAggressiveness && !options.costPredictor &&
       options.costThreshold === undefined && options.costWarn === undefined &&
-      !options.caveman && !options.cavemanIntensity) {
+      !options.caveman && !options.cavemanIntensity && !options.autoStart) {
     const rtkEnabled = getSetting("rtk_enabled") ?? "true";
     const rtkAgg = getSetting("rtk_aggressiveness") ?? "balanced";
     const costEnabled = getSetting("cost_predictor_enabled") ?? "true";
@@ -47,6 +49,9 @@ export function configCommand(options: {
     console.log(chalk.bold("  Caveman:"));
     console.log(`    enabled:          ${chalk.cyan(cavemanEnabled)}`);
     console.log(`    intensity:        ${chalk.cyan(cavemanIntensity)}`);
+    console.log("");
+    console.log(chalk.bold("  System:"));
+    console.log(`    auto-start:       ${chalk.cyan(getSetting("auto_start") ?? "false")}`);
     console.log(chalk.gray(`\n  db: ~/.grouter/grouter.db`));
     console.log("");
     return;
@@ -62,5 +67,11 @@ export function configCommand(options: {
   if (options.costWarn !== undefined) { setSetting("cost_warn_threshold", String(options.costWarn)); console.log(chalk.green(`  cost warn threshold set to: ${options.costWarn}`)); }
   if (options.caveman) { setSetting("caveman_enabled", options.caveman === "on" ? "true" : "false"); console.log(chalk.green(`  caveman enabled set to: ${options.caveman}`)); }
   if (options.cavemanIntensity) { setSetting("caveman_intensity", options.cavemanIntensity); console.log(chalk.green(`  caveman intensity set to: ${options.cavemanIntensity}`)); }
+  if (options.autoStart) {
+    const enabled = options.autoStart === "on";
+    const result = enabled ? installAutoStart() : uninstallAutoStart();
+    if (result.ok) { console.log(chalk.green(`  ${result.message}`)); }
+    else { console.log(chalk.yellow(`  ${result.message}`)); }
+  }
   console.log("");
 }

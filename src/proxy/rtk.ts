@@ -1,7 +1,7 @@
 // RTK Token Saver - Main Module
 
-import { RTKConfig, CompressResult, RTK_CONFIG_DEFAULT } from './rtk-types';
-import { detectToolType } from './rtk-detectors';
+import { RTK_CONFIG_DEFAULT, type RTKConfig, type CompressResult } from './rtk-types.ts';
+import { detectToolType } from './rtk-detectors.ts';
 import {
   compressGitDiff,
   compressGitStatus,
@@ -10,7 +10,7 @@ import {
   compressLs,
   compressTree,
   compressFileRead,
-} from './rtk-compressors';
+} from './rtk-compressors.ts';
 
 export type { RTKConfig, CompressResult };
 export { RTK_CONFIG_DEFAULT };

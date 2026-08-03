@@ -86,11 +86,16 @@ export function handleSetupDone(): Response {
 
 export function handleGetConfig(): Response {
   const requireClientAuth = getSetting("require_client_auth") ?? "false";
+  const autoStart = getSetting("auto_start") ?? "false";
+  const isDocker = process.env.GROUTER_IN_DOCKER === "1";
   return json({
     strategy: getStrategy(),
     stickyLimit: getStickyLimit(),
     port: getProxyPort(),
     require_client_auth: requireClientAuth,
+    auto_start: autoStart === "true",
+    auto_start_type: getSetting("auto_start_type") ?? "systemd",
+    is_docker: isDocker,
   });
 }
 
@@ -101,6 +106,8 @@ export async function handleSetConfig(req: Request): Promise<Response> {
       stickyLimit?: number;
       port?: number;
       require_client_auth?: string | boolean;
+      auto_start?: boolean;
+      auto_start_type?: string;
     }>(req);
 
     if (body.strategy !== undefined) {
@@ -137,6 +144,46 @@ export async function handleSetConfig(req: Request): Promise<Response> {
         return errorResponse(400, "require_client_auth must be true or false");
       }
       setSetting("require_client_auth", normalized);
+    }
+
+    if (body.auto_start !== undefined) {
+      setSetting("auto_start", body.auto_start ? "true" : "false");
+      if (body.auto_start_type !== undefined) {
+        setSetting("auto_start_type", body.auto_start_type);
+      }
+      try {
+        const { installAutoStart, uninstallAutoStart } = await import("../commands/autostart.ts");
+        if (body.auto_start) {
+          const result = installAutoStart();
+          return json({
+            ok: result.ok,
+            message: result.message,
+            strategy: getStrategy(),
+            stickyLimit: getStickyLimit(),
+            port: getProxyPort(),
+            require_client_auth: getSetting("require_client_auth") ?? "false",
+            auto_start: result.ok,
+            auto_start_type: getSetting("auto_start_type") ?? "systemd",
+            is_docker: process.env.GROUTER_IN_DOCKER === "1",
+          });
+        } else {
+          const result = uninstallAutoStart();
+          return json({
+            ok: result.ok,
+            message: result.message,
+            strategy: getStrategy(),
+            stickyLimit: getStickyLimit(),
+            port: getProxyPort(),
+            require_client_auth: getSetting("require_client_auth") ?? "false",
+            auto_start: false,
+            auto_start_type: getSetting("auto_start_type") ?? "systemd",
+            is_docker: process.env.GROUTER_IN_DOCKER === "1",
+          });
+        }
+      } catch (err) {
+        setSetting("auto_start", (!body.auto_start) ? "true" : "false");
+        return errorResponse(500, `Failed to toggle auto-start: ${(err as Error).message}`);
+      }
     }
 
     return json({

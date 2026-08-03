@@ -26,6 +26,7 @@ import { upOpencodeCommand, upOpencodeRemoveCommand } from "./src/commands/openc
 import { upClineCommand, upClineRemoveCommand } from "./src/commands/cline.ts";
 import { upOpenclawCommand, upOpenclawRemoveCommand } from "./src/commands/openclaw.ts";
 import { statsCommand } from "./src/commands/stats.ts";
+import { postinstallCommand } from "./src/commands/postinstall.ts";
 import { printUpdateBannerSync, scheduleUpdateCheck, CURRENT_VERSION } from "./src/update/checker.ts";
 
 const program = new Command()
@@ -168,6 +169,18 @@ function toUpOptions(opts: UpFlags) {
   };
 }
 
+upCmd.command("claude")
+  .description("Configure Claude Code (ANTHROPIC_BASE_URL) to use grouter")
+  .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
+  .option("-m, --model <model>", "Model to use")
+  .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
+  .option("--no-interactive", "Skip the wizard and use flag values / defaults")
+  .option("--remove", "Remove the integration")
+  .action((opts: UpFlags) => {
+    if (opts.remove) return upOpenclaudeRemoveCommand();
+    return upOpenclaudeCommand(toUpOptions(opts));
+  });
+
 upCmd.command("openclaude")
   .description("Configure Claude Code to use grouter (interactive wizard by default)")
   .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
@@ -230,6 +243,9 @@ program.command("_daemon", { hidden: true })
     daemonEntrypoint({ port: opts.port ? parseInt(opts.port, 10) : undefined })
   );
 
+program.command("_postinstall", { hidden: true })
+  .action(() => postinstallCommand());
+
 // ── status / config ───────────────────────────────────────────────────────────
 
 program.command("status")
@@ -256,7 +272,8 @@ program.command("config")
   .option("--cost-warn <number>", "Cost warning threshold (dollars)")
   .option("--caveman <on|off>", "Enable/disable Caveman prose compression")
   .option("--caveman-intensity <level>", "Caveman intensity: lite | full | ultra")
-  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string; caveman?: string; cavemanIntensity?: string }) => {
+  .option("--auto-start <on|off>", "Enable/disable system auto-start on boot (Linux systemd)")
+  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string; caveman?: string; cavemanIntensity?: string; autoStart?: string }) => {
     const options: Parameters<typeof configCommand>[0] = {};
     if (opts.strategy === "fill-first" || opts.strategy === "round-robin") options.strategy = opts.strategy;
     if (opts.port) options.port = parseInt(opts.port, 10);
@@ -268,6 +285,7 @@ program.command("config")
     if (opts.costWarn) options.costWarn = parseFloat(opts.costWarn);
     if (opts.caveman === "on" || opts.caveman === "off") options.caveman = opts.caveman;
     if (opts.cavemanIntensity === "lite" || opts.cavemanIntensity === "full" || opts.cavemanIntensity === "ultra") options.cavemanIntensity = opts.cavemanIntensity;
+    if (opts.autoStart === "on" || opts.autoStart === "off") options.autoStart = opts.autoStart;
     configCommand(options);
   });
 

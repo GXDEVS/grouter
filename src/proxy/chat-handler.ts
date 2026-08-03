@@ -25,9 +25,9 @@ import {
 } from "./server-helpers.ts";
 import { buildUpstream } from "./upstream.ts";
 
-const UPSTREAM_FIRST_BYTE_TIMEOUT_MS = 20_000;
-const UPSTREAM_STREAM_IDLE_TIMEOUT_MS = 45_000;
-const UPSTREAM_REQUEST_TOTAL_TIMEOUT_MS = 120_000;
+const UPSTREAM_FIRST_BYTE_TIMEOUT_MS = 60_000;
+const UPSTREAM_STREAM_IDLE_TIMEOUT_MS = 60_000;
+const UPSTREAM_REQUEST_TOTAL_TIMEOUT_MS = 300_000;
 
 type UpstreamTimeoutCategory = "first_byte_timeout" | "stream_idle_timeout" | "request_total_timeout";
 type UpstreamAbortReason = UpstreamTimeoutCategory | "client_cancelled";
