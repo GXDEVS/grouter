@@ -3,11 +3,23 @@
 // Runtime can serve gzip directly and inflate for legacy clients.
 
 import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
 const IN_FILE = join(import.meta.dir, "..", "src", "public", "animation.js");
 const OUT_FILE = join(import.meta.dir, "..", "src", "public", "animation-embedded.ts");
+
+if (!existsSync(IN_FILE)) {
+  console.log(`Skipping animation embed: ${IN_FILE} not found.`);
+  if (!existsSync(OUT_FILE)) {
+    await Bun.write(
+      OUT_FILE,
+      `export const ANIMATION_RAW_SHA1 = "";\nexport const ANIMATION_RAW_LENGTH = 0;\nexport const ANIMATION_GZIP_LENGTH = 0;\nexport const ANIMATION_GZIP_B64 = "";\n`
+    );
+  }
+  process.exit(0);
+}
 
 const rawBytes = Buffer.from(await Bun.file(IN_FILE).arrayBuffer());
 const gzipBytes = gzipSync(rawBytes, { level: 9 });

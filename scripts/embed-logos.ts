@@ -3,12 +3,23 @@
 // Runtime serves logos from this packed payload to keep single-binary offline mode.
 
 import { createHash } from "node:crypto";
-import { readdirSync } from "node:fs";
+import { readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { brotliCompressSync, constants as zlibConstants } from "node:zlib";
 
 const LOGO_DIR = join(import.meta.dir, "..", "src", "public", "logos");
 const OUT_FILE = join(import.meta.dir, "..", "src", "web", "logos-embedded.ts");
+
+if (!existsSync(LOGO_DIR)) {
+  console.log(`Skipping logo embed: ${LOGO_DIR} not found.`);
+  if (!existsSync(OUT_FILE)) {
+    await Bun.write(
+      OUT_FILE,
+      `export const LOGO_PACK_B64 = "";\nexport const LOGO_INDEX = {};\nexport const LOGO_RAW_TOTAL_BYTES = 0;\nexport const LOGO_PACK_TOTAL_BYTES = 0;\n`
+    );
+  }
+  process.exit(0);
+}
 
 const files = readdirSync(LOGO_DIR).filter((f) => f.endsWith(".png")).sort();
 
