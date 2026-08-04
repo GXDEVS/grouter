@@ -82,9 +82,8 @@ export function findCheaperAlternative(
     .filter(m => m.cost > 0 && m.cost < current.estimatedCost)
     .sort((a, b) => a.cost - b.cost);
   
-  if (alternatives.length === 0) return undefined;
-  
   const best = alternatives[0];
+  if (!best) return undefined;
   return {
     provider: best.provider,
     model: best.model,

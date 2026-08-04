@@ -17,7 +17,7 @@
 import { arch } from "node:os";
 import type { Connection } from "../types.ts";
 import { parseProviderData, decodeJwtPayload, mapPlatformOs } from "../utils.ts";
-import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG, estimateCostUSD } from "../constants.ts";
+import { buildQwenHeaders, buildQwenUrl, QWEN_SYSTEM_MSG } from "../constants.ts";
 import { getProvider } from "../providers/registry.ts";
 import {
   openaiToClaude,
@@ -27,7 +27,7 @@ import {
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
 import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk.ts";
-import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT, type CavemanConfig } from "./caveman.ts";
+import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT } from "./caveman.ts";
 import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor.ts";
 
 export interface UpstreamRequest {
@@ -205,8 +205,6 @@ function buildGithub(ctx: BuildContext): UpstreamResult {
   };
 }
 
-// ── Dispatcher ───────────────────────────────────────────────────────────────
-
 export function buildUpstream(ctx: BuildContext): UpstreamResult {
   const provider = ctx.account.provider;
   const model = (ctx.body.model as string) ?? "unknown";
@@ -243,6 +241,18 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       console.log(`[Cost] High cost estimate: $${estimate.estimatedCost.toFixed(4)} for ${model} on ${provider}`);
     }
   }
+
+  const res = dispatchUpstream(ctx);
+  if (res.kind === "ok") {
+    if (rtkSavings > 0) res.req.rtkSavings = rtkSavings;
+    if (cavemanSavings > 0) res.req.cavemanSavings = cavemanSavings;
+    if (costEstimate > 0) res.req.costEstimate = costEstimate;
+  }
+  return res;
+}
+
+function dispatchUpstream(ctx: BuildContext): UpstreamResult {
+  const provider = ctx.account.provider;
 
   // API key providers → plain OpenAI-compat
   if (ctx.account.auth_type === "apikey") {

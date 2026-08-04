@@ -221,7 +221,7 @@ export async function handleSetupCLI(req: Request): Promise<Response> {
     const model = body.model || "default";
 
     if (!toolId) {
-      return errorResponse("toolId is required", 400);
+      return errorResponse(400, "toolId is required");
     }
 
     const routerPort = getProxyPort();
@@ -322,7 +322,7 @@ export async function handleSetupCLI(req: Request): Promise<Response> {
 
     return json({ ok: true, message: `Ferramenta ${toolId} configurada com sucesso para ${targetUrl}` });
   } catch (err: any) {
-    return errorResponse(err.message || "Falha na configuração da CLI", 500);
+    return errorResponse(500, err.message || "Falha na configuração da CLI");
   }
 }
 
@@ -331,7 +331,7 @@ export async function handleRemoveCLI(req: Request): Promise<Response> {
     const body = (await req.json()) as { toolId?: string };
     const toolId = body.toolId;
     if (!toolId) {
-      return errorResponse("toolId is required", 400);
+      return errorResponse(400, "toolId is required");
     }
 
     if (toolId === "claude" || toolId === "claudecode") {
@@ -389,6 +389,6 @@ export async function handleRemoveCLI(req: Request): Promise<Response> {
 
     return json({ ok: true, message: `Integração removida para ${toolId}` });
   } catch (err: any) {
-    return errorResponse(err.message || "Falha ao remover integração da CLI", 500);
+    return errorResponse(500, err.message || "Falha ao remover integração da CLI");
   }
 }

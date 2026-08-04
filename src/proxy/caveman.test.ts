@@ -52,7 +52,7 @@ describe('Caveman Module', () => {
         { role: 'user', content: 'Hello!' }
       ];
       const result = compressMessages(messages, { ...CAVEMAN_CONFIG_DEFAULT, enabled: true, intensity: 'full' });
-      expect(result.compressedMessages[0].content.length).toBeLessThan(messages[0].content.length);
+      expect(result.compressedMessages[0]!.content.length).toBeLessThan(messages[0]!.content.length);
       expect(result.totalSaved).toBeGreaterThan(0);
     });
 
@@ -61,7 +61,7 @@ describe('Caveman Module', () => {
         { role: 'user', content: 'I would like you to please help me with this task.' }
       ];
       const result = compressMessages(messages, { ...CAVEMAN_CONFIG_DEFAULT, enabled: true, intensity: 'full' });
-      expect(result.compressedMessages[0].content.length).toBeLessThan(messages[0].content.length);
+      expect(result.compressedMessages[0]!.content.length).toBeLessThan(messages[0]!.content.length);
     });
 
     it('should not modify assistant messages', () => {
@@ -69,7 +69,7 @@ describe('Caveman Module', () => {
         { role: 'assistant', content: 'I will help you with that task.' }
       ];
       const result = compressMessages(messages, { ...CAVEMAN_CONFIG_DEFAULT, enabled: true, intensity: 'full' });
-      expect(result.compressedMessages[0].content).toBe(messages[0].content);
+      expect(result.compressedMessages[0]!.content).toBe(messages[0]!.content);
     });
 
     it('should return original when disabled', () => {

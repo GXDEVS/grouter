@@ -5,10 +5,10 @@ import {
   getDailyUsage, 
   getProviderBreakdown,
   getModelBreakdown,
-  UsageSummary,
-  DailyUsage,
-  ProviderBreakdown,
-  ModelBreakdown
+  type UsageSummary,
+  type DailyUsage,
+  type ProviderBreakdown,
+  type ModelBreakdown
 } from '../db/stats-queries';
 
 export interface StatsOptions {

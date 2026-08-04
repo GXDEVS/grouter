@@ -59,7 +59,7 @@ export function compressGrep(content: string): CompressResult {
   
   for (const line of lines) {
     const match = line.match(/^([^:]+):/);
-    if (match) {
+    if (match && match[1]) {
       const file = match[1];
       fileCounts[file] = (fileCounts[file] || 0) + 1;
     }

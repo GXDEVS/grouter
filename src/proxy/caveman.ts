@@ -62,7 +62,8 @@ function preserveContent(text: string): { preserved: string[]; placeholder: stri
 function restoreContent(text: string, preserved: string[]): string {
   let result = text;
   for (let i = 0; i < preserved.length; i++) {
-    result = result.replace(`__PRESERVED_${i}__`, preserved[i]);
+    const val = preserved[i] ?? "";
+    result = result.replace(`__PRESERVED_${i}__`, val);
   }
   return result;
 }

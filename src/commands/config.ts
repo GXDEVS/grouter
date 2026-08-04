@@ -1,8 +1,5 @@
 import chalk from "chalk";
 import { setSetting, getStrategy, getStickyLimit, getProxyPort, getSetting } from "../db/index.ts";
-import { RTK_CONFIG_DEFAULT } from "../proxy/rtk-types";
-import { COST_CONFIG_DEFAULT } from "../proxy/cost-predictor";
-import { CAVEMAN_CONFIG_DEFAULT } from "../proxy/caveman";
 import { installAutoStart, uninstallAutoStart } from "./autostart.ts";
 
 export function configCommand(options: {

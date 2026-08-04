@@ -2,7 +2,6 @@ import { mkdirSync, writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, platform } from "node:os";
 import { execSync } from "node:child_process";
-import chalk from "chalk";
 import { getProxyPort, getSetting, setSetting } from "../db/index.ts";
 
 const SERVICE_NAME = "grouter";

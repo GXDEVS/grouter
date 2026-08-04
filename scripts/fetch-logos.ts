@@ -84,7 +84,7 @@ async function processToPng(input: Buffer, url: string): Promise<Buffer | null> 
     const meta = await image.metadata();
     const isSvg = meta.format === "svg" || url.endsWith(".svg") || url.includes("simpleicons");
 
-    let pipeline: sharp.Sharp;
+    let pipeline: ReturnType<typeof sharp>;
 
     if (isSvg) {
       pipeline = sharp(input, { density: 300 })
