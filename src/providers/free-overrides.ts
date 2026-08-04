@@ -160,6 +160,7 @@ export const FREE_PROVIDER_CANDIDATES: FreeProviderCandidate[] = [
   { providerId: "nvidia", displayName: "NVIDIA NIM", openaiCompatible: true, freeTierActive: true, docsUrl: "https://build.nvidia.com/", integrated: true, stability: "stable" },
   { providerId: "gemini", displayName: "Google Gemini", openaiCompatible: true, freeTierActive: true, docsUrl: "https://aistudio.google.com/app/apikey", integrated: true, stability: "stable" },
   { providerId: "github-models", displayName: "GitHub Models", openaiCompatible: true, freeTierActive: true, docsUrl: "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models", integrated: true, stability: "stable" },
+  { providerId: "tokenrouter", displayName: "TokenRouter", openaiCompatible: true, freeTierActive: true, docsUrl: "https://www.tokenrouter.com/models", integrated: true, stability: "stable" },
 ];
 
 function candidateScore(c: FreeProviderCandidate): number {

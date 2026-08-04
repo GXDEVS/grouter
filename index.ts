@@ -25,6 +25,8 @@ import { upOpenclaudeCommand, upOpenclaudeRemoveCommand } from "./src/commands/o
 import { upOpencodeCommand, upOpencodeRemoveCommand } from "./src/commands/opencode.ts";
 import { upClineCommand, upClineRemoveCommand } from "./src/commands/cline.ts";
 import { upOpenclawCommand, upOpenclawRemoveCommand } from "./src/commands/openclaw.ts";
+import { statsCommand } from "./src/commands/stats.ts";
+import { postinstallCommand } from "./src/commands/postinstall.ts";
 import { printUpdateBannerSync, scheduleUpdateCheck, CURRENT_VERSION } from "./src/update/checker.ts";
 
 const program = new Command()
@@ -167,6 +169,18 @@ function toUpOptions(opts: UpFlags) {
   };
 }
 
+upCmd.command("claude")
+  .description("Configure Claude Code (ANTHROPIC_BASE_URL) to use grouter")
+  .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
+  .option("-m, --model <model>", "Model to use")
+  .option("-p, --port <number>", "Proxy port (default: provider's port or router port)")
+  .option("--no-interactive", "Skip the wizard and use flag values / defaults")
+  .option("--remove", "Remove the integration")
+  .action((opts: UpFlags) => {
+    if (opts.remove) return upOpenclaudeRemoveCommand();
+    return upOpenclaudeCommand(toUpOptions(opts));
+  });
+
 upCmd.command("openclaude")
   .description("Configure Claude Code to use grouter (interactive wizard by default)")
   .option("--provider <id>", "Provider ID (e.g. claude, kiro, github, qwen)")
@@ -229,22 +243,49 @@ program.command("_daemon", { hidden: true })
     daemonEntrypoint({ port: opts.port ? parseInt(opts.port, 10) : undefined })
   );
 
+program.command("_postinstall", { hidden: true })
+  .action(() => postinstallCommand());
+
 // ── status / config ───────────────────────────────────────────────────────────
 
 program.command("status")
   .description("Show accounts health, rotation state, and active locks")
   .action(statusCommand);
 
+program.command("stats")
+  .description("Show usage statistics and cost breakdown")
+  .option("-p, --period <period>", "day | week | month", "week")
+  .option("--provider <provider>", "Filter by provider")
+  .option("--model <model>", "Filter by model")
+  .option("--json", "Output as JSON")
+  .action(statsCommand);
+
 program.command("config")
   .description("Show or update proxy configuration")
   .option("--strategy <strategy>", "fill-first | round-robin")
   .option("--port <number>", "Default proxy port")
   .option("--sticky-limit <number>", "Round-robin consecutive-use limit")
-  .action((opts: { strategy?: string; port?: string; stickyLimit?: string }) => {
+  .option("--rtk <on|off>", "Enable/disable RTK Token Saver")
+  .option("--rtk-aggressiveness <level>", "RTK aggressiveness: balanced | aggressive | conservative")
+  .option("--cost-predictor <on|off>", "Enable/disable Cost Predictor")
+  .option("--cost-threshold <number>", "Cost threshold for suggestions (dollars)")
+  .option("--cost-warn <number>", "Cost warning threshold (dollars)")
+  .option("--caveman <on|off>", "Enable/disable Caveman prose compression")
+  .option("--caveman-intensity <level>", "Caveman intensity: lite | full | ultra")
+  .option("--auto-start <on|off>", "Enable/disable system auto-start on boot (Linux systemd)")
+  .action((opts: { strategy?: string; port?: string; stickyLimit?: string; rtk?: string; rtkAggressiveness?: string; costPredictor?: string; costThreshold?: string; costWarn?: string; caveman?: string; cavemanIntensity?: string; autoStart?: string }) => {
     const options: Parameters<typeof configCommand>[0] = {};
     if (opts.strategy === "fill-first" || opts.strategy === "round-robin") options.strategy = opts.strategy;
     if (opts.port) options.port = parseInt(opts.port, 10);
     if (opts.stickyLimit) options.stickyLimit = parseInt(opts.stickyLimit, 10);
+    if (opts.rtk === "on" || opts.rtk === "off") options.rtk = opts.rtk;
+    if (opts.rtkAggressiveness === "balanced" || opts.rtkAggressiveness === "aggressive" || opts.rtkAggressiveness === "conservative") options.rtkAggressiveness = opts.rtkAggressiveness;
+    if (opts.costPredictor === "on" || opts.costPredictor === "off") options.costPredictor = opts.costPredictor;
+    if (opts.costThreshold) options.costThreshold = parseFloat(opts.costThreshold);
+    if (opts.costWarn) options.costWarn = parseFloat(opts.costWarn);
+    if (opts.caveman === "on" || opts.caveman === "off") options.caveman = opts.caveman;
+    if (opts.cavemanIntensity === "lite" || opts.cavemanIntensity === "full" || opts.cavemanIntensity === "ultra") options.cavemanIntensity = opts.cavemanIntensity;
+    if (opts.autoStart === "on" || opts.autoStart === "off") options.autoStart = opts.autoStart;
     configCommand(options);
   });
 

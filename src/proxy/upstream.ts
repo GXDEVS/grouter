@@ -26,11 +26,17 @@ import {
 } from "./claude-translator.ts";
 import { openaiToCodexResponses } from "./codex-translator.ts";
 import { openaiToGemini } from "./gemini-translator.ts";
+import { compressMessages, RTK_CONFIG_DEFAULT } from "./rtk.ts";
+import { compressMessages as cavemanCompress, CAVEMAN_CONFIG_DEFAULT } from "./caveman.ts";
+import { estimateCost, COST_CONFIG_DEFAULT } from "./cost-predictor.ts";
 
 export interface UpstreamRequest {
   url: string;
   headers: Record<string, string>;
   body: Record<string, unknown>;
+  rtkSavings?: number;
+  cavemanSavings?: number;
+  costEstimate?: number;
 }
 
 export type UpstreamResult =
@@ -199,9 +205,53 @@ function buildGithub(ctx: BuildContext): UpstreamResult {
   };
 }
 
-// ── Dispatcher ───────────────────────────────────────────────────────────────
-
 export function buildUpstream(ctx: BuildContext): UpstreamResult {
+  const provider = ctx.account.provider;
+  const model = (ctx.body.model as string) ?? "unknown";
+
+  // ── RTK Token Saver: compress tool_result content ──────────────────────────
+  let rtkSavings = 0;
+  if (RTK_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const rtkResult = compressMessages(messages, RTK_CONFIG_DEFAULT);
+    if (rtkResult.totalSaved > 0) {
+      ctx.body = { ...ctx.body, messages: rtkResult.compressedMessages };
+      rtkSavings = rtkResult.totalSaved;
+    }
+  }
+
+  // ── Caveman: compress prose to save tokens ─────────────────────────────────
+  let cavemanSavings = 0;
+  if (CAVEMAN_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const cavemanResult = cavemanCompress(messages, CAVEMAN_CONFIG_DEFAULT);
+    if (cavemanResult.totalSaved > 0) {
+      ctx.body = { ...ctx.body, messages: cavemanResult.compressedMessages };
+      cavemanSavings = cavemanResult.totalSaved;
+    }
+  }
+
+  // ── Cost Predictor: estimate cost before sending ───────────────────────────
+  let costEstimate = 0;
+  if (COST_CONFIG_DEFAULT.enabled && ctx.body.messages) {
+    const messages = ctx.body.messages as any[];
+    const estimate = estimateCost(messages, model, provider);
+    costEstimate = estimate.estimatedCost;
+    if (estimate.estimatedCost > COST_CONFIG_DEFAULT.warnThreshold) {
+      console.log(`[Cost] High cost estimate: $${estimate.estimatedCost.toFixed(4)} for ${model} on ${provider}`);
+    }
+  }
+
+  const res = dispatchUpstream(ctx);
+  if (res.kind === "ok") {
+    if (rtkSavings > 0) res.req.rtkSavings = rtkSavings;
+    if (cavemanSavings > 0) res.req.cavemanSavings = cavemanSavings;
+    if (costEstimate > 0) res.req.costEstimate = costEstimate;
+  }
+  return res;
+}
+
+function dispatchUpstream(ctx: BuildContext): UpstreamResult {
   const provider = ctx.account.provider;
 
   // API key providers → plain OpenAI-compat
@@ -232,6 +282,7 @@ export function buildUpstream(ctx: BuildContext): UpstreamResult {
       gemini:     "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
       modal:      "https://api.us-west-2.modal.direct/v1/chat/completions",
       sambanova:  "https://api.sambanova.ai/v1/chat/completions",
+      tokenrouter: "https://api.tokenrouter.com/v1/chat/completions",
     };
     const url = urls[provider];
     if (url) {

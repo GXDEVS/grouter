@@ -766,6 +766,31 @@ export const PROVIDERS: Record<string, Provider> = {
     ],
   },
 
+  tokenrouter: {
+    id: "tokenrouter",
+    name: "TokenRouter",
+    description: "Access free & paid LLMs via TokenRouter OpenAI-compatible API",
+    category: "apikey",
+    authType: "apikey",
+    color: "#00D2B4",
+    baseUrl: "https://api.tokenrouter.com/v1",
+    apiKeyUrl: "https://www.tokenrouter.com/",
+    logo: "/public/logos/tokenrouter.png",
+    hasFreeModels: true,
+    freeTier: {
+      notice: "Free models available including Kimi 3.0 Free (moonshotai/kimi-k3-free).",
+      url: "https://www.tokenrouter.com/models",
+    },
+    models: [
+      { id: "moonshotai/kimi-k3-free",                name: "Kimi 3.0 (Free)",          isFree: true },
+      { id: "deepseek/deepseek-r1:free",             name: "DeepSeek R1 (Free)",       isFree: true },
+      { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B (Free)",     isFree: true },
+      { id: "qwen/qwen-2.5-coder-32b-instruct:free", name: "Qwen 2.5 Coder 32B (Free)", isFree: true },
+      { id: "openai/gpt-4o",                        name: "GPT-4o" },
+      { id: "anthropic/claude-3.5-sonnet",          name: "Claude 3.5 Sonnet" },
+    ],
+  },
+
   sambanova: {
     id: "sambanova",
     name: "SambaNova",
@@ -794,11 +819,12 @@ export const PROVIDERS: Record<string, Provider> = {
 
   custom: {
     id: "custom",
-    name: "Custom / Build Your Own",
-    description: "Add a generic OpenAI-compatible API",
+    name: "API Customizada",
+    description: "Adicione qualquer API compatível com OpenAI (LM Studio, vLLM, servidor próprio, etc.)",
     category: "apikey",
     authType: "apikey",
-    color: "#94a3b8",
+    color: "#0AB9DC",
+    logo: "solar:add-square-bold-duotone",
     baseUrl: "",
     apiKeyUrl: "",
     models: [

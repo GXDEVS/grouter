@@ -133,5 +133,20 @@ describe("buildUpstream", () => {
     expect(result.req.headers["ChatGPT-Account-ID"]).toBe("acct_123");
     expect(result.req.body.stream).toBe(false);
   });
+
+  test("maps TokenRouter API key requests to api.tokenrouter.com", () => {
+    const result = buildUpstream({
+      account: buildConnection({ provider: "tokenrouter", api_key: "sk-tokenrouter" }),
+      body: { model: "moonshotai/kimi-k3-free", messages: [{ role: "user", content: "hello" }] },
+      stream: true,
+    });
+
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+
+    expect(result.req.url).toBe("https://api.tokenrouter.com/v1/chat/completions");
+    expect(result.req.headers.Authorization).toBe("Bearer sk-tokenrouter");
+    expect(result.req.body.model).toBe("moonshotai/kimi-k3-free");
+  });
 });
 

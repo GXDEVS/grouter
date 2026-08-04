@@ -8,16 +8,24 @@ export function recordUsage(data: {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
+  provider?: string;
+  cost?: number;
+  rtk_savings?: number;
+  caveman_savings?: number;
 }): void {
   db().query(
-    `INSERT INTO usage_logs (account_id, model, prompt_tokens, completion_tokens, total_tokens, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`
+    `INSERT INTO usage_logs (account_id, model, prompt_tokens, completion_tokens, total_tokens, provider, cost, rtk_savings, caveman_savings, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     data.account_id,
     data.model,
     data.prompt_tokens,
     data.completion_tokens,
     data.total_tokens,
+    data.provider ?? '',
+    data.cost ?? 0,
+    data.rtk_savings ?? 0,
+    data.caveman_savings ?? 0,
     new Date().toISOString(),
   );
 }

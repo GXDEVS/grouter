@@ -1,6 +1,6 @@
 {
   "name": "grouter-auth",
-  "version": "5.7.1",
+  "version": "6.0.0",
   "description": "Universal AI router — OAuth + API Key providers (Claude, GitHub Copilot, Gemini, Kimi, Kiro, Qwen, Cursor, OpenRouter, Groq…) behind one OpenAI-compatible local proxy",
   "author": "gxdev",
   "license": "MIT",
@@ -40,6 +40,7 @@
     "build": "bun build index.ts --target bun --outfile dist/grouter && bun -e \"import { chmodSync } from 'node:fs'; if (process.platform !== 'win32') { try { chmodSync('dist/grouter', 0o755); } catch {} }\"",
     "deploy": "bun run build && bun link && echo '\\n✓ Global binary updated — run: grouter serve'",
     "prepare": "test -f dist/grouter || bun run build",
+    "postinstall": "node scripts/postinstall.js",
     "prepublishOnly": "bun run build",
     "install:cli": "bash setup.sh",
     "uninstall:cli": "bash uninstall.sh",
@@ -60,7 +61,8 @@
     "ora": "^9.3.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "sharp": "^0.35.3"
   },
   "peerDependencies": {
     "typescript": "^5"

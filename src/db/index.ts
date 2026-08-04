@@ -132,6 +132,20 @@ export function db(): Database {
   if (!cols.includes("provider_data"))
     _db.exec(`ALTER TABLE accounts ADD COLUMN provider_data TEXT`);
 
+  // Usage logs migrations for v6.0 features
+  const usageCols = _db.query<{ name: string }, [string]>(
+    "SELECT name FROM pragma_table_info(?)"
+  ).all("usage_logs").map(r => r.name);
+
+  if (!usageCols.includes("provider"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN provider TEXT NOT NULL DEFAULT ''`);
+  if (!usageCols.includes("cost"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN cost REAL NOT NULL DEFAULT 0`);
+  if (!usageCols.includes("rtk_savings"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN rtk_savings INTEGER NOT NULL DEFAULT 0`);
+  if (!usageCols.includes("caveman_savings"))
+    _db.exec(`ALTER TABLE usage_logs ADD COLUMN caveman_savings INTEGER NOT NULL DEFAULT 0`);
+
   _db.exec(`
     CREATE TABLE IF NOT EXISTS client_keys (
       api_key           TEXT PRIMARY KEY,
@@ -157,6 +171,8 @@ export function db(): Database {
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('sticky_limit', '3')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('proxy_port', '3099')`);
   _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('require_client_auth', 'false')`);
+  _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_start', 'false')`);
+  _db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('auto_start_type', 'systemd')`);
 
   return _db;
 }
