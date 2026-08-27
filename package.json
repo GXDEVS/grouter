@@ -23,7 +23,8 @@
     "grouter": "dist/grouter"
   },
   "files": [
-    "dist/grouter"
+    "dist/grouter",
+    "scripts/postinstall.js"
   ],
   "engines": {
     "bun": ">=1.0.0"
